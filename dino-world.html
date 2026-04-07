@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Dino World 7.1 — Ecosystem Simulator</title>
+  <style>
+body {
+    margin: 0;
+    padding: 0;
+    width: 1200px;
+    height: 800px;
+    font-family: Arial, sans-serif;
+    background-color: #2C3E50;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.data-panel {
+    width: 300px;
+    background-color: #34495E;
+    padding: 20px;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.canvas-panel {
+    flex: 1;
+    background-color: #2C3E50;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+h1 {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ECF0F1;
+    text-align: center;
+    margin: 0 0 10px 0;
+}
+
+.dag-info {
+    font-size: 16px;
+    font-weight: bold;
+    color: #3498DB;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.weer-info {
+    font-size: 12px;
+    color: #F39C12;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.separator {
+    height: 1px;
+    background-color: #7F8C8D;
+    margin: 15px 0;
+}
+
+.organisms, .resources {
+    margin: 10px 0;
+}
+
+.organism-item, .resource-item {
+    padding: 5px 0;
+    font-size: 12px;
+}
+
+.organism-item span, .resource-item span {
+    font-weight: bold;
+}
+
+#ecosystem {
+    width: 100%;
+    height: 100%;
+    background-color: #1A252F;
+    border-radius: 5px;
+}
+
+.controls {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.controls button {
+    flex: 1;
+    padding: 10px;
+    background-color: #3498DB;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.controls button:hover {
+    background-color: #2980B9;
+}
+
+.controls button:active {
+    background-color: #21618C;
+}
+body { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="data-panel">
+      <h1>🦕 DINO-WORLD 7.1 🦖</h1>
+      <div class="dag-info">Day: <span id="dag">0</span></div>
+      <div class="weer-info" id="weer">🌤️ Normal weather</div>
+      <div class="separator"></div>
+      <div class="organisms">
+        <div class="organism-item" style="color:#27AE60">🌿 Swamp Plants: <span id="moerasplant">0</span></div>
+        <div class="organism-item" style="color:#2ECC71">🌳 Plants: <span id="plant">0</span></div>
+        <div class="organism-item" style="color:#95A5A6">🦕 Ankylosaurs: <span id="anky">0</span></div>
+        <div class="organism-item" style="color:#E74C3C">🦖 T-Rexes: <span id="Trex">0</span></div>
+        <div class="organism-item" style="color:#E67E22">🦅 Scavengers: <span id="aaseter">0</span></div>
+        <div class="organism-item" style="color:#9B59B6">🦠 Bacteria: <span id="bacterie">0</span></div>
+      </div>
+      <div class="separator"></div>
+      <div class="resources">
+        <div class="resource-item" style="color:#3498DB">💧 Water: <span id="water">0</span></div>
+        <div class="resource-item" style="color:#95A5A6">⛰️ Minerals: <span id="mineralen">0</span></div>
+        <div class="resource-item" style="color:#E74C3C">🥩 Carrion: <span id="aasvlees">0</span></div>
+        <div class="resource-item" style="color:#85C1E9">💨 Humidity: <span id="vochtigheid">0</span></div>
+      </div>
+      <div class="controls">
+        <button id="pauseBtn">⏸️ Pause</button>
+        <button id="speedBtn">⏩ Speed: 1x</button>
+      </div>
+    </div>
+    <div class="canvas-panel">
+      <canvas id="ecosystem"></canvas>
+    </div>
+  </div>
+  <script>
+// Global variables
+let dag = 0;
+let isPaused = false;
+let speed = 1; // 1x, 2x, 3x
+
+// Energy values
+let Mp_levens = 500;
+let Plevens = 1000;
+let Alevens = 50000;
+let Tlevens = 100000;
+let Aaslevens = 40000;
+let Blevens = 50;
+
+// Resources
+let mineralen = 1200;
+let aasvlees = 40000;
+let water = 105000;
+let vochtigheid = 3000;
+
+// Organisms
+let anky = [];
+let Trex = [];
+let aaseter = [];
+let plant = [];
+let moerasplant = [];
+let bacterie = [];
+
+// IDs
+let Id = 1;
+let Id1 = 1;
+let Id2 = 1;
+let Id3 = 1;
+let Id4 = 1;
+let Id5 = 1;
+
+// Weather type
+let weatherType = "normal";
+
+// Canvas
+const canvas = document.getElementById('ecosystem');
+const ctx = canvas.getContext('2d');
+
+// Initialize
+function init() {
+    // Ankylosaurs
+    for (let i = 0; i < 2500; i++) {
+        anky.push({ID: Id++, Levensenergie: 50000});
+    }
+    
+    // T-Rex
+    for (let i = 0; i < 35; i++) {
+        Trex.push({ID: Id1++, Levensenergie: 100000});
+    }
+    
+    // Scavengers
+    for (let i = 0; i < 68; i++) {
+        aaseter.push({ID: Id2++, Levensenergie: 40000});
+    }
+    
+    // Plants
+    for (let i = 0; i < 80000; i++) {
+        plant.push({ID: Id3++, Levensenergie: 1000});
+    }
+    
+    // Swamp Plants
+    for (let i = 0; i < 80000; i++) {
+        moerasplant.push({ID: Id5++, Levensenergie: 500});
+    }
+    
+    // Bacteria
+    for (let i = 0; i < 10000; i++) {
+        bacterie.push({ID: Id4++, Levensenergie: 50});
+    }
+    
+    // Set canvas size
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    
+    updateDisplay();
+    drawEcosystem();
+}
+
+function updateDisplay() {
+    document.getElementById('dag').textContent = dag.toLocaleString();
+    document.getElementById('moerasplant').textContent = moerasplant.length.toLocaleString();
+    document.getElementById('plant').textContent = plant.length.toLocaleString();
+    document.getElementById('anky').textContent = anky.length.toLocaleString();
+    document.getElementById('Trex').textContent = Trex.length.toLocaleString();
+    document.getElementById('aaseter').textContent = aaseter.length.toLocaleString();
+    document.getElementById('bacterie').textContent = bacterie.length.toLocaleString();
+    document.getElementById('water').textContent = water.toLocaleString();
+    document.getElementById('mineralen').textContent = mineralen.toLocaleString();
+    document.getElementById('aasvlees').textContent = aasvlees.toLocaleString();
+    document.getElementById('vochtigheid').textContent = vochtigheid.toLocaleString();
+}
+
+function drawEcosystem() {
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    ctx.fillStyle = '#1A252F';
+    ctx.fillRect(0, 0, w, h);
+    
+    // Draw weather
+    drawWeather(w, h);
+    
+    // Calculate sizes
+    function calcSize(count, max) {
+        if (max === 0) return 10;
+        let size = Math.floor((count / max) * 140) + 10;
+        return Math.min(Math.max(size, 10), 150);
+    }
+    
+    const organisms = [
+        {x: 0.15, y: 0.7, count: moerasplant.length, max: 100000, color: '#27AE60', emoji: '🌿'},
+        {x: 0.35, y: 0.7, count: plant.length, max: 100000, color: '#2ECC71', emoji: '🌳'},
+        {x: 0.25, y: 0.5, count: anky.length, max: 3000, color: '#95A5A6', emoji: '🦕'},
+        {x: 0.5, y: 0.3, count: Trex.length, max: 50, color: '#E74C3C', emoji: '🦖'},
+        {x: 0.75, y: 0.55, count: aaseter.length, max: 100, color: '#E67E22', emoji: '🦅'},
+        {x: 0.6, y: 0.75, count: Math.floor(bacterie.length / 200), max: 100, color: '#9B59B6', emoji: '🦠'}
+    ];
+    
+    organisms.forEach(org => {
+        const x = w * org.x;
+        const y = h * org.y;
+        const size = calcSize(org.count, org.max);
+        
+        // Circle
+        ctx.fillStyle = org.color;
+        ctx.beginPath();
+        ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ECF0F1';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Emoji
+        ctx.font = `${Math.max(12, size / 4)}px Arial`;
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(org.emoji, x, y);
+        
+        // Count
+        ctx.font = '8px Arial';
+        ctx.fillStyle = '#ECF0F1';
+        ctx.fillText(org.count.toLocaleString(), x, y + size / 2 + 15);
+    });
+}
+
+function drawWeather(w, h) {
+    const x = w - 50;
+    const y = 40;
+    
+    ctx.save();
+    
+    if (weatherType === 'zonnig') {
+        // Sun
+        ctx.fillStyle = '#F1C40F';
+        ctx.strokeStyle = '#F39C12';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Rays
+        for (let angle = 0; angle < 360; angle += 45) {
+            const rad = (angle * Math.PI) / 180;
+            const x1 = x + Math.cos(rad) * 13;
+            const y1 = y + Math.sin(rad) * 13;
+            const x2 = x + Math.cos(rad) * 20;
+            const y2 = y + Math.sin(rad) * 20;
+            ctx.strokeStyle = '#F39C12';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+    } else if (weatherType === 'rain') {
+        // Cloud
+        ctx.fillStyle = '#7F8C8D';
+        ctx.strokeStyle = '#95A5A6';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x - 12, y - 2, 8, 0, Math.PI * 2);
+        ctx.arc(x - 5, y - 7, 10, 0, Math.PI * 2);
+        ctx.arc(x + 2, y - 2, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Rain
+        ctx.strokeStyle = '#3498DB';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            const dropX = x - 15 + i * 8;
+            ctx.beginPath();
+            ctx.moveTo(dropX, y + 8);
+            ctx.lineTo(dropX, y + 15);
+            ctx.stroke();
+        }
+    } else if (weatherType === 'snow') {
+        // Cloud
+        ctx.fillStyle = '#BDC3C7';
+        ctx.strokeStyle = '#ECF0F1';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x - 12, y - 2, 8, 0, Math.PI * 2);
+        ctx.arc(x - 5, y - 7, 10, 0, Math.PI * 2);
+        ctx.arc(x + 2, y - 2, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Snow
+        ctx.font = '8px Arial';
+        ctx.fillStyle = '#ECF0F1';
+        ctx.textAlign = 'center';
+        for (let i = 0; i < 3; i++) {
+            ctx.fillText('❄', x - 15 + i * 8, y + 10 + i * 2);
+        }
+    } else if (weatherType === 'storm') {
+        // Dark cloud
+        ctx.fillStyle = '#34495E';
+        ctx.strokeStyle = '#2C3E50';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x - 12, y - 2, 8, 0, Math.PI * 2);
+        ctx.arc(x - 5, y - 7, 10, 0, Math.PI * 2);
+        ctx.arc(x + 2, y - 2, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Lightning
+        ctx.strokeStyle = '#F1C40F';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y + 5);
+        ctx.lineTo(x - 5, y + 13);
+        ctx.lineTo(x, y + 18);
+        ctx.stroke();
+    } else if (weatherType === 'tornado') {
+        // Tornado
+        ctx.fillStyle = '#7F8C8D';
+        ctx.strokeStyle = '#34495E';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - 3, y - 15);
+        ctx.lineTo(x + 3, y - 15);
+        ctx.lineTo(x + 8, y + 15);
+        ctx.lineTo(x - 8, y + 15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#95A5A6';
+        ctx.textAlign = 'center';
+        ctx.fillText('🌪️', x, y);
+    } else {
+        // Normal: sun with cloud
+        ctx.fillStyle = '#F1C40F';
+        ctx.strokeStyle = '#F39C12';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x - 7, y - 7, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.fillStyle = '#ECF0F1';
+        ctx.strokeStyle = '#BDC3C7';
+        ctx.beginPath();
+        ctx.arc(x + 5, y + 2, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+    }
+    
+    ctx.restore();
+}
+
+function simulationStep() {
+    if (isPaused) return;
+    
+    dag++;
+    
+    // Chances
+    const Mp_kans = Math.floor(Math.random() * 3) + 1;
+    const Pkans = Math.floor(Math.random() * 10) + 1;
+    const Akans = Math.floor(Math.random() * 5) + 1;
+    const Aaskans = Math.floor(Math.random() * 3) + 1;
+    const Mkans = Math.floor(Math.random() * 3) + 1;
+    const Bkans = Math.floor(Math.random() * 30) + 1;
+    const Wkans = Math.floor(Math.random() * 5) + 1;
+    
+    // Reset weather
+    weatherType = "normal";
+    document.getElementById('weer').textContent = "🌤️ Normal weather";
+    document.getElementById('weer').style.color = "#95A5A6";
+    
+    // Daily energy - Swamp Plants
+    const Af0 = 30 * moerasplant.length;
+    if (Mp_levens >= Af0) {
+        Mp_levens -= Af0;
+        moerasplant.forEach(d => d.Levensenergie -= 30);
+        water += moerasplant.length * 10;
+        mineralen += moerasplant.length * 2;
+    } else {
+        const rest = Mp_levens;
+        Mp_levens = 0;
+        if (moerasplant.length > 0 && Af0 > 0) {
+            moerasplant.forEach(d => d.Levensenergie -= Math.floor(rest / moerasplant.length));
+            water += Math.floor((moerasplant.length * 10 * rest) / Af0);
+            mineralen += Math.floor((moerasplant.length * 2 * rest) / Af0);
+        }
+    }
+    
+    // Daily energy - Plants
+    const Af1 = 60 * plant.length;
+    if (Plevens >= Af1) {
+        Plevens -= Af1;
+        plant.forEach(d => d.Levensenergie -= 60);
+        water += plant.length * 10;
+        mineralen += plant.length * 5;
+    } else {
+        const rest = Plevens;
+        Plevens = 0;
+        if (plant.length > 0 && Af1 > 0) {
+            plant.forEach(d => d.Levensenergie -= Math.floor(rest / plant.length));
+            water += Math.floor((plant.length * 10 * rest) / Af1);
+            mineralen += Math.floor((plant.length * 5 * rest) / Af1);
+        }
+    }
+    
+    // Daily energy - Ankylosaurs
+    const Af2 = 1 * anky.length;
+    if (Alevens >= Af2) {
+        Alevens -= Af2;
+        anky.forEach(d => d.Levensenergie -= 1);
+        water += anky.length * 1;
+    } else {
+        const rest = Alevens;
+        Alevens = 0;
+        if (anky.length > 0 && Af2 > 0) {
+            anky.forEach(d => d.Levensenergie -= Math.floor(rest / anky.length));
+            water += Math.floor((anky.length * 1 * rest) / Af2);
+        }
+    }
+    
+    // Daily energy - T-Rex
+    const Af3 = 500 * Trex.length;
+    if (Tlevens >= Af3) {
+        Tlevens -= Af3;
+        Trex.forEach(d => d.Levensenergie -= 500);
+        water += Trex.length * 250;
+        mineralen += Trex.length * 25;
+    } else {
+        const rest = Tlevens;
+        Tlevens = 0;
+        if (Trex.length > 0 && Af3 > 0) {
+            Trex.forEach(d => d.Levensenergie -= Math.floor(rest / Trex.length));
+            water += Math.floor((Trex.length * 250 * rest) / Af3);
+            mineralen += Math.floor((Trex.length * 25 * rest) / Af3);
+        }
+    }
+    
+    // Daily energy - Scavengers
+    const Af4 = 80 * aaseter.length;
+    if (Aaslevens >= Af4) {
+        Aaslevens -= Af4;
+        aaseter.forEach(d => d.Levensenergie -= 80);
+        water += aaseter.length * 40;
+        mineralen += aaseter.length * 4;
+    } else {
+        const rest = Aaslevens;
+        Aaslevens = 0;
+        if (aaseter.length > 0 && Af4 > 0) {
+            aaseter.forEach(d => d.Levensenergie -= Math.floor(rest / aaseter.length));
+            water += Math.floor((aaseter.length * 40 * rest) / Af4);
+            mineralen += Math.floor((aaseter.length * 4 * rest) / Af4);
+        }
+    }
+    
+    // Daily energy - Bacteria
+    const Af5 = 1 * bacterie.length;
+    if (Blevens >= Af5) {
+        Blevens -= Af5;
+        bacterie.forEach(d => d.Levensenergie -= 1);
+        water += bacterie.length * 1;
+    } else {
+        const rest = Blevens;
+        Blevens = 0;
+        if (bacterie.length > 0 && Af5 > 0) {
+            bacterie.forEach(d => d.Levensenergie -= Math.floor(rest / bacterie.length));
+            water += Math.floor((bacterie.length * 1 * rest) / Af5);
+        }
+    }
+    
+    // Seasons
+    if (dag % 400 === 100 && water >= 5000 && mineralen >= 200 && plant.length > 0) {
+        for (let i = 0; i < 20; i++) {
+            plant.push({ID: Id3++, Levensenergie: 1000});
+        }
+        water -= 5000;
+        vochtigheid += 5000;
+        mineralen -= 200;
+    }
+    
+    if (dag % 400 === 200 && vochtigheid >= 120 && plant.length >= 8) {
+        plant.splice(0, 8);
+        water += 120;
+        vochtigheid -= 120;
+        mineralen += 80;
+    }
+    
+    if (dag % 400 === 300 && vochtigheid >= 180 && plant.length >= 25) {
+        plant.splice(0, 25);
+        water += 180;
+        vochtigheid -= 180;
+        mineralen += 250;
+    }
+    
+    if (dag % 400 === 0 && dag > 0 && water >= 3800 && mineralen >= 300 && plant.length > 0) {
+        for (let i = 0; i < 30; i++) {
+            plant.push({ID: Id3++, Levensenergie: 1000});
+        }
+        water -= 3800;
+        vochtigheid += 3800;
+        mineralen -= 300;
+    }
+    
+    // Weather
+    if (Wkans === 1 && water >= 2500 && plant.length > 0) {
+        weatherType = "zonnig";
+        document.getElementById('weer').textContent = "☀️ Sunny!";
+        document.getElementById('weer').style.color = "#F39C12";
+        for (let i = 0; i < 25; i++) {
+            plant.push({ID: Id3++, Levensenergie: 1000});
+            water -= 100;
+        }
+    }
+    
+    if (Wkans === 2 && vochtigheid >= 5000 && moerasplant.length > 0) {
+        weatherType = "regen";
+        document.getElementById('weer').textContent = "🌧️ Rainy";
+        document.getElementById('weer').style.color = "#3498DB";
+        for (let i = 0; i < 10; i++) {
+            moerasplant.push({ID: Id5++, Levensenergie: 500});
+            vochtigheid -= 500;
+        }
+    }
+    
+    if (Wkans === 3 && plant.length >= 38) {
+        weatherType = "sneeuw";
+        document.getElementById('weer').textContent = "❄️ Snow";
+        document.getElementById('weer').style.color = "#ECF0F1";
+        plant.splice(0, 38);
+        mineralen += 380;
+    }
+    
+    if (Wkans === 4 && aaseter.length >= 3 && vochtigheid >= 600 && moerasplant.length > 0) {
+        weatherType = "storm";
+        document.getElementById('weer').textContent = "⛈️ Storm!";
+        document.getElementById('weer').style.color = "#F39C12";
+        aaseter.splice(0, 3);
+        for (let i = 0; i < 10; i++) {
+            moerasplant.push({ID: Id5++, Levensenergie: 500});
+        }
+        water += 750;
+        aasvlees += 450;
+        vochtigheid -= 600;
+    }
+    
+    if (Wkans === 5 && Trex.length >= 1) {
+        weatherType = "tornado";
+        document.getElementById('weer').textContent = "🌪️ Tornado!";
+        document.getElementById('weer').style.color = "#E74C3C";
+        Trex.pop();
+        water += 100;
+        mineralen += 90;
+        aasvlees += 360;
+    }
+    
+    if (Wkans === 5 && anky.length >= 2) {
+        weatherType = "tornado";
+        document.getElementById('weer').textContent = "🌪️ Tornado!";
+        document.getElementById('weer').style.color = "#E74C3C";
+        anky.splice(0, 2);
+        water += 100;
+        mineralen += 40;
+        aasvlees += 380;
+    }
+    
+    // Feeding cycle
+    if (water >= 1000 && plant.length >= 90 && [1,2,3,5,6,7,8].includes(Pkans) && anky.length > 1) {
+        plant.splice(0, 90);
+        anky.push({ID: Id++, Levensenergie: 50000});
+        anky.push({ID: Id++, Levensenergie: 50000});
+        water -= 2000;
+    }
+    
+    if (anky.length >= 2 && [1,2,3].includes(Akans) && Trex.length > 1) {
+        anky.splice(0, 2);
+        Trex.push({ID: Id1++, Levensenergie: 100000});
+    }
+    
+    if (water >= 1500 && aasvlees >= 100 && [1,2].includes(Aaskans) && aaseter.length > 1) {
+        aaseter.push({ID: Id2++, Levensenergie: 40000});
+        water -= 1500;
+        aasvlees -= 100;
+    }
+    
+    if (water >= 500 && mineralen >= 250 && [1,2].includes(Mkans) && plant.length > 1) {
+        for (let i = 0; i < 30; i++) {
+            plant.push({ID: Id3++, Levensenergie: 1000});
+        }
+        water -= 500;
+        mineralen -= 250;
+    }
+    
+    if (water >= 500 && mineralen >= 200 && [1,2].includes(Mp_kans) && moerasplant.length > 1) {
+        for (let i = 0; i < 50; i++) {
+            moerasplant.push({ID: Id5++, Levensenergie: 500});
+        }
+        water -= 500;
+        mineralen -= 200;
+    }
+    
+    if (bacterie.length >= 1 && water >= 250000 && aasvlees >= 10000 && Bkans < 30) {
+        for (let i = 0; i < 100; i++) {
+            bacterie.push({ID: Id4++, Levensenergie: 50});
+        }
+        aasvlees -= 100;
+        water -= 2500;
+    }
+    
+    // Life checks
+    if (moerasplant.length >= 10 && Mp_levens <= 0) {
+        moerasplant.splice(0, 10);
+        Mp_levens = 500;
+        water += 500;
+        mineralen += 450;
+    } else if (moerasplant.length >= 1 && Mp_levens <= 0) {
+        moerasplant.pop();
+        Mp_levens = 500;
+        water += 50;
+        mineralen += 45;
+    }
+    
+    if (plant.length >= 10 && Plevens <= 0) {
+        plant.splice(0, 10);
+        Plevens = 1000;
+        water += 1000;
+        mineralen += 900;
+    } else if (plant.length >= 1 && Plevens <= 0) {
+        plant.pop();
+        Plevens = 1000;
+        water += 100;
+        mineralen += 90;
+    }
+    
+    if (anky.length >= 8 && Alevens <= 0) {
+        anky.splice(0, 8);
+        Alevens = 50000;
+        aasvlees += 1568;
+        mineralen += 80;
+    } else if (anky.length >= 1 && Alevens <= 0) {
+        anky.pop();
+        Alevens = 50000;
+        aasvlees += 196;
+        mineralen += 8;
+    }
+    
+    if (Trex.length >= 2 && Tlevens <= 0) {
+        Trex.splice(0, 2);
+        Tlevens = 100000;
+        aasvlees += 400;
+    } else if (Trex.length >= 1 && Tlevens <= 0) {
+        Trex.pop();
+        Tlevens = 100000;
+        aasvlees += 200;
+    }
+    
+    if (aaseter.length >= 5 && Aaslevens <= 0) {
+        aaseter.splice(0, 5);
+        Aaslevens = 40000;
+        aasvlees += 800;
+    } else if (aaseter.length >= 1 && Aaslevens <= 0) {
+        aaseter.pop();
+        Aaslevens = 40000;
+        aasvlees += 80;
+    }
+    
+    if (bacterie.length >= 50 && Blevens <= 0) {
+        bacterie.splice(0, 50);
+        Blevens = 50;
+        water += 250;
+    } else if (bacterie.length >= 1 && Blevens <= 0) {
+        bacterie.pop();
+        Blevens = 50;
+        water += 5;
+    }
+    
+    updateDisplay();
+    drawEcosystem();
+}
+
+// Controls
+document.getElementById('pauseBtn').addEventListener('click', () => {
+    isPaused = !isPaused;
+    document.getElementById('pauseBtn').textContent = isPaused ? '▶️ Play' : '⏸️ Pause';
+});
+
+document.getElementById('speedBtn').addEventListener('click', () => {
+    speed = speed === 1 ? 2 : speed === 2 ? 3 : 1;
+    document.getElementById('speedBtn').textContent = `⏩ Speed: ${speed}x`;
+});
+
+// Game loop
+function gameLoop() {
+    const interval = speed === 1 ? 3000 : speed === 2 ? 1500 : 500;
+    simulationStep();
+    setTimeout(gameLoop, interval);
+}
+
+// Start
+init();
+setTimeout(gameLoop, 3000);
+  </script>
+</body>
+</html>
