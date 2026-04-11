@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Money Digger</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=DM+Mono&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:#1a2a3a}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+#ui{position:fixed;inset:0;pointer-events:none;z-index:10}
+#hud{position:absolute;top:20px;left:20px}
+#alt{font-size:2.4rem;font-weight:700;color:#fff;line-height:1;text-shadow:0 2px 24px rgba(0,0,0,.7);letter-spacing:-1px}
+#unit{font-size:.88rem;font-weight:300;color:rgba(255,255,255,.6);margin-top:2px}
+#nxt{margin-top:8px;font-size:.66rem;color:rgba(255,255,255,.42);max-width:240px;line-height:1.5}
+#sb{position:absolute;top:20px;right:20px;background:rgba(0,0,0,.45);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 14px;min-width:135px}
+#sb h3{font-size:.52rem;font-weight:500;color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
+.sr{display:flex;justify-content:space-between;gap:10px;font-size:.6rem;color:rgba(255,255,255,.5);padding:2px 0}
+.sr.me{color:#22c55e}
+.sn{max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv{font-family:'DM Mono',monospace;font-size:.56rem}
+#bctr{position:absolute;bottom:110px;right:28px;text-align:right}
+#bnum{font-size:1.2rem;font-weight:700;color:#22c55e;font-family:'DM Mono',monospace;text-shadow:0 2px 12px rgba(34,197,94,.4)}
+#blbl{font-size:.56rem;color:rgba(255,255,255,.3);margin-top:2px}
+#cbtn{position:fixed;bottom:28px;right:28px;z-index:20;width:72px;height:72px;border-radius:50%;border:none;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;font-size:1.6rem;cursor:pointer;box-shadow:0 4px 20px rgba(34,197,94,.5);display:flex;align-items:center;justify-content:center;animation:pulse 2.5s infinite;transition:transform .08s;pointer-events:all}
+@keyframes pulse{0%,100%{box-shadow:0 4px 20px rgba(34,197,94,.5),0 0 0 0 rgba(34,197,94,.3)}70%{box-shadow:0 4px 20px rgba(34,197,94,.5),0 0 0 16px rgba(34,197,94,0)}}
+#cbtn:active{transform:scale(.88);animation:none}
+#online{position:absolute;bottom:28px;left:20px;font-size:.58rem;color:rgba(255,255,255,.3)}
+#nw{position:absolute;bottom:54px;left:20px;display:flex;align-items:center;gap:5px}
+#nl{font-size:.52rem;color:rgba(255,255,255,.22)}
+#ni{font-family:'DM Sans',sans-serif;font-size:.56rem;padding:3px 7px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.08);border-radius:5px;width:100px;pointer-events:all}
+#msb{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;opacity:0;transition:opacity .5s;pointer-events:none}
+#msb.show{opacity:1}
+#mse{font-size:3.5rem;filter:drop-shadow(0 4px 12px rgba(0,0,0,.8))}
+#msn{font-size:1.3rem;font-weight:700;color:#fff;margin-top:6px;text-shadow:0 2px 20px rgba(0,0,0,.9)}
+#mss{font-size:.62rem;color:rgba(255,255,255,.5);margin-top:3px}
+.fb{position:fixed;font-size:1.1rem;pointer-events:none;z-index:25;animation:fup .85s ease-out forwards}
+@keyframes fup{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-75px) scale(.6)}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="hud"><div id="alt">0,000</div><div id="unit">millimeter</div><div id="nxt"></div></div>
+  <div id="sb"><h3>Top klikkers</h3><div id="sl"></div></div>
+  <div id="bctr"><div id="bnum">0</div><div id="blbl">biljetten gestapeld</div></div>
+  <div id="nw"><span id="nl">naam:</span><input id="ni" type="text" maxlength="16"/></div>
+  <div id="online">● 1 online</div>
+  <div id="msb"><div id="mse"></div><div id="msn"></div><div id="mss"></div></div>
+</div>
+<button id="cbtn">💵</button>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+const BILL_M = 0.0001; // 0.1mm
+
+const OBJECTS = [
+  {m:0.001,  label:'Mier',                  emoji:'🐜'},
+  {m:0.015,  label:'Druif',                 emoji:'🍇'},
+  {m:0.040,  label:'Aardbei',               emoji:'🍓'},
+  {m:0.070,  label:'Muis',                  emoji:'🐭'},
+  {m:0.120,  label:'Appel',                 emoji:'🍎'},
+  {m:0.240,  label:'Basketbal',             emoji:'🏀'},
+  {m:0.300,  label:'Tulp',                  emoji:'🌷'},
+  {m:0.450,  label:'Zonnebloem',            emoji:'🌻'},
+  {m:0.600,  label:'Kat',                   emoji:'🐱'},
+  {m:0.900,  label:'Hond',                  emoji:'🐕'},
+  {m:1.750,  label:'Mens',                  emoji:'🧍'},
+  {m:2.400,  label:'Paard',                 emoji:'🐴'},
+  {m:4.000,  label:'Olifant',               emoji:'🐘'},
+  {m:5.500,  label:'Giraf',                 emoji:'🦒'},
+  {m:7.000,  label:'Jonge boom',            emoji:'🌲'},
+  {m:8.500,  label:'Huis',                  emoji:'🏠'},
+  {m:15.00,  label:'Grote eik',             emoji:'🌳'},
+  {m:25.00,  label:'Sequoia',               emoji:'🌲'},
+  {m:46.00,  label:'Scheve toren van Pisa', emoji:'🗼'},
+  {m:93.00,  label:'Vrijheidsbeeld',        emoji:'🗽'},
+  {m:115.0,  label:'Reuzensequoia',         emoji:'🌲'},
+  {m:169.0,  label:'Washington Monument',   emoji:'🏛️'},
+  {m:324.0,  label:'Eiffeltoren',           emoji:'🗼'},
+  {m:443.0,  label:'Empire State Building', emoji:'🏙️'},
+  {m:828.0,  label:'Burj Khalifa',          emoji:'🏙️'},
+  {m:1000,   label:'1 kilometer!',          emoji:'🎉'},
+  {m:8849,   label:'Mount Everest',         emoji:'🏔️'},
+  {m:100000, label:'Karman-lijn (ruimte!)', emoji:'🚀'},
+];
+
+// STATE
+let totalBills = 0; // altijd van Firebase laden, niet localStorage
+let myClicks   = parseInt(localStorage.getItem('md5_c')||'0');
+let myName     = localStorage.getItem('md5_n')||'Speler'+Math.floor(Math.random()*9000+1000);
+let scores     = JSON.parse(localStorage.getItem('md5_s')||'{}');
+let shownMS    = new Set(JSON.parse(localStorage.getItem('md5_m')||'[]'));
+let displayBills = totalBills;
+
+// CANVAS
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, groundY;
+
+function resize(){
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  groundY = H * 0.72;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── HELPERS ──
+function formatNum(n){if(n>=1e12)return(n/1e12).toFixed(2)+'T';if(n>=1e9)return(n/1e9).toFixed(2)+'B';if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n.toLocaleString('nl-NL');}
+function formatAlt(m){if(m>=1e9)return(m/1e9).toFixed(3)+' Gm';if(m>=1e6)return(m/1e6).toFixed(3)+' Mm';if(m>=1000)return(m/1000).toFixed(4)+' km';if(m>=1)return m.toFixed(4)+' m';if(m>=0.01)return(m*100).toFixed(3)+' cm';return(m*1000).toFixed(3)+' mm';}
+
+// ── SKY ──
+let cloudT = 0;
+function drawSky(altM){
+  const t = Math.min(1, altM/100000);
+  const r0=Math.round(20*(1-t)+0*t), g0=Math.round(42*(1-t)+0*t), b0=Math.round(58*(1-t)+0*t);
+  const r1=Math.round(135*(1-t)+2*t), g1=Math.round(186*(1-t)+5*t), b1=Math.round(235*(1-t)+18*t);
+  const sg = ctx.createLinearGradient(0,0,0,groundY);
+  sg.addColorStop(0,`rgb(${r0},${g0},${b0})`);
+  sg.addColorStop(1,`rgb(${r1},${g1},${b1})`);
+  ctx.fillStyle = sg;
+  ctx.fillRect(0,0,W,groundY);
+
+  // Stars (appear in space)
+  const starA = Math.min(1, Math.max(0,(altM-30000)/70000));
+  if(starA > 0){
+    ctx.save(); ctx.globalAlpha = starA;
+    for(let i=0;i<200;i++){
+      const sx=(i*137.5+50)%W, sy=(i*97.3+10)%(groundY*.9);
+      const f=0.5+0.5*Math.sin(Date.now()*.001+i);
+      ctx.fillStyle=`rgba(255,255,255,${f*(0.4+(i%3)*.25)})`;
+      ctx.beginPath(); ctx.arc(sx,sy,0.4+(i%4)*.35,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Clouds
+  const cloudA = Math.min(Math.max(0,(altM-1500)/500), Math.max(0,1-(altM-12000)/3000));
+  if(cloudA > 0){
+    ctx.save(); ctx.globalAlpha = cloudA * 0.88;
+    cloudT += 0.00015;
+    const cdefs=[{x:.07,y:.26,s:90},{x:.3,y:.36,s:110},{x:.56,y:.2,s:75},{x:.76,y:.3,s:92},{x:.48,y:.44,s:65}];
+    for(const c of cdefs){
+      const cx2=((c.x+cloudT*.05)%1.15)*W, cy2=c.y*groundY;
+      // Cloud shadow
+      ctx.fillStyle='rgba(150,160,180,.3)';
+      ctx.beginPath(); ctx.ellipse(cx2,cy2+c.s*.18,c.s*.7,c.s*.16,0,0,Math.PI*2); ctx.fill();
+      // Cloud body
+      ctx.fillStyle='rgba(255,255,255,.96)';
+      ctx.beginPath();
+      ctx.arc(cx2,cy2,c.s*.38,0,Math.PI*2);
+      ctx.arc(cx2+c.s*.36,cy2-c.s*.1,c.s*.3,0,Math.PI*2);
+      ctx.arc(cx2-c.s*.3,cy2+c.s*.06,c.s*.25,0,Math.PI*2);
+      ctx.arc(cx2+c.s*.12,cy2-c.s*.26,c.s*.22,0,Math.PI*2);
+      ctx.fill();
+      // Highlight
+      ctx.fillStyle='rgba(255,255,255,.45)';
+      ctx.beginPath(); ctx.ellipse(cx2-c.s*.12,cy2-c.s*.16,c.s*.14,c.s*.07,-.3,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// ── ASPHALT GROUND ──
+function drawGround(altM){
+  const a = Math.max(0, 1 - altM/300);
+  // Asphalt
+  const ag = ctx.createLinearGradient(0,groundY,0,H);
+  ag.addColorStop(0,'#1c1c1c'); ag.addColorStop(.25,'#242424'); ag.addColorStop(1,'#111');
+  ctx.fillStyle=ag; ctx.fillRect(0,groundY,W,H-groundY);
+
+  if(a > 0){
+    ctx.save(); ctx.globalAlpha=a;
+    // Perspective grid
+    const vx=W/2;
+    ctx.strokeStyle='rgba(255,255,255,.038)'; ctx.lineWidth=1;
+    for(let i=-9;i<=9;i++){ctx.beginPath();ctx.moveTo(vx,groundY);ctx.lineTo(vx+i*220,H);ctx.stroke();}
+    for(let d=.04;d<1;d+=.11){const gy2=groundY+(H-groundY)*d;ctx.beginPath();ctx.moveTo(0,gy2);ctx.lineTo(W,gy2);ctx.stroke();}
+    // Asphalt texture
+    ctx.fillStyle='rgba(255,255,255,.016)';
+    for(let i=0;i<140;i++){ctx.beginPath();ctx.arc((i*137.5)%W,groundY+((i*97.3)%(H-groundY)),1,0,Math.PI*2);ctx.fill();}
+    // Road markings
+    ctx.strokeStyle='rgba(255,255,255,.09)'; ctx.lineWidth=2; ctx.setLineDash([22,32]);
+    ctx.beginPath();ctx.moveTo(W/2-85,groundY);ctx.lineTo(W/2-210,H);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(W/2+85,groundY);ctx.lineTo(W/2+210,H);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+}
+
+// ── MONEY STACK (2.5D detailed) ──
+function drawStack(bills){
+  if(bills <= 0) return;
+  const stackCX = W/2;
+  const maxH = H * 0.38; // max 38% of screen
+  const billT = 0.5; // visual pixel per bill
+  const rawH = bills * billT;
+  const stackH = Math.min(rawH, maxH);
+  const top = groundY - stackH;
+  const sw = 110; // stack width
+  const depth = 20; // 3D depth
+
+  // Stack shadow on ground
+  ctx.save();
+  const sg2=ctx.createRadialGradient(stackCX+depth*.4,groundY+4,0,stackCX+depth*.4,groundY+4,sw*.7);
+  sg2.addColorStop(0,'rgba(0,0,0,.55)'); sg2.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=sg2; ctx.beginPath(); ctx.ellipse(stackCX+depth*.4,groundY+4,sw*.7,10,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // Right face
+  const rf=ctx.createLinearGradient(stackCX+sw/2,top,stackCX+sw/2+depth,top-depth*.5);
+  rf.addColorStop(0,'#14532d'); rf.addColorStop(1,'#052e16');
+  ctx.fillStyle=rf;
+  ctx.beginPath();
+  ctx.moveTo(stackCX+sw/2,top); ctx.lineTo(stackCX+sw/2+depth,top-depth*.5);
+  ctx.lineTo(stackCX+sw/2+depth,groundY-depth*.5); ctx.lineTo(stackCX+sw/2,groundY); ctx.fill();
+
+  // Front face
+  const ff=ctx.createLinearGradient(stackCX-sw/2,top,stackCX+sw/2,groundY);
+  ff.addColorStop(0,'#166534'); ff.addColorStop(.3,'#22c55e'); ff.addColorStop(.7,'#16a34a'); ff.addColorStop(1,'#14532d');
+  ctx.fillStyle=ff; ctx.fillRect(stackCX-sw/2,top,sw,stackH);
+
+  // Bill lines on front
+  const lineEvery = Math.max(1, Math.floor(stackH/Math.min(100,bills)));
+  ctx.strokeStyle='rgba(0,60,20,.22)'; ctx.lineWidth=.5;
+  for(let y=groundY;y>top;y-=lineEvery){ctx.beginPath();ctx.moveTo(stackCX-sw/2,y);ctx.lineTo(stackCX+sw/2,y);ctx.stroke();}
+
+  // $1 watermark
+  if(stackH>20){
+    ctx.fillStyle='rgba(255,255,255,.1)';
+    ctx.font=`bold ${Math.min(40,stackH*.28)}px serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('$1',stackCX,top+stackH*.52);
+    ctx.strokeStyle='rgba(0,80,20,.15)'; ctx.lineWidth=1;
+    ctx.strokeRect(stackCX-sw/2+3,top+3,sw-6,stackH-6);
+  }
+
+  // Top face
+  const tf=ctx.createLinearGradient(stackCX-sw/2,top,stackCX+sw/2+depth,top-depth*.5);
+  tf.addColorStop(0,'#4ade80'); tf.addColorStop(.5,'#86efac'); tf.addColorStop(1,'#22c55e');
+  ctx.fillStyle=tf;
+  ctx.beginPath();
+  ctx.moveTo(stackCX-sw/2,top); ctx.lineTo(stackCX+sw/2,top);
+  ctx.lineTo(stackCX+sw/2+depth,top-depth*.5); ctx.lineTo(stackCX-sw/2+depth,top-depth*.5); ctx.closePath(); ctx.fill();
+
+  // Top face bill lines
+  ctx.strokeStyle='rgba(0,80,30,.15)'; ctx.lineWidth=.4;
+  for(let x=stackCX-sw/2+8;x<stackCX+sw/2-4;x+=10){
+    ctx.beginPath();ctx.moveTo(x,top-1);ctx.lineTo(x+depth*.85,top-depth*.42-1);ctx.stroke();
+  }
+
+  // Glow
+  ctx.save(); ctx.shadowColor='#22c55e'; ctx.shadowBlur=14;
+  ctx.strokeStyle='rgba(34,197,94,.28)'; ctx.lineWidth=1;
+  ctx.strokeRect(stackCX-sw/2,top,sw,stackH); ctx.restore();
+
+  // Height label left of stack
+  ctx.save();
+  ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=1; ctx.setLineDash([2,6]);
+  ctx.beginPath();ctx.moveTo(stackCX-sw/2-28,top);ctx.lineTo(stackCX-sw/2-10,top);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(stackCX-sw/2-28,groundY);ctx.lineTo(stackCX-sw/2-10,groundY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(stackCX-sw/2-22,top);ctx.lineTo(stackCX-sw/2-22,groundY);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,.38)'; ctx.font='9px DM Mono,monospace';
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  ctx.fillText(formatAlt(bills*BILL_M),stackCX-sw/2-30,top+stackH*.5);
+  ctx.restore();
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+
+  return {top, stackCX, sw, depth};
+}
+
+// ── OBJECTS (emoji, spread across field) ──
+function drawObjects(bills){
+  if(bills <= 0) return;
+  const altM = bills * BILL_M;
+  const maxStackPx = H * 0.38;
+  const pxPerM = maxStackPx / Math.max(altM, BILL_M);
+  const stackCX = W/2;
+  const stackHW = 68; // half-width of stack
+  const avoidL = stackCX - stackHW - 18;
+  const avoidR = stackCX + stackHW + 18;
+  const leftW = Math.max(avoidL - 10, 10);
+  const rightW = Math.max(W - avoidR - 10, 10);
+  const totalW = leftW + rightW;
+
+  // Gather visible objects
+  const vis = [];
+  for(let i=0;i<OBJECTS.length;i++){
+    const obj=OBJECTS[i];
+    const ph = obj.m * pxPerM;
+    if(ph < 3) continue;
+    const ratio = obj.m / altM;
+    if(ratio > 4) break;
+    if(ratio < 0.002) continue;
+    // Smooth fade: full opacity at ratio=0.5..2, fades at edges
+    const opIn  = Math.min(1,(ratio-0.002)/0.04);
+    const opOut = Math.min(1,(4-ratio)/1.5);
+    const opacity = opIn * opOut;
+    if(opacity < 0.04) continue;
+    vis.push({obj,ph,ratio,opacity});
+  }
+
+  const n = vis.length;
+  for(let k=0;k<n;k++){
+    const {obj,ph,opacity} = vis[k];
+
+    // X position spread across left+right zones
+    const frac = n<=1 ? 0.5 : k/(n-1);
+    const lf = totalW > 0 ? leftW/totalW : 0.5;
+    let cx2;
+    const pad = 28;
+    if(frac <= lf && leftW > pad*2){
+      const f = lf>0 ? frac/lf : 0.5;
+      cx2 = pad + f*(leftW-pad*2);
+    } else {
+      const f = lf<1 ? (frac-lf)/(1-lf) : 0.5;
+      cx2 = avoidR+18 + pad + f*(rightW-pad*2);
+    }
+    // Small stagger for depth
+    cx2 += (k%5-2)*7;
+    cx2 = Math.max(pad, Math.min(W-pad, cx2));
+
+    const clampH = Math.min(ph, H*0.82);
+    const topY = groundY - clampH;
+
+    ctx.save();
+    ctx.globalAlpha = opacity;
+
+    // Ground shadow
+    const shRX = clampH*0.28, shRY = Math.max(3,clampH*0.036);
+    const shG=ctx.createRadialGradient(cx2,groundY,0,cx2,groundY,shRX);
+    shG.addColorStop(0,'rgba(0,0,0,.45)'); shG.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=shG;
+    ctx.beginPath(); ctx.ellipse(cx2,groundY+shRY*.5,shRX,shRY,0,0,Math.PI*2); ctx.fill();
+
+    // Emoji — rendered at high quality
+    const fontSize = Math.min(clampH, 600);
+    ctx.font = `${fontSize}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+
+    // Subtle drop shadow via shadowBlur
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = Math.min(fontSize*0.08, 30);
+    ctx.shadowOffsetX = fontSize*0.03;
+    ctx.shadowOffsetY = fontSize*0.04;
+    ctx.fillText(obj.emoji, cx2, groundY);
+    ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
+
+    // Label pill
+    if(clampH > 14){
+      const lblSz = Math.min(13, Math.max(8, 8+clampH*0.08));
+      ctx.font = `600 ${lblSz}px DM Sans,sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='top';
+      const tw = ctx.measureText(obj.label).width;
+      const pad2=6, ph2=lblSz+pad2;
+      ctx.fillStyle='rgba(0,0,0,.52)';
+      ctx.beginPath(); ctx.roundRect(cx2-tw/2-pad2,groundY+4,tw+pad2*2,ph2,ph2/2); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.fillText(obj.label,cx2,groundY+4+pad2/2);
+      if(clampH>28){
+        const hsz=Math.max(7,lblSz-3);
+        ctx.font=`${hsz}px DM Mono,monospace`;
+        ctx.fillStyle='rgba(255,255,255,.45)';
+        ctx.fillText(formatAlt(obj.m),cx2,groundY+4+ph2+3);
+      }
+    }
+
+    ctx.restore();
+  }
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+}
+
+// ── HUD ──
+let bannerTO=null;
+function showBanner(obj){
+  document.getElementById('mse').textContent=obj.emoji;
+  document.getElementById('msn').textContent=obj.label;
+  document.getElementById('mss').textContent=`${formatAlt(obj.m)} hoog · ${formatNum(Math.round(obj.m/BILL_M))} klikken`;
+  const el=document.getElementById('msb'); el.classList.add('show');
+  if(bannerTO)clearTimeout(bannerTO);
+  bannerTO=setTimeout(()=>el.classList.remove('show'),3500);
+}
+function updateHUD(){
+  const altM=displayBills*BILL_M;
+  const ae=document.getElementById('alt'),ue=document.getElementById('unit');
+  if(altM>=1000){ae.textContent=(altM/1000).toFixed(4);ue.textContent='kilometer';}
+  else if(altM>=1){ae.textContent=altM.toFixed(4);ue.textContent='meter';}
+  else if(altM>=.01){ae.textContent=(altM*100).toFixed(3);ue.textContent='centimeter';}
+  else{ae.textContent=(altM*1000).toFixed(3);ue.textContent='millimeter';}
+  let next=null;for(const o of OBJECTS)if(o.m>altM){next=o;break;}
+  document.getElementById('nxt').textContent=next?`${next.emoji} ${next.label} — nog ${formatNum(Math.ceil((next.m-altM)/BILL_M))} klikken`:'🚀 Voorbij alle mijlpalen!';
+  document.getElementById('bnum').textContent=formatNum(totalBills);
+  for(const obj of OBJECTS)if(obj.m>0&&altM>=obj.m&&!shownMS.has(obj.m)){shownMS.add(obj.m);localStorage.setItem('md5_m',JSON.stringify([...shownMS]));showBanner(obj);}
+}
+function updateScoreboard(){
+  scores[myName]=myClicks;localStorage.setItem('md5_s',JSON.stringify(scores));
+  const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const list=document.getElementById('sl');list.innerHTML='';
+  for(const[name,clicks]of sorted){const row=document.createElement('div');row.className='sr'+(name===myName?' me':'');row.innerHTML=`<span class="sn">${name}</span><span class="sv">${formatNum(clicks)}</span>`;list.appendChild(row);}
+}
+
+// ── CLICK ──
+function doClick(){
+  myClicks++;
+  localStorage.setItem('md5_c',myClicks);
+  spawnBill();
+  pushClick(); // Firebase verhoogt totalBills, listener vangt het op
+  updateScoreboard();
+}
+document.getElementById('cbtn').addEventListener('click',doClick);
+function spawnBill(){
+  const btn=document.getElementById('cbtn'),r=btn.getBoundingClientRect();
+  const el=document.createElement('div');el.className='fb';el.textContent='💵';
+  el.style.left=(r.left+r.width/2-10+(Math.random()-.5)*22)+'px';
+  el.style.top=(r.top-8)+'px';document.body.appendChild(el);setTimeout(()=>el.remove(),850);
+}
+
+// ── NAME ──
+const ni=document.getElementById('ni');ni.value=myName;
+ni.addEventListener('change',()=>{const v=ni.value.trim();if(!v)return;if(scores[myName]){scores[v]=(scores[v]||0)+scores[myName];delete scores[myName];}myName=v;localStorage.setItem('md5_n',myName);updateScoreboard();});
+
+// ── FIREBASE MULTIPLAYER ──
+// Firebase Realtime Database houdt de teller bij voor iedereen.
+// PeerJS wordt niet meer gebruikt — Firebase doet alles.
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+  authDomain: "money-digger-9b05e.firebaseapp.com",
+  databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "money-digger-9b05e",
+  storageBucket: "money-digger-9b05e.firebasestorage.app",
+  messagingSenderId: "883506536944",
+  appId: "1:883506536944:web:921b342dff76154fcbbd35"
+};
+
+// Firebase laden via CDN
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const billsRef = db.ref('totalBills');
+const scoresRef = db.ref('scores');
+const onlineRef = db.ref('online');
+const myOnlineRef = onlineRef.push();
+
+// Online aanwezigheid bijhouden
+myOnlineRef.set(true);
+myOnlineRef.onDisconnect().remove();
+
+// Tel online gebruikers
+onlineRef.on('value', snap => {
+  const n = snap.numChildren();
+  document.getElementById('online').textContent = `● ${n} online`;
+});
+
+// Luister naar de globale teller — Firebase is altijd de waarheid
+billsRef.on('value', snap => {
+  const val = snap.val() || 0;
+  // Altijd Firebase waarde nemen, ook als lokaal hoger is
+  totalBills = val;
+  displayBills = displayBills > 0 ? displayBills : val; // smooth animatie bewaren
+  localStorage.setItem('md5_b', totalBills);
+});
+
+// Luister naar scores
+scoresRef.on('value', snap => {
+  const val = snap.val() || {};
+  for(const [n,c] of Object.entries(val)){
+    if(n !== myName) scores[n] = Math.max(scores[n]||0, c);
+  }
+  updateScoreboard();
+});
+
+// Klik naar Firebase sturen
+function pushClick(){
+  // Atomisch optellen met transaction (voorkomt conflicten)
+  billsRef.transaction(current => (current || 0) + 1);
+  // Score updaten
+  scoresRef.child(myName.replace(/[.#$\[\]]/g,'_')).transaction(c => (c||0)+1);
+}
+
+function setOnline(n){ /* handled by Firebase */ }
+
+// ── RENDER LOOP ──
+function loop(){
+  requestAnimationFrame(loop);
+  displayBills += (totalBills-displayBills)*.1;
+  const altM = displayBills * BILL_M;
+  ctx.clearRect(0,0,W,H);
+  drawSky(altM);
+  drawGround(altM);
+  drawObjects(Math.round(displayBills));
+  drawStack(displayBills);
+  updateHUD();
+}
+
+updateHUD(); updateScoreboard();
+
+loop();
+</script>
+</body>
+</html>
