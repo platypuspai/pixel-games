@@ -4,18 +4,63 @@
     <meta charset="UTF-8">
     <title>Pixel-games</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: #111; color: white; text-align: center; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #111; 
+            color: white; 
+            text-align: center; 
+            margin: 0; 
+            padding: 0; 
+        }
+
         h1 { margin-top: 50px; margin-bottom: 30px; font-size: 2.5rem; }
-        .game { border: 1px solid #333; padding: 20px; margin: 20px auto; max-width: 500px; border-radius: 10px; background: #1a1a1a; transition: transform 0.2s; }
+
+        .game { 
+            border: 1px solid #333; 
+            padding: 20px; 
+            margin: 20px auto; 
+            max-width: 500px; 
+            border-radius: 10px; 
+            background: #1a1a1a; 
+            transition: transform 0.2s; 
+        }
         .game:hover { transform: scale(1.02); }
+
+        h2 { margin-top: 0; color: #eee; }
+
         a { display: inline-block; margin: 10px; padding: 10px 20px; text-decoration: none; color: white; border-radius: 5px; font-weight: bold; }
         .play { background: #22c55e; }
         .chrome { background: #3b82f6; }
 
-        /* Login Rechtsboven */
-        .login-container { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 12px; z-index: 100; }
-        #user-info { font-weight: 500; color: rgba(255,255,255,0.8); font-size: 14px; }
-        #auth-btn { background: #4285F4; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s; }
+        /* --- LOGIN SECTIE RECHTSBOVEN --- */
+        .login-container { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            z-index: 100; 
+        }
+        
+        #user-info { 
+            font-weight: 500; 
+            color: rgba(255,255,255,0.8); 
+            font-size: 14px; 
+        }
+
+        #auth-btn { 
+            background: #4285F4; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 14px; 
+            transition: all 0.2s; 
+        }
+        #auth-btn:hover { filter: brightness(1.1); }
         #auth-btn.logout { background: #ef4444; }
     </style>
 </head>
@@ -35,7 +80,24 @@
 </div>
 
 <div class="game">
-    <h2>money digger</h2>
+    <h2>Mini Browser Platformer</h2>
+    <a class="play" href="mini-browser-platformer.html">Play</a>
+    <a class="chrome" href="https://chromewebstore.google.com/detail/nhgibefomkakkimjgfddgjafdjkjfekd?utm_source=item-share-cb">Extension</a>
+</div>
+
+<div class="game">
+    <h2>One Square</h2>
+    <a class="play" href="one-square.html">Play</a>
+    <a class="chrome" href="https://chromewebstore.google.com/detail/foelbpdicaedppibpblliahmdceaocjc?utm_source=item-share-cb">Extension</a>
+</div>
+
+<div class="game">
+    <h2>Dodging arena</h2>
+    <a class="play" href="dodging arena.html">Play</a>
+</div>
+
+<div class="game">
+    <h2>Money Digger</h2>
     <a class="play" href="money-digger v10.html">Play</a>
 </div>
 
@@ -50,12 +112,16 @@
 
     const auth = firebase.auth();
     const provider = new firebase.auth.GoogleAuthProvider();
+
     const authBtn = document.getElementById('auth-btn');
     const userInfo = document.getElementById('user-info');
 
     authBtn.addEventListener('click', () => {
-        if(auth.currentUser) auth.signOut();
-        else auth.signInWithPopup(provider).catch(err => console.log(err.message));
+        if(auth.currentUser) {
+            auth.signOut();
+        } else {
+            auth.signInWithPopup(provider).catch(err => console.log(err.message));
+        }
     });
 
     auth.onAuthStateChanged(user => {
@@ -70,5 +136,6 @@
         }
     });
 </script>
+
 </body>
 </html>
