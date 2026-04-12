@@ -1,132 +1,363 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Money Digger v10</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #111;
-            color: white;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-        }
+<meta charset="UTF-8">
+<title>Money Digger</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=DM+Mono&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-serif; background-color: #111;}
+#c{display:block;width:100%;height:100%}
+#ui{position:fixed;inset:0;pointer-events:none;z-index:10}
+#hud{position:absolute;top:20px;left:20px}
+#alt{font-size:2.4rem;font-weight:700;color:#fff;line-height:1;text-shadow:0 2px 24px rgba(0,0,0,.7);letter-spacing:-1px}
+#unit{font-size:.88rem;font-weight:300;color:rgba(255,255,255,.6);margin-top:2px}
+#nxt{margin-top:8px;font-size:.66rem;color:rgba(255,255,255,.42);max-width:240px;line-height:1.5}
+#sb{position:absolute;top:20px;right:20px;background:rgba(0,0,0,.5);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 14px;min-width:135px}
+#sb h3{font-size:.52rem;font-weight:500;color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
+.sr{display:flex;justify-content:space-between;gap:10px;font-size:.6rem;color:rgba(255,255,255,.5);padding:2px 0}
+.sr.me{color:#22c55e}
+.sn{max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv{font-family:'DM Mono',monospace;font-size:.56rem}
+#bctr{position:absolute;bottom:110px;right:28px;text-align:right}
+#bnum{font-size:1.2rem;font-weight:700;color:#22c55e;font-family:'DM Mono',monospace;text-shadow:0 2px 12px rgba(34,197,94,.4)}
+#blbl{font-size:.56rem;color:rgba(255,255,255,.3);margin-top:2px}
+#cbtn{position:fixed;bottom:28px;right:28px;z-index:20;width:72px;height:72px;border-radius:50%;border:none;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;font-size:1.6rem;cursor:pointer;box-shadow:0 4px 20px rgba(34,197,94,.5);display:flex;align-items:center;justify-content:center;animation:pulse 2.5s infinite;transition:transform .08s;pointer-events:all}
+@keyframes pulse{0%,100%{box-shadow:0 4px 20px rgba(34,197,94,.5),0 0 0 0 rgba(34,197,94,.3)}70%{box-shadow:0 4px 20px rgba(34,197,94,.5),0 0 0 16px rgba(34,197,94,0)}}
+#cbtn:active{transform:scale(.88);animation:none}
+#online{position:absolute;bottom:28px;left:20px;font-size:.58rem;color:rgba(255,255,255,.3)}
+#nw{position:absolute;bottom:54px;left:20px;display:flex;align-items:center;gap:5px}
+#nl{font-size:.52rem;color:rgba(255,255,255,.22)}
+#ni { font-family:'DM Sans',sans-serif; font-size:.56rem; padding:3px 7px; background:rgba(255,255,255,0.05); color:rgba(255,255,255,.7); border:1px solid rgba(255,255,255,.08); border-radius:5px; width:100px; pointer-events:all; outline: none; }
+#ni:focus { background: rgba(255,255,255,0.1); border-color: #22c55e; }
 
-        h1 { color: #ffcc00; font-size: 3rem; margin-bottom: 10px; }
-
-        #game-canvas {
-            background: #222;
-            border: 4px solid #444;
-            border-radius: 10px;
-            display: block;
-            margin: 20px auto;
-            max-width: 100%;
-        }
-
-        .stats {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-        }
-
-        .btn {
-            background: #ffcc00;
-            color: #111;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .btn:hover { transform: scale(1.1); }
-
-        /* Login styling indien aanwezig */
-        .login-container { 
-            position: absolute; 
-            top: 20px; 
-            right: 20px; 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-        }
-
-        #auth-btn { 
-            background: #4285F4; 
-            color: white; 
-            border: none; 
-            padding: 8px 16px; 
-            border-radius: 5px; 
-            cursor: pointer; 
-        }
-    </style>
+#msb{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;opacity:0;transition:opacity .5s;pointer-events:none;background:rgba(0,0,0,.6);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:24px 32px}
+#msb.show{opacity:1}
+#mse{font-size:3.5rem}
+#msn{font-size:1.3rem;font-weight:700;color:#fff;margin-top:6px}
+#mss{font-size:.62rem;color:rgba(255,255,255,.5);margin-top:3px}
+.fb{position:fixed;font-size:1.1rem;pointer-events:none;z-index:25;animation:fup .85s ease-out forwards}
+@keyframes fup{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-70px)}}
+</style>
 </head>
 <body>
-
-<div class="login-container">
-    <span id="user-info"></span>
-    <button id="auth-btn">Login</button>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="hud"><div id="alt">0,000</div><div id="unit">millimeter</div><div id="nxt">Laadt...</div></div>
+  <div id="sb"><h3>Top klikkers</h3><div id="sl"></div></div>
+  <div id="bctr"><div id="bnum">0</div><div id="blbl">biljetten gestapeld</div></div>
+  <div id="nw"><span id="nl">naam:</span><input id="ni" type="text" maxlength="16" placeholder="Kies naam..."/></div>
+  <div id="online">● verbinden...</div>
+  <div id="msb"><div id="mse"></div><div id="msn"></div><div id="mss"></div></div>
 </div>
-
-<h1>💰 Money Digger</h1>
-
-<div class="stats">
-    Geld: $<span id="money">0</span>
-</div>
-
-<div id="game-area">
-    <button class="btn" id="dig-button">GRAAF!</button>
-</div>
-
-<canvas id="game-canvas" width="600" height="400"></canvas>
+<button id="cbtn">💵</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script>
-    // Firebase Configuratie (Hetzelfde als je index.html)
+function safeGetLS(key, def) { try { return localStorage.getItem(key) || def; } catch(e) { return def; } }
+function safeSetLS(key, val) { try { localStorage.setItem(key, val); } catch(e) {} }
+
+const BILL_M = 0.0001; 
+const OBJECTS = [
+  {m:0.001,   label:'Mier', emoji:'🐜'},
+  {m:0.015,   label:'Druif', emoji:'🍇'},
+  {m:0.040,   label:'Aardbei', emoji:'🍓'},
+  {m:0.070,   label:'Muis', emoji:'🐭'},
+  {m:0.112,   label:'Appel', emoji:'🍎'},
+  {m:0.240,   label:'Basketbal', emoji:'🏀'},
+  {m:0.300,   label:'Tulp', emoji:'🌷'},
+  {m:0.450,   label:'Zonnebloem', emoji:'🌻'},
+  {m:0.600,   label:'Kat', emoji:'🐱'},
+  {m:0.900,   label:'Hond', emoji:'🐕'},
+  {m:1.750,   label:'Mens', emoji:'🧍'},
+  {m:2.400,   label:'Paard', emoji:'🐴'},
+  {m:4.000,   label:'Olifant', emoji:'🐘'},
+  {m:5.500,   label:'Giraf', emoji:'🦒'},
+  {m:7.000,   label:'Jonge boom', emoji:'🌲'},
+  {m:8.500,   label:'Huis', emoji:'🏠'},
+  {m:15.00,   label:'Grote eik', emoji:'🌳'},
+  {m:25.00,   label:'Sequoia', emoji:'🌲'},
+  {m:46.00,   label:'Toren van Pisa', emoji:'🗼'},
+  {m:93.00,   label:'Vrijheidsbeeld', emoji:'🗽'},
+  {m:115.0,   label:'Reuzensequoia', emoji:'🌲'},
+  {m:169.0,   label:'Washington Monument', emoji:'🏛️'},
+  {m:324.0,   label:'Eiffeltoren', emoji:'🗼'},
+  {m:443.0,   label:'Empire State Building', emoji:'🏙️'},
+  {m:600.0,   label:'Pterodactylus', emoji:'🦕'},
+  {m:828.0,   label:'Burj Khalifa', emoji:'🏙️'},
+  {m:1000,    label:'1 kilometer!', emoji:'🎊'},
+  {m:1100,    label:'Luchtballon', emoji:'🎈'},
+  {m:1178,    label:'Jeddah Tower', emoji:'🏗️'},
+  {m:1200,    label:'Monarchvlinder', emoji:'🦋'},
+  {m:1345,    label:'Ben Nevis', emoji:'⛰️'},
+  {m:1620,    label:'5× de Eiffeltoren', emoji:'🗼'},
+  {m:1909,    label:'Mont Ventoux', emoji:'🚴'},
+  {m:2250,    label:'Mil V-12 helikopter', emoji:'🚁'},
+  {m:3776,    label:'Mount Fuji', emoji:'🗻'},
+  {m:4800,    label:'1 uur wandelen omhoog', emoji:'🥾'},
+  {m:5500,    label:'Zuurstof gedaald tot 50%', emoji:'😮‍💨'},
+  {m:5850,    label:'65 voetbalvelden op elkaar', emoji:'⚽'},
+  {m:7000,    label:'Death zone', emoji:'💀'},
+  {m:8849,    label:'Mount Everest', emoji:'🏔️'},
+  {m:10000,   label:'Verloren ballon knapt!', emoji:'🎈'},
+  {m:26000,   label:'SR-71 Blackbird', emoji:'✈️'},
+  {m:38969,   label:'Felix Baumgartner', emoji:'🪂'},
+  {m:100000,  label:'Kármánlijn (Ruimte)', emoji:'🌌'},
+  {m:408000,  label:'ISS Ruimtestation', emoji:'🛸'},
+  {m:384400000, label:'De Maan', emoji:'🌕'},
+  {m:149600000000, label:'De Zon', emoji:'☀️'}
+];
+
+let totalBills = 0, displayBills = 0, cloudT = 0;
+let localDeviceId = safeGetLS('md6_did', '');
+if(!localDeviceId){ localDeviceId = 'dev-'+Math.random().toString(36).slice(2,12); safeSetLS('md6_did',localDeviceId); }
+let deviceId = localDeviceId; 
+let myName   = safeGetLS('md6_n', 'Gast'+Math.floor(Math.random()*9000+1000));
+let myClicks = 0, scores = {};
+let shownMS = new Set();
+try { shownMS = new Set(JSON.parse(safeGetLS('md6_m', '[]'))); } catch(e){}
+
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+let W = 0, H = 0, GY = 0;
+function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; GY = Math.round(H * 0.72); }
+resize(); window.addEventListener('resize', resize);
+
+function fmtN(n){
+  if(n>=1e15) return(n/1e15).toFixed(2)+'P'; if(n>=1e12) return(n/1e12).toFixed(2)+'T';
+  if(n>=1e9)  return(n/1e9).toFixed(2)+'B';  if(n>=1e6)  return(n/1e6).toFixed(2)+'M';
+  if(n>=1e3)  return(n/1e3).toFixed(1)+'K';  return n.toLocaleString('nl-NL');
+}
+function fmtH(m){
+  if(m>=1e12) return(m/1e12).toFixed(3)+' Tm'; if(m>=1e9) return(m/1e9).toFixed(3)+' Gm';
+  if(m>=1e6)  return(m/1e6).toFixed(3)+' Mm';  if(m>=1000) return(m/1000).toFixed(3)+' km';
+  if(m>=1)    return m.toFixed(3)+' m';        if(m>=0.01) return(m*100).toFixed(2)+' cm';
+  return(m*1000).toFixed(2)+' mm';
+}
+
+function drawSky(altM){
+  const t = Math.min(1, altM/100000);
+  const r0=Math.round(20*(1-t)), g0=Math.round(42*(1-t)), b0=Math.round(58*(1-t));
+  const r1=Math.round(135*(1-t)+2*t), g1=Math.round(186*(1-t)+5*t), b1=Math.round(235*(1-t)+18*t);
+  const sg = ctx.createLinearGradient(0,0,0,GY);
+  sg.addColorStop(0, `rgb(${r0},${g0},b0)`); sg.addColorStop(1, `rgb(${r1},${g1},${b1})`);
+  ctx.fillStyle = sg; ctx.fillRect(0,0,W,GY);
+  const sa = Math.min(1, Math.max(0,(altM-30000)/70000));
+  if(sa>0){
+    ctx.save(); ctx.globalAlpha=sa;
+    for(let i=0;i<200;i++){
+      const f=0.5+0.5*Math.sin(Date.now()*.001+i); ctx.fillStyle=`rgba(255,255,255,${f*(0.3+(i%3)*.25)})`;
+      ctx.beginPath(); ctx.arc((i*137.5+50)%W,(i*97.3+10)%(GY*.9),0.4+(i%4)*.35,0,Math.PI*2); ctx.fill();
+    } ctx.restore();
+  }
+  const ca = Math.min(Math.max(0,(altM-1500)/500), Math.max(0,1-(altM-12000)/3000));
+  if(ca>0){
+    ctx.save(); ctx.globalAlpha=ca*.88; cloudT+=0.00015;
+    const cd=[{x:.07,y:.26,s:90},{x:.3,y:.36,s:110},{x:.56,y:.2,s:75},{x:.76,y:.3,s:92},{x:.48,y:.44,s:65}];
+    for(const c of cd){
+      const cx=((c.x+cloudT*.05)%1.15)*W, cy=c.y*GY;
+      ctx.fillStyle='rgba(150,160,180,.3)'; ctx.beginPath(); ctx.ellipse(cx,cy+c.s*.18,c.s*.7,c.s*.16,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.96)'; ctx.beginPath();
+      ctx.arc(cx,cy,c.s*.38,0,Math.PI*2); ctx.arc(cx+c.s*.36,cy-c.s*.1,c.s*.3,0,Math.PI*2); ctx.arc(cx-c.s*.3,cy+c.s*.06,c.s*.25,0,Math.PI*2); ctx.fill();
+    } ctx.restore();
+  }
+}
+function drawGround(altM){
+  const ag=ctx.createLinearGradient(0,GY,0,H);
+  ag.addColorStop(0,'#1c1c1c'); ag.addColorStop(.3,'#242424'); ag.addColorStop(1,'#111');
+  ctx.fillStyle=ag; ctx.fillRect(0,GY,W,H-GY);
+}
+function drawStack(bills){
+  if(bills<=0) return;
+  const cx=W/2, maxH=H*.38, sh=Math.min(bills*.5,maxH), top=GY-sh, sw=110, depth=20;
+  const shg=ctx.createRadialGradient(cx+depth*.4,GY+4,0,cx+depth*.4,GY+4,sw*.7);
+  shg.addColorStop(0,'rgba(0,0,0,.5)'); shg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=shg; ctx.beginPath(); ctx.ellipse(cx+depth*.4,GY+4,sw*.7,10,0,0,Math.PI*2); ctx.fill();
+  const rf=ctx.createLinearGradient(cx+sw/2,top,cx+sw/2+depth,top-depth*.5);
+  rf.addColorStop(0,'#14532d'); rf.addColorStop(1,'#052e16');
+  ctx.fillStyle=rf; ctx.beginPath(); ctx.moveTo(cx+sw/2,top); ctx.lineTo(cx+sw/2+depth,top-depth*.5); ctx.lineTo(cx+sw/2+depth,GY-depth*.5); ctx.lineTo(cx+sw/2,GY); ctx.fill();
+  const ff=ctx.createLinearGradient(cx,top,cx,GY);
+  ff.addColorStop(0,'#166534'); ff.addColorStop(.3,'#22c55e'); ff.addColorStop(.7,'#16a34a'); ff.addColorStop(1,'#14532d');
+  ctx.fillStyle=ff; ctx.fillRect(cx-sw/2,top,sw,sh);
+  const le=Math.max(1,Math.floor(sh/Math.min(100,bills)));
+  ctx.strokeStyle='rgba(0,60,20,.22)'; ctx.lineWidth=.5;
+  for(let y=GY;y>top;y-=le){ ctx.beginPath(); ctx.moveTo(cx-sw/2,y); ctx.lineTo(cx+sw/2,y); ctx.stroke(); }
+  if(sh>20){
+    ctx.fillStyle='rgba(255,255,255,.1)'; ctx.font=`bold ${Math.min(36,sh*.26)}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('$1',cx,top+sh*.52);
+    ctx.strokeStyle='rgba(0,80,20,.15)'; ctx.lineWidth=1; ctx.strokeRect(cx-sw/2+3,top+3,sw-6,sh-6);
+  }
+  const tf=ctx.createLinearGradient(cx-sw/2,top,cx+sw/2+depth,top-depth*.5);
+  tf.addColorStop(0,'#4ade80'); tf.addColorStop(.5,'#86efac'); tf.addColorStop(1,'#22c55e');
+  ctx.fillStyle=tf; ctx.beginPath(); ctx.moveTo(cx-sw/2,top); ctx.lineTo(cx+sw/2,top); ctx.lineTo(cx+sw/2+depth,top-depth*.5); ctx.lineTo(cx-sw/2+depth,top-depth*.5); ctx.closePath(); ctx.fill();
+  ctx.save(); ctx.shadowColor='#22c55e'; ctx.shadowBlur=14; ctx.strokeStyle='rgba(34,197,94,.28)'; ctx.lineWidth=1; ctx.strokeRect(cx-sw/2,top,sw,sh); ctx.restore();
+  ctx.save(); ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=1; ctx.setLineDash([2,6]); const lx=cx-sw/2-26;
+  ctx.beginPath(); ctx.moveTo(lx,top); ctx.lineTo(cx-sw/2-10,top); ctx.stroke(); ctx.beginPath(); ctx.moveTo(lx,GY); ctx.lineTo(cx-sw/2-10,GY); ctx.stroke(); ctx.beginPath(); ctx.moveTo(lx,top); ctx.lineTo(lx,GY); ctx.stroke();
+  ctx.setLineDash([]); ctx.fillStyle='rgba(255,255,255,.4)'; ctx.font='9px DM Mono,monospace'; ctx.textAlign='right'; ctx.textBaseline='middle'; ctx.fillText(fmtH(bills*BILL_M),lx-4,top+sh*.5); ctx.restore(); ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+}
+
+function drawObjects(bills){
+  if(bills<=0) return;
+  const altM=bills*BILL_M, maxH=H*.38, pxPerM=maxH/Math.max(altM,BILL_M), stackCX=W/2, stackSW=110, stackDepth=20;
+  const stackR=stackCX+stackSW/2+stackDepth+14, stackL=stackCX-stackSW/2-14, stackPx=Math.min(bills*.5,maxH), MIN_PX=Math.max(15,stackPx*.25);  
+  const vis=[];
+  for(let i=0;i<OBJECTS.length;i++){
+    const obj=OBJECTS[i], ph=obj.m*pxPerM, ratio=obj.m/altM;
+    if(ratio>8) break; if(ratio<0.0001) continue; 
+    const drawH=Math.min(ph,H*0.9); if(drawH<MIN_PX) continue; 
+    const opIn=Math.min(1,(ratio-0.0005)/0.03), opOut=Math.min(1,(8-ratio)/3), opacity=opIn*opOut, emojiW=Math.max(drawH*.65,30); 
+    vis.push({obj,drawH,emojiW,ratio,opacity});
+  }
+  if(!vis.length) return;
+  const smaller=vis.filter(v=>v.ratio<=1).sort((a,b)=>b.ratio-a.ratio), bigger=vis.filter(v=>v.ratio>1).sort((a,b)=>a.ratio-b.ratio);  
+  let gapL=16; 
+  if(smaller.length>0){ const totW=smaller.reduce((sum,v)=>sum+v.emojiW,0); if(totW+smaller.length*16<stackL) gapL=(stackL-totW)/smaller.length; }
+  let curX=stackL;
+  for(const v of smaller){ curX-=gapL/2; const cx2=curX-v.emojiW/2; if(cx2+v.emojiW/2<0) break; drawOneObject(v,cx2); curX-=v.emojiW; curX-=gapL/2; }
+  const rightAvail=W-stackR; let gapR=16;
+  if(bigger.length>0){ const totW=bigger.reduce((sum,v)=>sum+v.emojiW,0); if(totW+bigger.length*16<rightAvail) gapR=(rightAvail-totW)/bigger.length; }
+  curX=stackR;
+  for(const v of bigger){ curX+=gapR/2; const cx2=curX+v.emojiW/2; if(cx2-v.emojiW/2>W) break; drawOneObject(v,cx2); curX+=v.emojiW; curX+=gapR/2; }
+}
+
+function drawOneObject(v,cx2){
+  const {obj,drawH,opacity}=v; ctx.save(); ctx.globalAlpha=Math.max(0.04,opacity);
+  const shRX=drawH*.28, shRY=Math.max(3,drawH*.036), shg=ctx.createRadialGradient(cx2,GY,0,cx2,GY,shRX);
+  shg.addColorStop(0,'rgba(0,0,0,.4)'); shg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=shg; ctx.beginPath(); ctx.ellipse(cx2,GY+shRY*.4,shRX,shRY,0,0,Math.PI*2); ctx.fill();
+  const fs=Math.min(drawH,500); ctx.font=`${fs}px serif`; ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(obj.emoji,cx2,GY);
+  if(drawH>14){
+    const lblSz=Math.min(13,Math.max(8,8+drawH*.07)); ctx.font=`600 ${lblSz}px DM Sans,sans-serif`; ctx.textAlign='center'; ctx.textBaseline='top';
+    const tw=ctx.measureText(obj.label).width, pad=5, ph2=lblSz+pad;
+    ctx.fillStyle='rgba(0,0,0,.55)';
+    if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(cx2-tw/2-pad,GY+4,tw+pad*2,ph2,ph2/2); ctx.fill(); }
+    else{ ctx.fillRect(cx2-tw/2-pad,GY+4,tw+pad*2,ph2); }
+    ctx.fillStyle='#fff'; ctx.fillText(obj.label,cx2,GY+4+pad/2);
+    ctx.font=`${Math.max(8,lblSz-2)}px DM Mono,monospace`; ctx.fillStyle='rgba(255,255,255,.6)'; ctx.fillText(fmtH(obj.m),cx2,GY+4+ph2+2);
+  } ctx.restore();
+}
+
+let bannerTO=null;
+function showBanner(obj){
+  document.getElementById('mse').textContent=obj.emoji; document.getElementById('msn').textContent=obj.label; document.getElementById('mss').textContent=`${fmtH(obj.m)} hoog · ${fmtN(Math.round(obj.m/BILL_M))} klikken`;
+  const el=document.getElementById('msb'); el.classList.add('show');
+  if(bannerTO) clearTimeout(bannerTO); bannerTO=setTimeout(()=>el.classList.remove('show'),3800);
+}
+
+function updateHUD(){
+  const altM=displayBills*BILL_M, ae=document.getElementById('alt'), ue=document.getElementById('unit');
+  if(altM>=1e9){ae.textContent=(altM/1e9).toFixed(3);ue.textContent='gigameter';} else if(altM>=1e6){ae.textContent=(altM/1e6).toFixed(3);ue.textContent='megameter';} else if(altM>=1000){ae.textContent=(altM/1000).toFixed(4);ue.textContent='kilometer';} else if(altM>=1){ae.textContent=altM.toFixed(4);ue.textContent='meter';} else if(altM>=.01){ae.textContent=(altM*100).toFixed(3);ue.textContent='centimeter';} else{ae.textContent=(altM*1000).toFixed(3);ue.textContent='millimeter';}
+  let next=null; for(const o of OBJECTS) if(o.m>altM){ next=o; break; }
+  document.getElementById('nxt').textContent=next?`${next.emoji} ${next.label} — nog ${fmtN(Math.ceil((next.m-altM)/BILL_M))} klikken`:'🌌 Voorbij alle mijlpalen!';
+  document.getElementById('bnum').textContent=fmtN(Math.round(totalBills));
+  for(const obj of OBJECTS){ if(obj.m>0&&altM>=obj.m&&!shownMS.has(obj.label)){ shownMS.add(obj.label); safeSetLS('md6_m',JSON.stringify([...shownMS])); showBanner(obj); break; } }
+}
+
+function updateScoreboard(){
+  const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,7), list=document.getElementById('sl'); list.innerHTML='';
+  for(const [name,clicks] of sorted){
+    const row=document.createElement('div'); row.className='sr'+(name===myName?' me':''); row.innerHTML=`<span class="sn">${name}</span><span class="sv">${fmtN(clicks)}</span>`; list.appendChild(row);
+  }
+}
+
+function spawnBill(){
+  const btn=document.getElementById('cbtn'), r=btn.getBoundingClientRect(), el=document.createElement('div');
+  el.className='fb'; el.textContent='💵'; el.style.left=(r.left+r.width/2-10+(Math.random()-.5)*22)+'px'; el.style.top=(r.top-8)+'px';
+  document.body.appendChild(el); setTimeout(()=>el.remove(),850);
+}
+
+let billsRef, scoresRef, auth;
+
+try {
+  if (typeof firebase !== 'undefined') {
     firebase.initializeApp({
-        apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
-        authDomain: "money-digger-9b05e.firebaseapp.com",
-        projectId: "money-digger-9b05e",
+      apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+      authDomain: "money-digger-9b05e.firebaseapp.com",
+      databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "money-digger-9b05e",
+      storageBucket: "money-digger-9b05e.firebasestorage.app",
+      messagingSenderId: "883506536944",
+      appId: "1:883506536944:web:921b342dff76154fcbbd35"
     });
-
-    const auth = firebase.auth();
-    const provider = new firebase.auth.GoogleAuthProvider();
-    const authBtn = document.getElementById('auth-btn');
-    const userInfo = document.getElementById('user-info');
-
-    // Auth Logica
-    authBtn.addEventListener('click', () => {
-        if(auth.currentUser) {
-            auth.signOut();
-        } else {
-            auth.signInWithPopup(provider).catch(err => console.log(err.message));
-        }
-    });
+    
+    const db = firebase.database();
+    billsRef = db.ref('totalBills');
+    scoresRef = db.ref('scores');
+    auth = firebase.auth();
+    const ni = document.getElementById('ni');
 
     auth.onAuthStateChanged(user => {
-        if(user) {
-            userInfo.textContent = user.displayName;
-            authBtn.textContent = "Log uit";
-        } else {
-            userInfo.textContent = "";
-            authBtn.textContent = "Login";
-        }
+      if(user) {
+        deviceId = user.uid;
+        scoresRef.child(deviceId).once('value').then(snap => {
+            const data = snap.val();
+            if(data && data.name) {
+                myName = data.name;
+                ni.value = myName;
+            } else {
+                myName = user.displayName || "Speler";
+                ni.value = myName;
+            }
+            if(data && data.clicks) myClicks = data.clicks;
+        });
+      } else {
+        deviceId = localDeviceId;
+        myName = safeGetLS('md6_n', 'Gast'+Math.floor(Math.random()*9000+1000));
+        ni.value = myName;
+      }
     });
 
-    // Game Logica
-    let money = 0;
-    const moneyDisplay = document.getElementById('money');
-    const digButton = document.getElementById('dig-button');
-
-    digButton.addEventListener('click', () => {
-        money += 10;
-        moneyDisplay.textContent = money;
+    ni.addEventListener('change', ()=>{
+      const v = ni.value.trim();
+      if(!v) return;
+      myName = v;
+      safeSetLS('md6_n', myName);
+      try { scoresRef.child(deviceId).update({name: myName}); } catch(e){}
     });
+
+    const onlineRef = db.ref('online'), myRef = onlineRef.push();
+    myRef.set(true); myRef.onDisconnect().remove();
+    onlineRef.on('value', snap => {
+        const count = snap.numChildren();
+        document.getElementById('online').textContent = `● ${count} online`;
+    });
+    billsRef.on('value', snap => totalBills = snap.val() || 0);
+
+    scoresRef.on('value', snap => {
+      scores = {};
+      snap.forEach(child => {
+        const rec = child.val();
+        if(!rec) return;
+        if(typeof rec === 'number'){ scores[child.key] = (scores[child.key] || 0) + rec; return; }
+        const did = child.key, name = rec.name || 'Onbekend', clicks = rec.clicks || 0;
+        if(did === deviceId) myClicks = clicks;
+        scores[name] = (scores[name]||0) + clicks;
+      });
+      updateScoreboard();
+    });
+  } else { throw new Error("Firebase kon niet laden"); }
+} catch(e) { console.warn("Offline:", e); document.getElementById('online').textContent = "● Offline modus"; }
+
+document.getElementById('cbtn').addEventListener('click', ()=>{
+  myClicks++; totalBills++; spawnBill();
+  try {
+    if(billsRef && typeof billsRef.transaction === 'function') {
+      billsRef.transaction(v => (v||0)+1);
+      scoresRef.child(deviceId).transaction(rec => {
+        if(!rec || typeof rec !== 'object') rec = { clicks: 0, name: myName };
+        rec.clicks = (rec.clicks||0) + 1; rec.name = myName; return rec;
+      });
+    } else { scores[myName] = myClicks; updateScoreboard(); }
+  } catch(e) {}
+});
+
+function loop(){
+  requestAnimationFrame(loop);
+  displayBills += (totalBills - displayBills) * 0.1;
+  const b = Math.round(displayBills);
+  ctx.clearRect(0, 0, W, H); drawSky(b * BILL_M); drawGround(b * BILL_M); drawObjects(b); drawStack(displayBills); updateHUD();
+}
+loop(); updateScoreboard();
 </script>
-
 </body>
 </html>
