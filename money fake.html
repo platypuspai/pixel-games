@@ -68,7 +68,6 @@ const firebaseConfig = {
     appId: "1:883506536944:web:921b342dff76154fcbbd35"
 };
 
-// Initialiseer Firebase (Compat mode)
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
@@ -80,61 +79,39 @@ function safeSetLS(key, val) { try { localStorage.setItem(key, val); } catch(e) 
 
 const BILL_M = 0.0001; 
 const OBJECTS = [
-  {m:0.001,   label:'Mier', emoji:'🐜'},
-  {m:0.015,   label:'Druif', emoji:'🍇'},
-  {m:0.040,   label:'Aardbei', emoji:'🍓'},
-  {m:0.070,   label:'Muis', emoji:'🐭'},
-  {m:0.112,   label:'Appel', emoji:'🍎'},
-  {m:0.240,   label:'Basketbal', emoji:'🏀'},
-  {m:0.300,   label:'Tulp', emoji:'🌷'},
-  {m:0.450,   label:'Zonnebloem', emoji:'🌻'},
-  {m:0.600,   label:'Kat', emoji:'🐱'},
-  {m:0.900,   label:'Hond', emoji:'🐕'},
-  {m:1.750,   label:'Mens', emoji:'🧍'},
-  {m:2.400,   label:'Paard', emoji:'🐴'},
-  {m:4.000,   label:'Olifant', emoji:'🐘'},
-  {m:5.500,   label:'Giraf', emoji:'🦒'},
-  {m:7.000,   label:'Jonge boom', emoji:'🌲'},
-  {m:8.500,   label:'Huis', emoji:'🏠'},
-  {m:15.00,   label:'Grote eik', emoji:'🌳'},
-  {m:25.00,   label:'Sequoia', emoji:'🌲'},
-  {m:46.00,   label:'Toren van Pisa', emoji:'🗼'},
-  {m:93.00,   label:'Vrijheidsbeeld', emoji:'🗽'},
-  {m:115.0,   label:'Reuzensequoia', emoji:'🌲'},
-  {m:169.0,   label:'Washington Monument', emoji:'🏛️'},
-  {m:324.0,   label:'Eiffeltoren', emoji:'🗼'},
-  {m:443.0,   label:'Empire State Building', emoji:'🏙️'},
-  {m:600.0,   label:'Pterodactylus', emoji:'🦕'},
-  {m:828.0,   label:'Burj Khalifa', emoji:'🏙️'},
-  {m:1000,    label:'1 kilometer!', emoji:'🎊'},
-  {m:1100,    label:'Luchtballon', emoji:'🎈'},
-  {m:1178,    label:'Jeddah Tower', emoji:'🏗️'},
-  {m:1200,    label:'Monarchvlinder', emoji:'🦋'},
-  {m:1345,    label:'Ben Nevis', emoji:'⛰️'},
-  {m:1620,    label:'5× de Eiffeltoren', emoji:'🗼'},
-  {m:1909,    label:'Mont Ventoux', emoji:'🚴'},
-  {m:2250,    label:'Mil V-12 helikopter', emoji:'🚁'},
-  {m:3776,    label:'Mount Fuji', emoji:'🗻'},
-  {m:4800,    label:'1 uur wandelen omhoog', emoji:'🥾'},
-  {m:5500,    label:'Zuurstof gedaald tot 50%', emoji:'😮‍💨'},
-  {m:5850,    label:'65 voetbalvelden op elkaar', emoji:'⚽'},
-  {m:7000,    label:'Death zone', emoji:'💀'},
-  {m:8849,    label:'Mount Everest', emoji:'🏔️'},
-  {m:10000,   label:'Verloren ballon knapt!', emoji:'🎈'},
-  {m:26000,   label:'SR-71 Blackbird', emoji:'✈️'},
-  {m:38969,   label:'Felix Baumgartner', emoji:'🪂'},
-  {m:100000,  label:'Kármánlijn (Ruimte)', emoji:'🌌'},
-  {m:408000,  label:'ISS Ruimtestation', emoji:'🛸'},
-  {m:384400000, label:'De Maan', emoji:'🌕'},
+  {m:0.001,   label:'Mier', emoji:'🐜'}, {m:0.015,   label:'Druif', emoji:'🍇'},
+  {m:0.040,   label:'Aardbei', emoji:'🍓'}, {m:0.070,   label:'Muis', emoji:'🐭'},
+  {m:0.112,   label:'Appel', emoji:'🍎'}, {m:0.240,   label:'Basketbal', emoji:'🏀'},
+  {m:0.300,   label:'Tulp', emoji:'🌷'}, {m:0.450,   label:'Zonnebloem', emoji:'🌻'},
+  {m:0.600,   label:'Kat', emoji:'🐱'}, {m:0.900,   label:'Hond', emoji:'🐕'},
+  {m:1.750,   label:'Mens', emoji:'🧍'}, {m:2.400,   label:'Paard', emoji:'🐴'},
+  {m:4.000,   label:'Olifant', emoji:'🐘'}, {m:5.500,   label:'Giraf', emoji:'🦒'},
+  {m:7.000,   label:'Jonge boom', emoji:'🌲'}, {m:8.500,   label:'Huis', emoji:'🏠'},
+  {m:15.00,   label:'Grote eik', emoji:'🌳'}, {m:25.00,   label:'Sequoia', emoji:'🌲'},
+  {m:46.00,   label:'Toren van Pisa', emoji:'🗼'}, {m:93.00,   label:'Vrijheidsbeeld', emoji:'🗽'},
+  {m:115.0,   label:'Reuzensequoia', emoji:'🌲'}, {m:169.0,   label:'Washington Monument', emoji:'🏛️'},
+  {m:324.0,   label:'Eiffeltoren', emoji:'🗼'}, {m:443.0,   label:'Empire State Building', emoji:'🏙️'},
+  {m:600.0,   label:'Pterodactylus', emoji:'🦕'}, {m:828.0,   label:'Burj Khalifa', emoji:'🏙️'},
+  {m:1000,    label:'1 kilometer!', emoji:'🎊'}, {m:1100,    label:'Luchtballon', emoji:'🎈'},
+  {m:1178,    label:'Jeddah Tower', emoji:'🏗️'}, {m:1200,    label:'Monarchvlinder', emoji:'🦋'},
+  {m:1345,    label:'Ben Nevis', emoji:'⛰️'}, {m:1620,    label:'5× de Eiffeltoren', emoji:'🗼'},
+  {m:1909,    label:'Mont Ventoux', emoji:'🚴'}, {m:2250,    label:'Mil V-12 helikopter', emoji:'🚁'},
+  {m:3776,    label:'Mount Fuji', emoji:'🗻'}, {m:4800,    label:'1 uur wandelen omhoog', emoji:'🥾'},
+  {m:5500,    label:'Zuurstof gedaald tot 50%', emoji:'😮‍💨'}, {m:5850,    label:'65 voetbalvelden op elkaar', emoji:'⚽'},
+  {m:7000,    label:'Death zone', emoji:'💀'}, {m:8849,    label:'Mount Everest', emoji:'🏔️'},
+  {m:10000,   label:'Verloren ballon knapt!', emoji:'🎈'}, {m:26000,   label:'SR-71 Blackbird', emoji:'✈️'},
+  {m:38969,   label:'Felix Baumgartner', emoji:'🪂'}, {m:100000,  label:'Kármánlijn (Ruimte)', emoji:'🌌'},
+  {m:408000,  label:'ISS Ruimtestation', emoji:'🛸'}, {m:384400000, label:'De Maan', emoji:'🌕'},
   {m:149600000000, label:'De Zon', emoji:'☀️'}
 ];
 
-let totalBills = 0, displayBills = 0;
+let totalBills = 0, displayBills = 0, cloudT = 0;
 let localDeviceId = safeGetLS('md6_did', '');
 if(!localDeviceId){ localDeviceId = 'dev-'+Math.random().toString(36).slice(2,12); safeSetLS('md6_did',localDeviceId); }
 let deviceId = localDeviceId; 
 let myName   = safeGetLS('md6_n', 'Gast'+Math.floor(Math.random()*9000+1000));
-let myClicks = 0, scores = {};
+let myClicks = 0, scores = {}, shownMS = new Set();
+try { shownMS = new Set(JSON.parse(safeGetLS('md6_m', '[]'))); } catch(e){}
 
 const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
 let W = 0, H = 0, GY = 0;
@@ -142,34 +119,70 @@ function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = win
 resize(); window.addEventListener('resize', resize);
 
 function fmtN(n){
-  if(n>=1e9) return(n/1e9).toFixed(2)+'B'; if(n>=1e6) return(n/1e6).toFixed(2)+'M';
-  if(n>=1e3) return(n/1e3).toFixed(1)+'K'; return n.toLocaleString('nl-NL');
+  if(n>=1e12) return(n/1e12).toFixed(2)+'T'; if(n>=1e9) return(n/1e9).toFixed(2)+'B';
+  if(n>=1e6) return(n/1e6).toFixed(2)+'M'; if(n>=1e3) return(n/1e3).toFixed(1)+'K';
+  return n.toLocaleString('nl-NL');
 }
 function fmtH(m){
   if(m>=1000) return(m/1000).toFixed(3)+' km'; if(m>=1) return m.toFixed(3)+' m';
-  return(m*1000).toFixed(2)+' mm';
+  if(m>=0.01) return(m*100).toFixed(2)+' cm'; return(m*1000).toFixed(2)+' mm';
+}
+
+function drawSky(altM){
+  const t = Math.min(1, altM/100000);
+  const r0=Math.round(20*(1-t)), g0=Math.round(42*(1-t)), b0=Math.round(58*(1-t));
+  const r1=Math.round(135*(1-t)+2*t), g1=Math.round(186*(1-t)+5*t), b1=Math.round(235*(1-t)+18*t);
+  const sg = ctx.createLinearGradient(0,0,0,GY);
+  // FIX: b0 was hier b0 zonder ${}
+  sg.addColorStop(0, `rgb(${r0},${g0},${b0})`); 
+  sg.addColorStop(1, `rgb(${r1},${g1},${b1})`);
+  ctx.fillStyle = sg; ctx.fillRect(0,0,W,GY);
+  
+  // Stars
+  const sa = Math.min(1, Math.max(0,(altM-30000)/70000));
+  if(sa>0){
+    ctx.save(); ctx.globalAlpha=sa;
+    for(let i=0;i<100;i++){
+      ctx.fillStyle='white'; ctx.beginPath(); ctx.arc((i*137)%W, (i*97)%GY, 0.5, 0, Math.PI*2); ctx.fill();
+    } ctx.restore();
+  }
+}
+
+function drawGround(){
+  ctx.fillStyle = '#1c1c1c'; ctx.fillRect(0,GY,W,H-GY);
+}
+
+function drawStack(bills){
+  if(bills <= 0) return;
+  const cx=W/2, sw=110, maxH=H*0.4, sh=Math.min(bills*0.5, maxH), top=GY-sh;
+  ctx.fillStyle='#22c55e'; ctx.fillRect(cx-sw/2, top, sw, sh);
+  ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=1; ctx.strokeRect(cx-sw/2, top, sw, sh);
 }
 
 function updateHUD(){
   const altM=displayBills*BILL_M, ae=document.getElementById('alt'), ue=document.getElementById('unit');
-  if(altM>=1000){ ae.textContent=(altM/1000).toFixed(3); ue.textContent='kilometer'; }
-  else if(altM>=1){ ae.textContent=altM.toFixed(3); ue.textContent='meter'; }
-  else { ae.textContent=(altM*1000).toFixed(2); ue.textContent='millimeter'; }
+  if(altM>=1000){ae.textContent=(altM/1000).toFixed(3);ue.textContent='kilometer';} 
+  else if(altM>=1){ae.textContent=altM.toFixed(3);ue.textContent='meter';} 
+  else {ae.textContent=(altM*1000).toFixed(2);ue.textContent='millimeter';}
   
   let next=null; for(const o of OBJECTS) if(o.m>altM){ next=o; break; }
-  document.getElementById('nxt').textContent=next?`${next.emoji} ${next.label} — nog ${fmtN(Math.ceil((next.m-altM)/BILL_M))} klikken`:'🌌 Oneindigheid!';
+  document.getElementById('nxt').textContent=next?`${next.emoji} ${next.label} — nog ${fmtN(Math.ceil((next.m-altM)/BILL_M))} klikken`:'🌌 Oneindig!';
   document.getElementById('bnum').textContent=fmtN(Math.round(totalBills));
 }
 
 function updateScoreboard(){
   const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,7), list=document.getElementById('sl'); 
-  if(!list) return;
   list.innerHTML='';
   for(const [name,clicks] of sorted){
     const row=document.createElement('div'); row.className='sr'+(name===myName?' me':''); 
-    row.innerHTML=`<span class="sn">${name}</span><span class="sv">${fmtN(clicks)}</span>`; 
-    list.appendChild(row);
+    row.innerHTML=`<span class="sn">${name}</span><span class="sv">${fmtN(clicks)}</span>`; list.appendChild(row);
   }
+}
+
+function spawnBill(){
+  const btn=document.getElementById('cbtn'), r=btn.getBoundingClientRect(), el=document.createElement('div');
+  el.className='fb'; el.textContent='💵'; el.style.left=(r.left+r.width/2-10)+'px'; el.style.top=(r.top-8)+'px';
+  document.body.appendChild(el); setTimeout(()=>el.remove(),850);
 }
 
 // Database Listeners
@@ -188,12 +201,11 @@ myRef.set(true); myRef.onDisconnect().remove();
 onlineRef.on('value', snap => { document.getElementById('online').textContent = `● ${snap.numChildren()} online`; });
 
 document.getElementById('cbtn').addEventListener('click', ()=>{
-  myClicks++; totalBills++; 
+  myClicks++; totalBills++; spawnBill();
   billsRef.transaction(v => (v||0)+1);
   scoresRef.child(deviceId).update({ clicks: myClicks, name: myName });
 });
 
-// Naam wijzigen
 document.getElementById('ni').addEventListener('change', (e)=>{
     myName = e.target.value.trim() || myName;
     safeSetLS('md6_n', myName);
@@ -203,16 +215,11 @@ document.getElementById('ni').addEventListener('change', (e)=>{
 function loop(){
   requestAnimationFrame(loop);
   displayBills += (totalBills - displayBills) * 0.1;
-  ctx.clearRect(0, 0, W, H);
-  
-  // Sky & Ground
-  ctx.fillStyle = '#1a1a1a'; ctx.fillRect(0,0,W,GY);
-  ctx.fillStyle = '#111'; ctx.fillRect(0,GY,W,H-GY);
-  
-  // Simpele Stack
-  const sh = Math.min(displayBills * 0.5, H * 0.4);
-  ctx.fillStyle = '#22c55e'; ctx.fillRect(W/2-50, GY-sh, 100, sh);
-  
+  const b = Math.round(displayBills);
+  ctx.clearRect(0,0,W,H);
+  drawSky(displayBills * BILL_M);
+  drawGround();
+  drawStack(displayBills);
   updateHUD();
 }
 loop();
