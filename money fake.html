@@ -16,7 +16,6 @@
 
         h1 { color: #ffcc00; font-size: 3rem; margin-bottom: 10px; }
 
-        /* Game container styling */
         #game-canvas {
             background: #222;
             border: 4px solid #444;
@@ -45,44 +44,89 @@
 
         .btn:hover { transform: scale(1.1); }
 
-        /* De navigatie/home-knop sectie is hier volledig verwijderd */
+        /* Login styling indien aanwezig */
+        .login-container { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+        }
+
+        #auth-btn { 
+            background: #4285F4; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+        }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>💰 Money Digger</h1>
-        <div class="stats">
-            Geld: $<span id="money">0</span>
-        </div>
-    </header>
+<div class="login-container">
+    <span id="user-info"></span>
+    <button id="auth-btn">Login</button>
+</div>
 
-    <main>
-        <div id="game-area">
-            <button class="btn" id="dig-button">GRAAF!</button>
-        </div>
-        
-        <canvas id="game-canvas" width="600" height="400"></canvas>
-    </main>
+<h1>💰 Money Digger</h1>
 
-    <script>
-        // Simpele game logica voorbeeld (vervang dit door je eigen unieke game code)
-        let money = 0;
-        const moneyDisplay = document.getElementById('money');
-        const digButton = document.getElementById('dig-button');
+<div class="stats">
+    Geld: $<span id="money">0</span>
+</div>
 
-        digButton.addEventListener('click', () => {
-            money += 10;
-            moneyDisplay.textContent = money;
-            
-            // Visueel effectje
-            digButton.style.backgroundColor = "#fff";
-            setTimeout(() => { digButton.style.backgroundColor = "#ffcc00"; }, 50);
-        });
+<div id="game-area">
+    <button class="btn" id="dig-button">GRAAF!</button>
+</div>
 
-        // Jouw specifieke Money Digger v10 engine code komt hieronder:
-        console.log("Money Digger v10 is geladen zonder home-knop.");
-    </script>
+<canvas id="game-canvas" width="600" height="400"></canvas>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script>
+    // Firebase Configuratie (Hetzelfde als je index.html)
+    firebase.initializeApp({
+        apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+        authDomain: "money-digger-9b05e.firebaseapp.com",
+        projectId: "money-digger-9b05e",
+    });
+
+    const auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const authBtn = document.getElementById('auth-btn');
+    const userInfo = document.getElementById('user-info');
+
+    // Auth Logica
+    authBtn.addEventListener('click', () => {
+        if(auth.currentUser) {
+            auth.signOut();
+        } else {
+            auth.signInWithPopup(provider).catch(err => console.log(err.message));
+        }
+    });
+
+    auth.onAuthStateChanged(user => {
+        if(user) {
+            userInfo.textContent = user.displayName;
+            authBtn.textContent = "Log uit";
+        } else {
+            userInfo.textContent = "";
+            authBtn.textContent = "Login";
+        }
+    });
+
+    // Game Logica
+    let money = 0;
+    const moneyDisplay = document.getElementById('money');
+    const digButton = document.getElementById('dig-button');
+
+    digButton.addEventListener('click', () => {
+        money += 10;
+        moneyDisplay.textContent = money;
+    });
+</script>
 
 </body>
 </html>
