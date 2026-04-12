@@ -4,32 +4,72 @@
     <meta charset="UTF-8">
     <title>Pixel-games</title>
     <style>
-        body { font-family: Arial; background: #111; color: white; text-align: center; }
-        .game { border: 1px solid #333; padding: 20px; margin: 20px; border-radius: 10px; background: #1a1a1a; }
-        a { display: inline-block; margin: 10px; padding: 10px 20px; text-decoration: none; color: white; border-radius: 5px; }
-        .play { background: green; }
-        .chrome { background: blue; }
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #111; 
+            color: white; 
+            text-align: center; 
+            margin: 0;
+            padding: 0;
+        }
 
-        /* Styling voor de Login Knop */
-        .login-container { margin-bottom: 30px; }
-        #user-info { font-weight: bold; margin-right: 15px; color: #fff; }
+        h1 { margin-top: 50px; margin-bottom: 30px; font-size: 2.5rem; }
+
+        .game { 
+            border: 1px solid #333; 
+            padding: 20px; 
+            margin: 20px auto; 
+            max-width: 500px;
+            border-radius: 10px; 
+            background: #1a1a1a; 
+            transition: transform 0.2s;
+        }
+        .game:hover { transform: scale(1.02); }
+
+        a { display: inline-block; margin: 10px; padding: 10px 20px; text-decoration: none; color: white; border-radius: 5px; font-weight: bold; }
+        .play { background: #22c55e; }
+        .chrome { background: #3b82f6; }
+
+        /* --- NIEUWE LOGIN STYLING RECHTSBOVEN --- */
+        .login-container { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 100;
+        }
+        
+        #user-info { 
+            font-weight: 500; 
+            color: rgba(255,255,255,0.8); 
+            font-size: 14px;
+        }
+
         #auth-btn { 
-            background: #4285F4; color: white; border: none; padding: 10px 20px; 
-            border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px; 
-            transition: background 0.2s, filter 0.2s;
+            background: #4285F4; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 14px; 
+            transition: all 0.2s;
         }
         #auth-btn:hover { filter: brightness(1.1); }
-        #auth-btn.logout { background: #dc2626; } /* Rode kleur voor uitloggen */
+        #auth-btn.logout { background: #ef4444; } /* Rood voor uitloggen */
     </style>
 </head>
 <body>
 
-<h1>🎮 My Games</h1>
-
 <div class="login-container">
-    <span id="user-info">Aan het laden...</span>
-    <button id="auth-btn">Login met Google</button>
+    <span id="user-info"></span>
+    <button id="auth-btn">Login</button>
 </div>
+
+<h1>🎮 My Games</h1>
 
 <div class="game">
     <h2>Dino World</h2>
@@ -55,14 +95,13 @@
 </div>
 
 <div class="game">
-    <h2>money digger</h2>
+    <h2>Money Digger</h2>
     <a class="play" href="money-digger v10.html">Play</a>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script>
-    // 1. Verbind met jouw Firebase project
     firebase.initializeApp({
         apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
         authDomain: "money-digger-9b05e.firebaseapp.com",
@@ -75,27 +114,25 @@
     const authBtn = document.getElementById('auth-btn');
     const userInfo = document.getElementById('user-info');
 
-    // 2. Log in of log uit als er op de knop wordt geklikt
     authBtn.addEventListener('click', () => {
         if(auth.currentUser) {
             auth.signOut();
         } else {
-            auth.signInWithPopup(provider).catch(err => alert("Fout bij inloggen: " + err.message));
+            auth.signInWithPopup(provider).catch(err => console.log(err.message));
         }
     });
 
-    // 3. Luister naar veranderingen (wel of niet ingelogd)
     auth.onAuthStateChanged(user => {
         if(user) {
-            // Ze zijn ingelogd!
-            userInfo.textContent = "Welkom, " + user.displayName + "!";
-            authBtn.textContent = "Uitloggen";
-            authBtn.classList.add('logout'); // Maak knop rood
+            // Ingelogd: toon naam en knop "Log uit"
+            userInfo.textContent = user.displayName;
+            authBtn.textContent = "Log uit";
+            authBtn.classList.add('logout');
         } else {
-            // Niet ingelogd
-            userInfo.textContent = "Je bent niet ingelogd.";
-            authBtn.textContent = "Login met Google";
-            authBtn.classList.remove('logout'); // Maak knop weer blauw
+            // Niet ingelogd: toon geen tekst en knop "Login"
+            userInfo.textContent = "";
+            authBtn.textContent = "Login";
+            authBtn.classList.remove('logout');
         }
     });
 </script>
