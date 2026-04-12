@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money Digger - Game</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            text-align: center;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .header {
+            margin-bottom: 10px;
+        }
+
+        h1 { color: #ffd700; margin: 0; font-size: 2rem; }
+        
+        #user-display { font-size: 0.9rem; color: #aaa; }
+
+        .stats {
+            font-size: 28px;
+            margin: 15px 0;
+            background: #333;
+            padding: 10px 30px;
+            border-radius: 50px;
+            border: 2px solid #ffd700;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);
+        }
+
+        #game-canvas {
+            background-color: #4a2e19;
+            border: 5px solid #3d2514;
+            border-radius: 15px;
+            cursor: crosshair;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+            touch-action: none;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            color: #888;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>💰 MONEY DIGGER</h1>
+        <div id="user-display">Bezig met laden...</div>
+    </div>
+    
+    <div class="stats">
+        $ <span id="money-count">0</span>
+    </div>
+
+    <canvas id="game-canvas" width="600" height="400"></canvas>
+
+    <p class="instructions">Klik op de grond om geld te vinden!</p>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    
+    <script>
+        // Firebase configuratie
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+            authDomain: "money-digger-9b05e.firebaseapp.com",
+            projectId: "money-digger-9b05e",
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        const auth = firebase.auth();
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const moneyDisplay = document.getElementById('money-count');
+        const userDisplay = document.getElementById('user-display');
+        
+        let money = 0;
+        let particles = [];
+
+        // Check login status
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                userDisplay.textContent = "Speler: " + user.displayName;
+            } else {
+                userDisplay.textContent = "Niet ingelogd (Gastmodus)";
+            }
+        });
+
+        // Particle effect voor het graven
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 5 + 2;
+                this.speedX = Math.random() * 6 - 3;
+                this.speedY = Math.random() * -6 - 2;
+                this.gravity = 0.2;
+                this.color = '#8d6e63';
+            }
+            update() {
+                this.x += this.speedX;
+                this.speedY += this.gravity;
+                this.y += this.speedY;
+                this.size *= 0.95;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function createMoneyEffect(x, y) {
+            for (let i = 0; i < 8; i++) {
+                particles.push(new Particle(x, y));
+            }
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            money += 1;
+            moneyDisplay.textContent = money;
+            
+            createMoneyEffect(x, y);
+        });
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Teken de grond lagen
+            ctx.fillStyle = "#5d4037";
+            ctx.fillRect(0, 200, 600, 200);
+            ctx.fillStyle = "#4e342e";
+            ctx.fillRect(0, 300, 600, 100);
+
+            // Update en teken particles
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].size < 0.3) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+
+            // Teken instructie tekst op canvas als er nog niet geklikt is
+            if (money === 0) {
+                ctx.fillStyle = "rgba(255,255,255,0.5)";
+                ctx.font = "20px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("GRAAF HIER", canvas.width / 2, 300);
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
