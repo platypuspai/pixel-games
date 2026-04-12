@@ -47,11 +47,11 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 <body>
 <canvas id="c"></canvas>
 <div id="ui">
-  <div id="hud"><div id="alt">0,000</div><div id="unit">millimeter</div><div id="nxt">Verbinden...</div></div>
+  <div id="hud"><div id="alt">0,000</div><div id="unit">millimeter</div><div id="nxt">Laden...</div></div>
   <div id="sb"><h3>Top klikkers</h3><div id="sl"></div></div>
   <div id="bctr"><div id="bnum">0</div><div id="blbl">biljetten gestapeld</div></div>
   <div id="nw"><span id="nl">naam:</span><input id="ni" type="text" maxlength="16" placeholder="Kies naam..."/></div>
-  <div id="online">● offline</div>
+  <div id="online">● verbinden...</div>
   <div id="msb"><div id="mse"></div><div id="msn"></div><div id="mss"></div></div>
 </div>
 <button id="cbtn">💵</button>
@@ -133,30 +133,70 @@ function drawSky(altM){
   const r0=Math.round(20*(1-t)), g0=Math.round(42*(1-t)), b0=Math.round(58*(1-t));
   const r1=Math.round(135*(1-t)+2*t), g1=Math.round(186*(1-t)+5*t), b1=Math.round(235*(1-t)+18*t);
   const sg = ctx.createLinearGradient(0,0,0,GY);
-  // FIX: b0 was hier b0 zonder ${}
   sg.addColorStop(0, `rgb(${r0},${g0},${b0})`); 
   sg.addColorStop(1, `rgb(${r1},${g1},${b1})`);
   ctx.fillStyle = sg; ctx.fillRect(0,0,W,GY);
-  
-  // Stars
+
   const sa = Math.min(1, Math.max(0,(altM-30000)/70000));
   if(sa>0){
     ctx.save(); ctx.globalAlpha=sa;
-    for(let i=0;i<100;i++){
-      ctx.fillStyle='white'; ctx.beginPath(); ctx.arc((i*137)%W, (i*97)%GY, 0.5, 0, Math.PI*2); ctx.fill();
+    for(let i=0;i<120;i++){
+      const f=0.5+0.5*Math.sin(Date.now()*.001+i); ctx.fillStyle=`rgba(255,255,255,${f})`;
+      ctx.beginPath(); ctx.arc((i*137)%W, (i*97)%(GY*0.9), 0.7, 0, Math.PI*2); ctx.fill();
+    } ctx.restore();
+  }
+
+  const ca = Math.min(Math.max(0,(altM-1500)/500), Math.max(0,1-(altM-12000)/3000));
+  if(ca>0){
+    ctx.save(); ctx.globalAlpha=ca*0.8; cloudT+=0.0002;
+    const cd=[{x:0.1,y:0.3,s:80},{x:0.4,y:0.2,s:100},{x:0.7,y:0.4,s:70}];
+    for(const c of cd){
+      const cx=((c.x+cloudT)%1.2-0.1)*W, cy=c.y*GY;
+      ctx.fillStyle='white'; ctx.beginPath(); ctx.ellipse(cx,cy,c.s,c.s*0.4,0,0,Math.PI*2); ctx.fill();
     } ctx.restore();
   }
 }
 
 function drawGround(){
-  ctx.fillStyle = '#1c1c1c'; ctx.fillRect(0,GY,W,H-GY);
+  const ag=ctx.createLinearGradient(0,GY,0,H);
+  ag.addColorStop(0,'#1c1c1c'); ag.addColorStop(1,'#111');
+  ctx.fillStyle=ag; ctx.fillRect(0,GY,W,H-GY);
 }
 
 function drawStack(bills){
   if(bills <= 0) return;
-  const cx=W/2, sw=110, maxH=H*0.4, sh=Math.min(bills*0.5, maxH), top=GY-sh;
-  ctx.fillStyle='#22c55e'; ctx.fillRect(cx-sw/2, top, sw, sh);
-  ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=1; ctx.strokeRect(cx-sw/2, top, sw, sh);
+  const cx=W/2, sw=110, maxH=H*0.4, depth=20, sh=Math.min(bills*0.5, maxH), top=GY-sh;
+  // Side
+  ctx.fillStyle='#14532d'; ctx.beginPath(); ctx.moveTo(cx+sw/2, top); ctx.lineTo(cx+sw/2+depth, top-depth*0.5); ctx.lineTo(cx+sw/2+depth, GY-depth*0.5); ctx.lineTo(cx+sw/2, GY); ctx.fill();
+  // Front
+  const ff=ctx.createLinearGradient(cx,top,cx,GY); ff.addColorStop(0,'#166534'); ff.addColorStop(1,'#14532d');
+  ctx.fillStyle=ff; ctx.fillRect(cx-sw/2, top, sw, sh);
+  // Top
+  ctx.fillStyle='#4ade80'; ctx.beginPath(); ctx.moveTo(cx-sw/2, top); ctx.lineTo(cx+sw/2, top); ctx.lineTo(cx+sw/2+depth, top-depth*0.5); ctx.lineTo(cx-sw/2+depth, top-depth*0.5); ctx.closePath(); ctx.fill();
+}
+
+function drawObjects(bills){
+  if(bills<=0) return;
+  const altM=bills*BILL_M, maxH=H*0.4, pxPerM=maxH/Math.max(altM,BILL_M);
+  for(let i=0; i<OBJECTS.length; i++){
+    const obj=OBJECTS[i], ratio=obj.m/altM;
+    if(ratio>5 || ratio<0.001) continue;
+    const drawY=GY-(obj.m*pxPerM), opacity=Math.min(1, (5-ratio));
+    if(drawY < -50 || drawY > H) continue;
+    ctx.save(); ctx.globalAlpha=opacity; ctx.font='30px serif'; ctx.textAlign='center';
+    const offsetX = (i%2===0) ? -150 : 150;
+    ctx.fillText(obj.emoji, W/2+offsetX, drawY);
+    ctx.fillStyle='white'; ctx.font='10px DM Sans'; ctx.fillText(obj.label, W/2+offsetX, drawY+15);
+    ctx.restore();
+  }
+}
+
+let bannerTO=null;
+function showBanner(obj){
+  document.getElementById('mse').textContent=obj.emoji; document.getElementById('msn').textContent=obj.label;
+  document.getElementById('mss').textContent=`${fmtH(obj.m)} hoog`;
+  const el=document.getElementById('msb'); el.classList.add('show');
+  if(bannerTO) clearTimeout(bannerTO); bannerTO=setTimeout(()=>el.classList.remove('show'),3000);
 }
 
 function updateHUD(){
@@ -168,6 +208,8 @@ function updateHUD(){
   let next=null; for(const o of OBJECTS) if(o.m>altM){ next=o; break; }
   document.getElementById('nxt').textContent=next?`${next.emoji} ${next.label} — nog ${fmtN(Math.ceil((next.m-altM)/BILL_M))} klikken`:'🌌 Oneindig!';
   document.getElementById('bnum').textContent=fmtN(Math.round(totalBills));
+
+  for(const obj of OBJECTS){ if(altM>=obj.m && !shownMS.has(obj.label)){ shownMS.add(obj.label); safeSetLS('md6_m',JSON.stringify([...shownMS])); showBanner(obj); break; } }
 }
 
 function updateScoreboard(){
@@ -185,7 +227,6 @@ function spawnBill(){
   document.body.appendChild(el); setTimeout(()=>el.remove(),850);
 }
 
-// Database Listeners
 billsRef.on('value', snap => { totalBills = snap.val() || 0; });
 scoresRef.on('value', snap => {
     scores = {};
@@ -215,10 +256,10 @@ document.getElementById('ni').addEventListener('change', (e)=>{
 function loop(){
   requestAnimationFrame(loop);
   displayBills += (totalBills - displayBills) * 0.1;
-  const b = Math.round(displayBills);
   ctx.clearRect(0,0,W,H);
   drawSky(displayBills * BILL_M);
   drawGround();
+  drawObjects(displayBills);
   drawStack(displayBills);
   updateHUD();
 }
