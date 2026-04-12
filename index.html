@@ -9,11 +9,27 @@
         a { display: inline-block; margin: 10px; padding: 10px 20px; text-decoration: none; color: white; border-radius: 5px; }
         .play { background: green; }
         .chrome { background: blue; }
+
+        /* Styling voor de Login Knop */
+        .login-container { margin-bottom: 30px; }
+        #user-info { font-weight: bold; margin-right: 15px; color: #fff; }
+        #auth-btn { 
+            background: #4285F4; color: white; border: none; padding: 10px 20px; 
+            border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px; 
+            transition: background 0.2s, filter 0.2s;
+        }
+        #auth-btn:hover { filter: brightness(1.1); }
+        #auth-btn.logout { background: #dc2626; } /* Rode kleur voor uitloggen */
     </style>
 </head>
 <body>
 
 <h1>🎮 My Games</h1>
+
+<div class="login-container">
+    <span id="user-info">Aan het laden...</span>
+    <button id="auth-btn">Login met Google</button>
+</div>
 
 <div class="game">
     <h2>Dino World</h2>
@@ -32,13 +48,57 @@
     <a class="play" href="one-square.html">Play</a>
     <a class="chrome" href="https://chromewebstore.google.com/detail/foelbpdicaedppibpblliahmdceaocjc?utm_source=item-share-cb">Extension</a>
 </div>
+
 <div class="game">
     <h2>Dodging arena</h2>
     <a class="play" href="dodging arena.html">Play</a>
 </div>
+
 <div class="game">
     <h2>money digger</h2>
     <a class="play" href="money-digger v10.html">Play</a>
 </div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script>
+    // 1. Verbind met jouw Firebase project
+    firebase.initializeApp({
+        apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+        authDomain: "money-digger-9b05e.firebaseapp.com",
+        projectId: "money-digger-9b05e",
+    });
+
+    const auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    const authBtn = document.getElementById('auth-btn');
+    const userInfo = document.getElementById('user-info');
+
+    // 2. Log in of log uit als er op de knop wordt geklikt
+    authBtn.addEventListener('click', () => {
+        if(auth.currentUser) {
+            auth.signOut();
+        } else {
+            auth.signInWithPopup(provider).catch(err => alert("Fout bij inloggen: " + err.message));
+        }
+    });
+
+    // 3. Luister naar veranderingen (wel of niet ingelogd)
+    auth.onAuthStateChanged(user => {
+        if(user) {
+            // Ze zijn ingelogd!
+            userInfo.textContent = "Welkom, " + user.displayName + "!";
+            authBtn.textContent = "Uitloggen";
+            authBtn.classList.add('logout'); // Maak knop rood
+        } else {
+            // Niet ingelogd
+            userInfo.textContent = "Je bent niet ingelogd.";
+            authBtn.textContent = "Login met Google";
+            authBtn.classList.remove('logout'); // Maak knop weer blauw
+        }
+    });
+</script>
+
 </body>
 </html>
