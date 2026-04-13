@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Money Digger - Cloud Save</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=DM+Mono&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-serif; background-color: #111;}
+#c{display:block;width:100%;height:100%}
+#ui{position:fixed;inset:0;pointer-events:none;z-index:10}
+#hud{position:absolute;top:20px;left:20px}
+#alt{font-size:2.4rem;font-weight:700;color:#fff;line-height:1;text-shadow:0 2px 24px rgba(0,0,0,.7);letter-spacing:-1px}
+#unit{font-size:.88rem;font-weight:300;color:rgba(255,255,255,.6);margin-top:2px}
+#nxt{margin-top:8px;font-size:.66rem;color:rgba(255,255,255,.42);max-width:240px;line-height:1.5}
+#sb{position:absolute;top:20px;right:20px;background:rgba(0,0,0,0.5);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 14px;min-width:135px}
+#sb h3{font-size:.52rem;font-weight:500;color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
+.sr{display:flex;justify-content:space-between;gap:10px;font-size:.6rem;color:rgba(255,255,255,.5);padding:2px 0}
+.sr.me{color:#22c55e; font-weight: bold;}
+.sn{max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sv{font-family:'DM Mono',monospace;font-size:.56rem}
+#bctr{position:absolute;bottom:110px;right:28px;text-align:right}
+#bnum{font-size:1.2rem;font-weight:700;color:#22c55e;font-family:'DM Mono',monospace;text-shadow:0 2px 12px rgba(34,197,94,.4)}
+#blbl{font-size:.56rem;color:rgba(255,255,255,.3);margin-top:2px}
+#cbtn{position:fixed;bottom:28px;right:28px;z-index:20;width:72px;height:72px;border-radius:50%;border:none;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;font-size:1.6rem;cursor:pointer;box-shadow:0 4px 20px rgba(34,197,94,.5);display:flex;align-items:center;justify-content:center;animation:pulse 2.5s infinite;transition:transform .08s;pointer-events:all}
+@keyframes pulse{0%,100%{box-shadow:0 4px 20px rgba(34,197,94,.5),0 0 0 0 rgba(34,197,94,.3)}70%{box-shadow:0 4px 20px rgba(34,197,94,.5),0 0 0 16px rgba(34,197,94,0)}}
+#cbtn:active{transform:scale(.88);animation:none}
+#online{position:absolute;bottom:28px;left:20px;font-size:.58rem;color:rgba(255,255,255,.3)}
+#nw{position:absolute;bottom:54px;left:20px;display:flex;align-items:center;gap:5px}
+#nl{font-size:.52rem;color:rgba(255,255,255,.22)}
+#ni{font-family:'DM Sans',sans-serif;font-size:.56rem;padding:3px 7px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.08);border-radius:5px;width:100px;pointer-events:all}
+#msb{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;opacity:0;transition:opacity .5s;pointer-events:none;background:rgba(0,0,0,.6);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px 32px}
+#msb.show{opacity:1}
+#mse{font-size:3.5rem}
+#msn{font-size:1.3rem;font-weight:700;color:#fff;margin-top:6px}
+#mss{font-size:.62rem;color:rgba(255,255,255,.5);margin-top:3px}
+.fb{position:fixed;font-size:1.1rem;pointer-events:none;z-index:25;animation:fup .85s ease-out forwards}
+@keyframes fup{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-70px)}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="hud"><div id="alt">0,000</div><div id="unit">millimeter</div><div id="nxt">Laadt...</div></div>
+  <div id="sb"><h3>Top klikkers</h3><div id="sl"></div></div>
+  <div id="bctr"><div id="bnum">0</div><div id="blbl">biljetten gestapeld</div></div>
+  <div id="nw"><span id="nl">naam:</span><input id="ni" type="text" maxlength="16"/></div>
+  <div id="online">● verbinden...</div>
+  <div id="msb"><div id="mse"></div><div id="msn"></div><div id="mss"></div></div>
+</div>
+<button id="cbtn">💵</button>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+// --- CONFIGURATIE ---
+const BILL_M = 0.0001;
+const OBJECTS = [
+  {m:0.001, label:'Mier', emoji:'🐜'}, {m:0.015, label:'Druif', emoji:'🍇'},
+  {m:0.040, label:'Aardbei', emoji:'🍓'}, {m:0.070, label:'Muis', emoji:'🐭'},
+  {m:0.112, label:'Appel', emoji:'🍎'}, {m:0.240, label:'Basketbal', emoji:'🏀'},
+  {m:0.300, label:'Tulp', emoji:'🌷'}, {m:0.450, label:'Zonnebloem', emoji:'🌻'},
+  {m:0.600, label:'Kat', emoji:'🐱'}, {m:0.900, label:'Hond', emoji:'🐕'},
+  {m:1.750, label:'Mens', emoji:'🧍'}, {m:2.400, label:'Paard', emoji:'🐴'},
+  {m:4.000, label:'Olifant', emoji:'🐘'}, {m:5.500, label:'Giraf', emoji:'🦒'},
+  {m:7.000, label:'Jonge boom', emoji:'🌲'}, {m:8.500, label:'Huis', emoji:'🏠'},
+  {m:15.00, label:'Grote eik', emoji:'🌳'}, {m:25.00, label:'Sequoia', emoji:'🌲'},
+  {m:46.00, label:'Toren van Pisa', emoji:'🗼'}, {m:93.00, label:'Vrijheidsbeeld', emoji:'🗽'},
+  {m:324.0, label:'Eiffeltoren', emoji:'🗼'}, {m:828.0, label:'Burj Khalifa', emoji:'🏙️'},
+  {m:8849,  label:'Mount Everest', emoji:'🏔️'}, {m:100000, label:'Ruimte', emoji:'🌌'},
+  {m:384400000, label:'De Maan', emoji:'🌕'}, {m:149600000000, label:'De Zon', emoji:'☀️'}
+];
+
+// --- STATE ---
+let totalBills = 0;
+let displayBills = 0;
+let cloudT = 0;
+let myClicks = 0;
+let myName = localStorage.getItem('md6_n') || "Gast";
+let currentUid = null;
+let scores = {};
+let shownMS = new Set();
+
+// --- CANVAS SETUP ---
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, GY;
+function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; GY=Math.round(H*0.72); }
+resize(); window.addEventListener('resize', resize);
+
+// --- FIREBASE INITIALISATIE ---
+firebase.initializeApp({
+    apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+    authDomain: "money-digger-9b05e.firebaseapp.com",
+    databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "money-digger-9b05e"
+});
+
+const db = firebase.database();
+const auth = firebase.auth();
+const billsRef = db.ref('totalBills');
+const scoresRef = db.ref('scores');
+
+// --- AUTH LOGICA (LINK MET VOORPAGINA) ---
+auth.onAuthStateChanged(user => {
+    if(user) {
+        currentUid = user.uid;
+        myName = user.displayName;
+        document.getElementById('ni').value = myName;
+        
+        // Laad persoonlijke score in
+        scoresRef.child(user.uid).on('value', snap => {
+            const data = snap.val();
+            if(data) {
+                myClicks = data.clicks || 0;
+                // We syncen display naar de hoogste waarde
+                if(myClicks > totalBills) totalBills = myClicks;
+            }
+        });
+    } else {
+        currentUid = "guest-" + Math.random().toString(36).substr(2, 5);
+    }
+});
+
+// Sync globale stats & scoreboard
+billsRef.on('value', snap => { totalBills = snap.val() || 0; });
+scoresRef.on('value', snap => {
+    scores = {};
+    snap.forEach(child => {
+        const d = child.val();
+        if(d && d.name) scores[child.key] = { name: d.name, clicks: d.clicks };
+    });
+    updateScoreboard();
+});
+
+// --- GAME FUNCTIES ---
+function fmtN(n){ return n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n.toLocaleString('nl-NL'); }
+function fmtH(m){ return m >= 1000 ? (m/1000).toFixed(2)+'km' : m.toFixed(2)+'m'; }
+
+function updateScoreboard(){
+    const sorted = Object.values(scores).sort((a,b)=>b.clicks-a.clicks).slice(0,5);
+    const list = document.getElementById('sl');
+    list.innerHTML = '';
+    sorted.forEach(s => {
+        const row = document.createElement('div');
+        row.className = 'sr' + (s.name === myName ? ' me' : '');
+        row.innerHTML = `<span class="sn">${s.name}</span><span class="sv">${fmtN(s.clicks)}</span>`;
+        list.appendChild(row);
+    });
+}
+
+document.getElementById('cbtn').addEventListener('click', () => {
+    myClicks++;
+    totalBills++;
+    spawnBill();
+    
+    // Save naar Cloud
+    if(currentUid) {
+        billsRef.transaction(v => (v || 0) + 1);
+        scoresRef.child(currentUid).set({
+            name: myName,
+            clicks: myClicks
+        });
+    }
+});
+
+function spawnBill(){
+    const btn = document.getElementById('cbtn').getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'fb'; el.textContent = '💵';
+    el.style.left = (btn.left + 20 + Math.random()*20) + 'px';
+    el.style.top = btn.top + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 800);
+}
+
+// --- RENDER LOOP ---
+function drawSky(altM){
+    const t = Math.min(1, altM/100000);
+    const sg = ctx.createLinearGradient(0, 0, 0, GY);
+    sg.addColorStop(0, `rgb(${Math.round(20*(1-t))},${Math.round(42*(1-t))},${Math.round(58*(1-t))})`);
+    sg.addColorStop(1, `rgb(${Math.round(135*(1-t))},${Math.round(186*(1-t))},${Math.round(235*(1-t))})`);
+    ctx.fillStyle = sg; ctx.fillRect(0,0,W,GY);
+}
+
+function drawStack(bills){
+    const sh = Math.min(bills * 0.5, H * 0.4);
+    const top = GY - sh;
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(W/2-50, top, 100, sh);
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(W/2-50, top, 100, 5); // Bovenkant briefje
+}
+
+function loop(){
+    displayBills += (totalBills - displayBills) * 0.1;
+    ctx.clearRect(0,0,W,H);
+    drawSky(displayBills * BILL_M);
+    ctx.fillStyle = '#1c1c1c'; ctx.fillRect(0,GY,W,H-GY);
+    drawStack(displayBills);
+    
+    const altM = displayBills * BILL_M;
+    document.getElementById('alt').textContent = fmtH(altM);
+    document.getElementById('bnum').textContent = fmtN(Math.round(displayBills));
+    
+    requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
