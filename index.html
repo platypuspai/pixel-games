@@ -31,45 +31,9 @@
         a { display: inline-block; margin: 10px; padding: 10px 20px; text-decoration: none; color: white; border-radius: 5px; font-weight: bold; }
         .play { background: #22c55e; }
         .chrome { background: #3b82f6; }
-
-        /* --- LOGIN SECTIE RECHTSBOVEN --- */
-        .login-container { 
-            position: absolute; 
-            top: 20px; 
-            right: 20px; 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            z-index: 100; 
-        }
-        
-        #user-info { 
-            font-weight: 500; 
-            color: rgba(255,255,255,0.8); 
-            font-size: 14px; 
-        }
-
-        #auth-btn { 
-            background: #4285F4; 
-            color: white; 
-            border: none; 
-            padding: 8px 16px; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 14px; 
-            transition: all 0.2s; 
-        }
-        #auth-btn:hover { filter: brightness(1.1); }
-        #auth-btn.logout { background: #ef4444; }
     </style>
 </head>
 <body>
-
-<div class="login-container">
-    <span id="user-info"></span>
-    <button id="auth-btn">Login</button>
-</div>
 
 <h1>🎮 My Games</h1>
 
@@ -100,42 +64,6 @@
     <h2>Money Digger</h2>
     <a class="play" href="money-digger v10.html">Play</a>
 </div>
-
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script>
-    firebase.initializeApp({
-        apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
-        authDomain: "money-digger-9b05e.firebaseapp.com",
-        projectId: "money-digger-9b05e",
-    });
-
-    const auth = firebase.auth();
-    const provider = new firebase.auth.GoogleAuthProvider();
-
-    const authBtn = document.getElementById('auth-btn');
-    const userInfo = document.getElementById('user-info');
-
-    authBtn.addEventListener('click', () => {
-        if(auth.currentUser) {
-            auth.signOut();
-        } else {
-            auth.signInWithPopup(provider).catch(err => console.log(err.message));
-        }
-    });
-
-    auth.onAuthStateChanged(user => {
-        if(user) {
-            userInfo.textContent = user.displayName;
-            authBtn.textContent = "Log uit";
-            authBtn.classList.add('logout');
-        } else {
-            userInfo.textContent = "";
-            authBtn.textContent = "Login";
-            authBtn.classList.remove('logout');
-        }
-    });
-</script>
 
 </body>
 </html>
