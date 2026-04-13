@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>PixelGames</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+body{ font-family:'DM Sans',sans-serif; background:#111; color:#fff; min-height:100vh; }
+
+/* ── NAVBAR ── */
+nav{
+  position:sticky; top:0; z-index:100;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 28px;
+  background:rgba(10,10,10,0.95); backdrop-filter:blur(12px);
+  border-bottom:1px solid #1e1e1e;
+}
+.nav-logo{ font-size:1.2rem; font-weight:700; color:#fff; letter-spacing:-.3px; }
+.nav-logo span{ color:#22c55e; }
+.nav-right{ display:flex; align-items:center; gap:10px; }
+#user-name{ font-size:.82rem; color:rgba(255,255,255,.55); }
+#user-name strong{ color:#22c55e; font-weight:600; }
+
+.btn{
+  font-family:'DM Sans',sans-serif; font-size:.82rem; font-weight:600;
+  padding:7px 16px; border-radius:8px; border:none; cursor:pointer;
+  transition:opacity .15s, transform .1s;
+}
+.btn:hover{ opacity:.88; }
+.btn:active{ transform:scale(.96); }
+.btn-ghost{ background:rgba(255,255,255,.07); color:rgba(255,255,255,.75); border:1px solid rgba(255,255,255,.12); }
+.btn-google{
+  display:flex; align-items:center; gap:7px;
+  background:#fff; color:#222; padding:7px 14px;
+}
+.btn-google svg{ width:16px; height:16px; flex-shrink:0; }
+.btn-logout{ background:rgba(255,255,255,.05); color:rgba(255,255,255,.4); font-size:.75rem; padding:6px 12px; }
+
+/* ── MODAL ── */
+#modal-bg{
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,.8); backdrop-filter:blur(10px);
+  z-index:200; align-items:center; justify-content:center;
+}
+#modal-bg.open{ display:flex; }
+#modal{
+  background:#1a1a1a; border:1px solid #2a2a2a; border-radius:18px;
+  padding:36px 40px; width:100%; max-width:380px; position:relative;
+}
+#modal-close{
+  position:absolute; top:14px; right:16px;
+  background:none; border:none; color:rgba(255,255,255,.3);
+  font-size:1.1rem; cursor:pointer; padding:4px 8px; border-radius:6px;
+}
+#modal-close:hover{ color:#fff; background:rgba(255,255,255,.06); }
+#modal h2{ font-size:1.4rem; font-weight:700; margin-bottom:4px; }
+#modal .sub{ font-size:.78rem; color:rgba(255,255,255,.4); margin-bottom:24px; }
+
+/* Google knop groot */
+#btn-google-big{
+  width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+  background:#fff; color:#222; font-family:'DM Sans',sans-serif;
+  font-size:.92rem; font-weight:600; padding:11px; border-radius:10px;
+  border:none; cursor:pointer; margin-bottom:18px;
+  transition:opacity .15s;
+}
+#btn-google-big:hover{ opacity:.92; }
+#btn-google-big svg{ width:20px; height:20px; }
+
+.divider{
+  display:flex; align-items:center; gap:10px;
+  color:rgba(255,255,255,.2); font-size:.75rem; margin-bottom:18px;
+}
+.divider::before,.divider::after{ content:''; flex:1; height:1px; background:rgba(255,255,255,.1); }
+
+.field{ margin-bottom:13px; }
+.field label{ display:block; font-size:.72rem; color:rgba(255,255,255,.45); margin-bottom:5px; }
+.field input{
+  width:100%; padding:10px 12px;
+  background:#111; border:1px solid #2e2e2e; border-radius:9px;
+  color:#fff; font-size:.88rem; font-family:'DM Sans',sans-serif;
+  outline:none; transition:border-color .15s;
+}
+.field input:focus{ border-color:#22c55e; }
+#modal-hint{ font-size:.68rem; color:rgba(255,255,255,.3); margin-bottom:14px; }
+#modal-err{ font-size:.72rem; color:#f87171; margin-bottom:10px; min-height:16px; }
+#modal-submit{
+  width:100%; padding:11px; background:#22c55e; color:#fff;
+  font-family:'DM Sans',sans-serif; font-size:.92rem; font-weight:700;
+  border-radius:10px; border:none; cursor:pointer; margin-bottom:16px;
+  transition:opacity .15s;
+}
+#modal-submit:hover{ opacity:.88; }
+#modal-switch{ font-size:.75rem; color:rgba(255,255,255,.35); text-align:center; }
+#modal-switch a{ color:#22c55e; cursor:pointer; }
+
+/* ── GAMES ── */
+main{ max-width:680px; margin:0 auto; padding:36px 20px; }
+main > h2{
+  font-size:.72rem; font-weight:500; color:rgba(255,255,255,.25);
+  letter-spacing:2px; text-transform:uppercase; margin-bottom:18px;
+}
+.game{
+  display:flex; align-items:center; justify-content:space-between;
+  background:#181818; border:1px solid #222; border-radius:14px;
+  padding:18px 22px; margin-bottom:12px;
+  transition:border-color .15s, background .15s;
+}
+.game:hover{ background:#1c1c1c; border-color:#2e2e2e; }
+.game-title{ font-size:.98rem; font-weight:600; margin-bottom:3px; }
+.game-desc{ font-size:.72rem; color:rgba(255,255,255,.3); }
+.game-btns{ display:flex; gap:8px; flex-shrink:0; }
+.btn-play{
+  background:#22c55e; color:#fff; padding:8px 18px;
+  border-radius:8px; text-decoration:none; font-size:.82rem; font-weight:600;
+  transition:opacity .15s;
+}
+.btn-play:hover{ opacity:.85; }
+.btn-ext{
+  background:#1a73e8; color:#fff; padding:8px 14px;
+  border-radius:8px; text-decoration:none; font-size:.82rem; font-weight:600;
+  transition:opacity .15s;
+}
+.btn-ext:hover{ opacity:.85; }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav>
+  <div class="nav-logo">🎮 <span>Pixel</span>Games</div>
+  <div class="nav-right">
+    <span id="user-name"></span>
+    <button class="btn btn-google" id="btn-nav-google" onclick="openModal('signup')" style="display:none">
+      <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.7 0 6.7 5.4 2.8 13.3l7.8 6C12.4 13 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.8-2.2 5.2-4.7 6.8l7.3 5.7c4.3-4 6.7-9.9 6.7-16.5z"/><path fill="#FBBC05" d="M10.6 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.5 10.7l8.1-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.3-5.7c-2 1.4-4.6 2.2-7.9 2.2-6.2 0-11.5-4.2-13.4-9.8l-8.1 6C6.7 42.6 14.7 48 24 48z"/></svg>
+      Inloggen
+    </button>
+    <button class="btn btn-ghost" id="btn-nav-login" onclick="openModal('login')" style="display:none">Inloggen</button>
+    <button class="btn btn-ghost" id="btn-nav-signup" onclick="openModal('signup')" style="display:none">Aanmelden</button>
+    <button class="btn btn-logout" id="btn-nav-logout" onclick="doLogout()" style="display:none">Uitloggen</button>
+  </div>
+</nav>
+
+<!-- MODAL -->
+<div id="modal-bg">
+  <div id="modal">
+    <button id="modal-close" onclick="closeModal()">✕</button>
+    <h2 id="modal-title">Aanmelden</h2>
+    <p class="sub" id="modal-sub">Maak een gratis account aan.</p>
+
+    <!-- Google login knop -->
+    <button id="btn-google-big" onclick="doGoogleLogin()">
+      <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.7 0 6.7 5.4 2.8 13.3l7.8 6C12.4 13 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.8-2.2 5.2-4.7 6.8l7.3 5.7c4.3-4 6.7-9.9 6.7-16.5z"/><path fill="#FBBC05" d="M10.6 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.5 10.7l8.1-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.3-5.7c-2 1.4-4.6 2.2-7.9 2.2-6.2 0-11.5-4.2-13.4-9.8l-8.1 6C6.7 42.6 14.7 48 24 48z"/></svg>
+      Doorgaan met Google
+    </button>
+
+    <div class="divider">of met e-mail</div>
+
+    <div class="field" id="field-name" style="display:none">
+      <label>Gebruikersnaam (wordt je naam in Money Digger)</label>
+      <input id="f-name" type="text" maxlength="20" placeholder="jouw naam..." autocomplete="off"/>
+    </div>
+    <div class="field">
+      <label>E-mailadres</label>
+      <input id="f-email" type="email" placeholder="jij@voorbeeld.com"/>
+    </div>
+    <div class="field">
+      <label>Wachtwoord</label>
+      <input id="f-pass" type="password" placeholder="••••••••"/>
+    </div>
+    <p id="modal-hint"></p>
+    <p id="modal-err"></p>
+    <button id="modal-submit" onclick="doEmailAuth()">Aanmelden</button>
+    <p id="modal-switch"></p>
+  </div>
+</div>
+
+<!-- GAMES -->
+<main>
+  <h2>Alle games</h2>
+
+  <div class="game">
+    <div><div class="game-title">🦕 Dino World</div><div class="game-desc">Ecosysteem simulator met dinosaurussen</div></div>
+    <div class="game-btns">
+      <a class="btn-play" href="dino-world.html">Spelen</a>
+      <a class="btn-ext" href="https://chromewebstore.google.com/detail/iejbajahighjdjjpembncgkgjolpbkfh">Chrome</a>
+    </div>
+  </div>
+
+  <div class="game">
+    <div><div class="game-title">🎮 Mini Browser Platformer</div><div class="game-desc">Platformer met 22 levels en multiplayer</div></div>
+    <div class="game-btns">
+      <a class="btn-play" href="mini-browser-platformer.html">Spelen</a>
+      <a class="btn-ext" href="https://chromewebstore.google.com/detail/nhgibefomkakkimjgfddgjafdjkjfekd">Chrome</a>
+    </div>
+  </div>
+
+  <div class="game">
+    <div><div class="game-title">⬜ One Square</div><div class="game-desc">Minecraft-achtig spel met multiplayer</div></div>
+    <div class="game-btns">
+      <a class="btn-play" href="one-square.html">Spelen</a>
+      <a class="btn-ext" href="https://chromewebstore.google.com/detail/foelbpdicaedppibpblliahmdceaocjc">Chrome</a>
+    </div>
+  </div>
+
+  <div class="game">
+    <div><div class="game-title">🕹️ Dodging Arena</div><div class="game-desc">Ontwijkspel</div></div>
+    <div class="game-btns">
+      <a class="btn-play" href="dodging-arena.html">Spelen</a>
+    </div>
+  </div>
+
+  <div class="game">
+    <div><div class="game-title">💵 Money Digger</div><div class="game-desc">Klik samen de geldbiljettenstapel omhoog!</div></div>
+    <div class="game-btns">
+      <a class="btn-play" href="money-digger v9.html">Spelen</a>
+    </div>
+  </div>
+</main>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+const FB_CONFIG = {
+  apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+  authDomain: "money-digger-9b05e.firebaseapp.com",
+  databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "money-digger-9b05e",
+  storageBucket: "money-digger-9b05e.firebasestorage.app",
+  messagingSenderId: "883506536944",
+  appId: "1:883506536944:web:921b342dff76154fcbbd35"
+};
+
+firebase.initializeApp(FB_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.database();
+let mode = 'signup';
+
+// ── AUTH STATE ──
+auth.onAuthStateChanged(async user => {
+  if(user){
+    // Haal naam op uit database, of gebruik Google displayName
+    let name = user.displayName || user.email.split('@')[0];
+    const snap = await db.ref('users/'+user.uid+'/name').once('value');
+    if(snap.val()) name = snap.val();
+
+    // Sla op zodat Money Digger hem pakt
+    try{ localStorage.setItem('md6_n', name); }catch(e){}
+
+    // Koppel ook deviceId aan account
+    try{
+      let did = localStorage.getItem('md6_did');
+      if(!did){ did='dev-'+Math.random().toString(36).slice(2,12); localStorage.setItem('md6_did',did); }
+      await db.ref('users/'+user.uid).update({ name, email: user.email, deviceId: did });
+      // Update naam in scores
+      await db.ref('scores/'+did).update({ name });
+    }catch(e){}
+
+    showLoggedIn(name);
+  } else {
+    showLoggedOut();
+  }
+});
+
+function showLoggedIn(name){
+  document.getElementById('user-name').innerHTML = `Hallo, <strong>${name}</strong>`;
+  document.getElementById('btn-nav-google').style.display = 'none';
+  document.getElementById('btn-nav-login').style.display  = 'none';
+  document.getElementById('btn-nav-signup').style.display = 'none';
+  document.getElementById('btn-nav-logout').style.display = 'inline-flex';
+}
+
+function showLoggedOut(){
+  document.getElementById('user-name').textContent = '';
+  document.getElementById('btn-nav-google').style.display = 'inline-flex';
+  document.getElementById('btn-nav-login').style.display  = 'none';
+  document.getElementById('btn-nav-signup').style.display = 'none';
+  document.getElementById('btn-nav-logout').style.display = 'none';
+}
+
+// ── MODAL ──
+function openModal(m){
+  mode = m;
+  document.getElementById('modal-bg').classList.add('open');
+  document.getElementById('modal-err').textContent = '';
+  document.getElementById('f-email').value = '';
+  document.getElementById('f-pass').value  = '';
+
+  const signup = m === 'signup';
+  document.getElementById('modal-title').textContent   = signup ? 'Aanmelden' : 'Inloggen';
+  document.getElementById('modal-sub').textContent     = signup ? 'Maak een gratis account aan.' : 'Welkom terug!';
+  document.getElementById('modal-submit').textContent  = signup ? 'Account aanmaken' : 'Inloggen';
+  document.getElementById('btn-google-big').textContent= ''; // reset
+  document.getElementById('btn-google-big').innerHTML  =
+    '<svg viewBox="0 0 48 48" style="width:20px;height:20px"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.2 0 24 0 14.7 0 6.7 5.4 2.8 13.3l7.8 6C12.4 13 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.8-2.2 5.2-4.7 6.8l7.3 5.7c4.3-4 6.7-9.9 6.7-16.5z"/><path fill="#FBBC05" d="M10.6 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.5 10.7l8.1-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.3-5.7c-2 1.4-4.6 2.2-7.9 2.2-6.2 0-11.5-4.2-13.4-9.8l-8.1 6C6.7 42.6 14.7 48 24 48z"/></svg>Doorgaan met Google';
+  document.getElementById('modal-hint').textContent    = signup ? 'Wachtwoord: minimaal 6 tekens.' : '';
+  document.getElementById('modal-switch').innerHTML    = signup
+    ? 'Al een account? <a onclick="openModal('login')">Inloggen</a>'
+    : 'Nog geen account? <a onclick="openModal('signup')">Aanmelden</a>';
+
+  // Naam veld alleen bij signup
+  document.getElementById('field-name').style.display = signup ? 'block' : 'none';
+  if(signup){
+    try{ const n=localStorage.getItem('md6_n'); if(n) document.getElementById('f-name').value=n; }catch(e){}
+  }
+
+  setTimeout(()=>{
+    const el = signup ? document.getElementById('f-name') : document.getElementById('f-email');
+    el.focus();
+  }, 80);
+}
+
+function closeModal(){
+  document.getElementById('modal-bg').classList.remove('open');
+}
+
+document.getElementById('modal-bg').addEventListener('click', e=>{
+  if(e.target === document.getElementById('modal-bg')) closeModal();
+});
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape') closeModal();
+  if(e.key==='Enter' && document.getElementById('modal-bg').classList.contains('open')) doEmailAuth();
+});
+
+// ── GOOGLE LOGIN ──
+function doGoogleLogin(){
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .then(cred=>{
+      // Sla naam op als die nog niet bestaat in DB
+      const uid  = cred.user.uid;
+      const name = cred.user.displayName || cred.user.email.split('@')[0];
+      db.ref('users/'+uid+'/name').once('value').then(snap=>{
+        if(!snap.val()){
+          db.ref('users/'+uid).set({ name, email: cred.user.email });
+        }
+      });
+      closeModal();
+    })
+    .catch(err => {
+      document.getElementById('modal-err').textContent = fmtErr(err.code);
+    });
+}
+
+// ── EMAIL AUTH ──
+function doEmailAuth(){
+  const email = document.getElementById('f-email').value.trim();
+  const pass  = document.getElementById('f-pass').value;
+  const name  = document.getElementById('f-name').value.trim();
+  const err   = document.getElementById('modal-err');
+  err.textContent = '';
+
+  if(!email || !pass){ err.textContent = 'Vul e-mail en wachtwoord in.'; return; }
+  if(mode==='signup' && pass.length < 6){ err.textContent = 'Wachtwoord moet minstens 6 tekens zijn.'; return; }
+  if(mode==='signup' && !name){ err.textContent = 'Kies een gebruikersnaam.'; return; }
+
+  const btn = document.getElementById('modal-submit');
+  btn.textContent = '...'; btn.disabled = true;
+
+  if(mode==='signup'){
+    auth.createUserWithEmailAndPassword(email, pass)
+      .then(cred=>{
+        return db.ref('users/'+cred.user.uid).set({ name, email });
+      })
+      .then(()=>{
+        try{ localStorage.setItem('md6_n', name); }catch(e){}
+        closeModal();
+      })
+      .catch(e=>{ err.textContent = fmtErr(e.code); })
+      .finally(()=>{ btn.textContent='Account aanmaken'; btn.disabled=false; });
+  } else {
+    auth.signInWithEmailAndPassword(email, pass)
+      .then(()=>closeModal())
+      .catch(e=>{ err.textContent = fmtErr(e.code); })
+      .finally(()=>{ btn.textContent='Inloggen'; btn.disabled=false; });
+  }
+}
+
+function doLogout(){ auth.signOut(); }
+
+function fmtErr(code){
+  return ({
+    'auth/email-already-in-use':  'Dit e-mailadres is al in gebruik.',
+    'auth/invalid-email':         'Ongeldig e-mailadres.',
+    'auth/weak-password':         'Wachtwoord is te zwak (min. 6 tekens).',
+    'auth/user-not-found':        'Geen account gevonden.',
+    'auth/wrong-password':        'Verkeerd wachtwoord.',
+    'auth/invalid-credential':    'E-mail of wachtwoord klopt niet.',
+    'auth/too-many-requests':     'Te veel pogingen. Probeer later opnieuw.',
+    'auth/popup-closed-by-user':  'Popup gesloten. Probeer opnieuw.',
+    'auth/popup-blocked':         'Popup geblokkeerd door browser.',
+  })[code] || 'Er ging iets mis. Probeer opnieuw.';
+}
+</script>
+</body>
+</html>
