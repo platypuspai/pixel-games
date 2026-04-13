@@ -28,100 +28,86 @@
 
         h2 { margin-top: 0; color: #eee; }
 
-        a, .btn-action { display: inline-block; margin: 10px; padding: 10px 20px; text-decoration: none; color: white; border-radius: 5px; font-weight: bold; cursor: pointer; border: none; }
+        a { display: inline-block; margin: 10px; padding: 10px 20px; text-decoration: none; color: white; border-radius: 5px; font-weight: bold; }
         .play { background: #22c55e; }
         .chrome { background: #3b82f6; }
-        .achievements-btn { background: #f59e0b; font-size: 14px; width: 100%; margin: 10px 0 0 0; }
 
-        /* --- TOP 10 & STATS RECHTSBOVEN --- */
-        .sidebar-container { 
+        /* --- TOP 10 & ACHIEVEMENTS RECHTSBOVEN --- */
+        .side-container { 
             position: absolute; 
             top: 20px; 
             right: 20px; 
+            display: flex; 
+            flex-direction: column;
+            align-items: flex-end; 
+            gap: 12px; 
+            z-index: 100; 
+        }
+
+        .top-10 {
             background: #1a1a1a;
             border: 1px solid #333;
-            padding: 15px;
-            border-radius: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
             text-align: left;
-            width: 220px;
-            z-index: 100;
-        }
-        
-        .sidebar-container h3 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
-            color: #22c55e;
-            border-bottom: 1px solid #333;
-            padding-bottom: 5px;
+            min-width: 150px;
         }
 
-        .top-players-list {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 15px 0;
-            font-size: 13px;
+        .top-10 h3 { margin: 0 0 5px 0; font-size: 14px; color: #22c55e; }
+        .top-10 ol { margin: 0; padding-left: 20px; color: #ccc; }
+
+        #achievements-btn { 
+            background: #f59e0b; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 14px; 
         }
 
-        .top-players-list li {
-            display: flex;
-            justify-content: space-between;
-            padding: 3px 0;
-            color: #ccc;
-        }
-
-        .top-players-list li span { color: #fff; font-weight: bold; }
-
-        /* Achievements Overlay */
-        #achievements-modal {
+        /* Achievements Modal */
+        #achievements-overlay {
             display: none;
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #1a1a1a;
-            border: 2px solid #f59e0b;
-            padding: 30px;
-            border-radius: 15px;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
             z-index: 1000;
+        }
+
+        #achievements-content {
+            background: #1a1a1a;
+            margin: 10% auto;
+            padding: 20px;
+            width: 80%;
             max-width: 500px;
-            width: 90%;
+            border: 2px solid #f59e0b;
+            border-radius: 10px;
             text-align: left;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
         }
-
-        .achievement-item {
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #333;
-        }
-
-        .achievement-item.locked { opacity: 0.5; }
-        .achievement-item.unlocked { border-left: 4px solid #22c55e; padding-left: 10px; opacity: 1; }
-        
-        .achievement-item h4 { margin: 0; color: #f59e0b; }
-        .achievement-item p { margin: 5px 0; font-size: 13px; color: #bbb; }
-
-        .close-btn { background: #ef4444; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="sidebar-container">
-    <h3>🏆 Top 10 Klikkers</h3>
-    <ul class="top-players-list">
-        <li>1. PixelKing <span>999k</span></li>
-        <li>2. DinoMaster <span>850k</span></li>
-        <li>3. SquareJump <span>720k</span></li>
-        <li>4. MoneyMaker <span>600k</span></li>
-        <li>5. GoldDigger <span>550k</span></li>
-    </ul>
-    
-    <h3>📊 Jouw Score</h3>
-    <div style="font-size: 14px; margin-bottom: 10px;">
-        Gegraven: <span id="current-depth" style="color: #22c55e; font-weight: bold;">0</span> meter
+<div class="side-container">
+    <div class="top-10">
+        <h3>🏆 Top 10 Klikkers</h3>
+        <ol id="top-list">
+            <li>PixelKing - 1500m</li>
+            <li>DinoPro - 1200m</li>
+            <li>Clicker123 - 900m</li>
+            <li>Ghost - 850m</li>
+            <li>Master - 700m</li>
+            <li>Player1 - 600m</li>
+            <li>Zon - 500m</li>
+            <li>Shadow - 400m</li>
+            <li>Winner - 300m</li>
+            <li>Noob - 100m</li>
+        </ol>
     </div>
-
-    <button class="btn-action achievements-btn" onclick="toggleAchievements()">🏅 Achievements</button>
+    <button id="achievements-btn" onclick="openAchievements()">🏅 Achievements</button>
 </div>
 
 <h1>🎮 My Games</h1>
@@ -133,54 +119,67 @@
 </div>
 
 <div class="game">
+    <h2>Mini Browser Platformer</h2>
+    <a class="play" href="mini-browser-platformer.html">Play</a>
+    <a class="chrome" href="https://chromewebstore.google.com/detail/nhgibefomkakkimjgfddgjafdjkjfekd?utm_source=item-share-cb">Extension</a>
+</div>
+
+<div class="game">
+    <h2>One Square</h2>
+    <a class="play" href="one-square.html">Play</a>
+    <a class="chrome" href="https://chromewebstore.google.com/detail/foelbpdicaedppibpblliahmdceaocjc?utm_source=item-share-cb">Extension</a>
+</div>
+
+<div class="game">
+    <h2>Dodging arena</h2>
+    <a class="play" href="dodging arena.html">Play</a>
+</div>
+
+<div class="game">
     <h2>Money Digger</h2>
     <a class="play" href="money-digger v10.html">Play</a>
 </div>
 
-<div id="achievements-modal">
-    <h2 style="margin-top:0;">🏅 Achievements Progressie</h2>
-    <div id="achievements-list">
-        </div>
-    <button class="btn-action close-btn" onclick="toggleAchievements()">Sluiten</button>
+<div id="achievements-overlay" onclick="closeAchievements()">
+    <div id="achievements-content" onclick="event.stopPropagation()">
+        <h2>Jouw Achievements</h2>
+        <ul id="achievement-list" style="list-style: none; padding: 0;"></ul>
+        <button onclick="closeAchievements()" style="background:#ef4444; color:white; border:none; padding:10px; border-radius:5px; cursor:pointer; width:100%;">Sluiten</button>
+    </div>
 </div>
 
 <script>
-    // Dit simuleert de data uit je game. 
-    // In je echte game moet je "localStorage.setItem('totalMeters', score)" gebruiken.
-    let userMeters = localStorage.getItem('totalMeters') || 0;
-    document.getElementById('current-depth').textContent = userMeters;
+    // Haal de score op van de huidige persoon
+    let mijnMeters = localStorage.getItem('moneyDiggerMeters') || 0;
 
-    const achievements = [
-        { threshold: 1, title: "De Leraar", desc: "$10.000 = 26 dagen lesgeven" },
-        { threshold: 5, title: "De CEO", desc: "$50.000 = 12,5 uur Fortune 500 CEO" },
-        { threshold: 10, title: "De Ruimtevaarder", desc: "$100.000 = NASA budget (2m 24s)" },
-        { threshold: 50, title: "Huizenbezitter", desc: "$500.000 = Gemiddeld NL huis" },
-        { threshold: 100, title: "De Staat", desc: "$1.000.000 = Wat de overheid per minuut uitgeeft" },
-        { threshold: 1000, title: "Elon Mode", desc: "$10.000.000 = De waarde van een privé eiland" }
+    const achievementsData = [
+        { m: 1, text: "1 meter = $10.000 = 26 dagen en 1 uur lesgeven" },
+        { m: 5, text: "5 meter = $50.000 = 12,5 uur Fortune 500 CEO" },
+        { m: 10, text: "10 meter = $100.000 = NASA budget per 2m 24s" },
+        { m: 25, text: "25 meter = $250.000 = Prijs van een gemiddeld huis in 1990" },
+        { m: 100, text: "100 meter = $1.000.000 = 1 minuut inkomsten van Apple" },
+        { m: 500, text: "500 meter = $5.000.000 = De duurste pizza ooit besteld (BTC)" }
     ];
 
-    function toggleAchievements() {
-        const modal = document.getElementById('achievements-modal');
-        const list = document.getElementById('achievements-list');
+    function openAchievements() {
+        const list = document.getElementById('achievement-list');
+        list.innerHTML = '';
         
-        if (modal.style.display === 'block') {
-            modal.style.display = 'none';
-        } else {
-            // Update lijst voordat we deze tonen
-            list.innerHTML = '';
-            achievements.forEach(ach => {
-                const isUnlocked = userMeters >= ach.threshold;
-                const div = document.createElement('div');
-                div.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
-                div.innerHTML = `
-                    <h4>${isUnlocked ? '✅' : '🔒'} ${ach.title} (${ach.threshold}m)</h4>
-                    <p>${ach.desc}</p>
-                    ${!isUnlocked ? `<small style="color: #666">Nog ${ach.threshold - userMeters} meter te gaan</small>` : ''}
-                `;
-                list.appendChild(div);
-            });
-            modal.style.display = 'block';
-        }
+        achievementsData.forEach(ach => {
+            const unlocked = mijnMeters >= ach.m;
+            const li = document.createElement('li');
+            li.style.padding = "10px";
+            li.style.borderBottom = "1px solid #333";
+            li.style.color = unlocked ? "#22c55e" : "#666";
+            li.innerHTML = `<strong>${unlocked ? '✅' : '🔒'} ${ach.m}m:</strong> ${ach.text}`;
+            list.appendChild(li);
+        });
+
+        document.getElementById('achievements-overlay').style.display = 'block';
+    }
+
+    function closeAchievements() {
+        document.getElementById('achievements-overlay').style.display = 'none';
     }
 </script>
 
