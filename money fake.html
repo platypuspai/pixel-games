@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Money Digger - Cloud Save</title>
+<title>Money Digger - Volledige Versie</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=DM+Mono&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -13,10 +13,10 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 #alt{font-size:2.4rem;font-weight:700;color:#fff;line-height:1;text-shadow:0 2px 24px rgba(0,0,0,.7);letter-spacing:-1px}
 #unit{font-size:.88rem;font-weight:300;color:rgba(255,255,255,.6);margin-top:2px}
 #nxt{margin-top:8px;font-size:.66rem;color:rgba(255,255,255,.42);max-width:240px;line-height:1.5}
-#sb{position:absolute;top:20px;right:20px;background:rgba(0,0,0,0.5);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 14px;min-width:135px}
+#sb{position:absolute;top:20px;right:20px;background:rgba(0,0,0,.5);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px 14px;min-width:135px}
 #sb h3{font-size:.52rem;font-weight:500;color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:7px}
 .sr{display:flex;justify-content:space-between;gap:10px;font-size:.6rem;color:rgba(255,255,255,.5);padding:2px 0}
-.sr.me{color:#22c55e; font-weight: bold;}
+.sr.me{color:#22c55e}
 .sn{max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sv{font-family:'DM Mono',monospace;font-size:.56rem}
 #bctr{position:absolute;bottom:110px;right:28px;text-align:right}
@@ -29,7 +29,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 #nw{position:absolute;bottom:54px;left:20px;display:flex;align-items:center;gap:5px}
 #nl{font-size:.52rem;color:rgba(255,255,255,.22)}
 #ni{font-family:'DM Sans',sans-serif;font-size:.56rem;padding:3px 7px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.08);border-radius:5px;width:100px;pointer-events:all}
-#msb{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;opacity:0;transition:opacity .5s;pointer-events:none;background:rgba(0,0,0,.6);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px 32px}
+#msb{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;opacity:0;transition:opacity .5s;pointer-events:none;background:rgba(0,0,0,.6);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:24px 32px}
 #msb.show{opacity:1}
 #mse{font-size:3.5rem}
 #msn{font-size:1.3rem;font-weight:700;color:#fff;margin-top:6px}
@@ -53,10 +53,9 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
 <script>
-// --- CONFIGURATIE ---
-const BILL_M = 0.0001;
+// --- CONSTANTS ---
+const BILL_M = 0.0001; 
 const OBJECTS = [
   {m:0.001, label:'Mier', emoji:'🐜'}, {m:0.015, label:'Druif', emoji:'🍇'},
   {m:0.040, label:'Aardbei', emoji:'🍓'}, {m:0.070, label:'Muis', emoji:'🐭'},
@@ -68,8 +67,11 @@ const OBJECTS = [
   {m:7.000, label:'Jonge boom', emoji:'🌲'}, {m:8.500, label:'Huis', emoji:'🏠'},
   {m:15.00, label:'Grote eik', emoji:'🌳'}, {m:25.00, label:'Sequoia', emoji:'🌲'},
   {m:46.00, label:'Toren van Pisa', emoji:'🗼'}, {m:93.00, label:'Vrijheidsbeeld', emoji:'🗽'},
-  {m:324.0, label:'Eiffeltoren', emoji:'🗼'}, {m:828.0, label:'Burj Khalifa', emoji:'🏙️'},
-  {m:8849,  label:'Mount Everest', emoji:'🏔️'}, {m:100000, label:'Ruimte', emoji:'🌌'},
+  {m:115.0, label:'Reuzensequoia', emoji:'🌲'}, {m:169.0, label:'Washington Monument', emoji:'🏛️'},
+  {m:324.0, label:'Eiffeltoren', emoji:'🗼'}, {m:443.0, label:'Empire State Building', emoji:'🏙️'},
+  {m:600.0, label:'Pterodactylus', emoji:'🦕'}, {m:828.0, label:'Burj Khalifa', emoji:'🏙️'},
+  {m:1000, label:'1 kilometer!', emoji:'🎊'}, {m:3776, label:'Mount Fuji', emoji:'🗻'},
+  {m:8849, label:'Mount Everest', emoji:'🏔️'}, {m:100000, label:'Kármánlijn', emoji:'🌌'},
   {m:384400000, label:'De Maan', emoji:'🌕'}, {m:149600000000, label:'De Zon', emoji:'☀️'}
 ];
 
@@ -77,134 +79,191 @@ const OBJECTS = [
 let totalBills = 0;
 let displayBills = 0;
 let cloudT = 0;
+let deviceId = localStorage.getItem('md6_did') || 'dev-'+Math.random().toString(36).slice(2,12);
+localStorage.setItem('md6_did', deviceId);
+let myName = localStorage.getItem('md6_n') || 'Gast';
 let myClicks = 0;
-let myName = localStorage.getItem('md6_n') || "Gast";
-let currentUid = null;
 let scores = {};
 let shownMS = new Set();
+try { shownMS = new Set(JSON.parse(localStorage.getItem('md6_m') || '[]')); } catch(e){}
 
-// --- CANVAS SETUP ---
+// --- FIREBASE ---
+firebase.initializeApp({
+    apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+    authDomain: "money-digger-9b05e.firebaseapp.com",
+    databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "money-digger-9b05e",
+});
+
+const auth = firebase.auth();
+const db = firebase.database();
+const billsRef = db.ref('totalBills');
+const scoresRef = db.ref('scores');
+
+// --- LOGIN & SYNC ---
+auth.onAuthStateChanged(user => {
+    if(user) {
+        deviceId = user.uid; // Gebruik Firebase UID voor opslag
+        myName = user.displayName;
+        document.getElementById('ni').value = myName;
+        // Haal bestaande clicks op voor deze gebruiker
+        scoresRef.child(deviceId).once('value', snap => {
+            if(snap.val()) myClicks = snap.val().clicks || 0;
+        });
+    }
+});
+
+// Realtime updates van database
+billsRef.on('value', snap => { totalBills = snap.val() || 0; });
+scoresRef.on('value', snap => {
+    scores = {};
+    snap.forEach(child => {
+        const rec = child.val();
+        if(rec && rec.name) scores[child.key] = rec;
+    });
+    updateScoreboard();
+});
+
+const onlineRef = db.ref('online');
+const myPresence = onlineRef.push();
+myPresence.set(true);
+myPresence.onDisconnect().remove();
+onlineRef.on('value', snap => { document.getElementById('online').textContent = `● ${snap.numChildren()} online`; });
+
+// --- CANVAS & DRAWING ---
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 let W, H, GY;
 function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; GY=Math.round(H*0.72); }
 resize(); window.addEventListener('resize', resize);
 
-// --- FIREBASE INITIALISATIE ---
-firebase.initializeApp({
-    apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
-    authDomain: "money-digger-9b05e.firebaseapp.com",
-    databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "money-digger-9b05e"
-});
+function fmtN(n){
+    if(n>=1e12) return(n/1e12).toFixed(2)+'T';
+    if(n>=1e9)  return(n/1e9).toFixed(2)+'B';
+    if(n>=1e6)  return(n/1e6).toFixed(2)+'M';
+    if(n>=1e3)  return(n/1e3).toFixed(1)+'K';
+    return Math.round(n).toLocaleString('nl-NL');
+}
 
-const db = firebase.database();
-const auth = firebase.auth();
-const billsRef = db.ref('totalBills');
-const scoresRef = db.ref('scores');
+function fmtH(m){
+    if(m>=1000) return(m/1000).toFixed(3)+' km';
+    if(m>=1)    return m.toFixed(3)+' m';
+    return(m*1000).toFixed(2)+' mm';
+}
 
-// --- AUTH LOGICA (LINK MET VOORPAGINA) ---
-auth.onAuthStateChanged(user => {
-    if(user) {
-        currentUid = user.uid;
-        myName = user.displayName;
-        document.getElementById('ni').value = myName;
-        
-        // Laad persoonlijke score in
-        scoresRef.child(user.uid).on('value', snap => {
-            const data = snap.val();
-            if(data) {
-                myClicks = data.clicks || 0;
-                // We syncen display naar de hoogste waarde
-                if(myClicks > totalBills) totalBills = myClicks;
-            }
-        });
-    } else {
-        currentUid = "guest-" + Math.random().toString(36).substr(2, 5);
+function drawSky(altM){
+    const t = Math.min(1, altM/100000);
+    const sg = ctx.createLinearGradient(0, 0, 0, GY);
+    sg.addColorStop(0, `rgb(${Math.round(20*(1-t))},${Math.round(42*(1-t))},${Math.round(58*(1-t))})`);
+    sg.addColorStop(1, `rgb(${Math.round(135*(1-t)+2*t)},${Math.round(186*(1-t)+5*t)},${Math.round(235*(1-t)+18*t)})`);
+    ctx.fillStyle = sg; ctx.fillRect(0, 0, W, GY);
+}
+
+function drawStack(bills){
+    if(bills <= 0) return;
+    const cx = W/2, maxH = H * 0.38, sh = Math.min(bills * 0.5, maxH), top = GY - sh, sw = 110, depth = 20;
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(cx+depth*.4, GY+4, sw*.7, 10, 0, 0, Math.PI*2); ctx.fill();
+    // 3D Side
+    ctx.fillStyle = '#14532d';
+    ctx.beginPath(); ctx.moveTo(cx+sw/2, top); ctx.lineTo(cx+sw/2+depth, top-depth*.5);
+    ctx.lineTo(cx+sw/2+depth, GY-depth*.5); ctx.lineTo(cx+sw/2, GY); ctx.fill();
+    // Front
+    const ff = ctx.createLinearGradient(cx, top, cx, GY);
+    ff.addColorStop(0,'#166534'); ff.addColorStop(1,'#14532d');
+    ctx.fillStyle = ff; ctx.fillRect(cx-sw/2, top, sw, sh);
+    // $1 label
+    if(sh > 20){
+        ctx.fillStyle='rgba(255,255,255,.1)';
+        ctx.font=`bold ${Math.min(36,sh*.26)}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('$1', cx, top+sh*.52);
     }
-});
+    // Top
+    ctx.fillStyle = '#4ade80';
+    ctx.beginPath(); ctx.moveTo(cx-sw/2, top); ctx.lineTo(cx+sw/2, top);
+    ctx.lineTo(cx+sw/2+depth, top-depth*.5); ctx.lineTo(cx-sw/2+depth, top-depth*.5); ctx.closePath(); ctx.fill();
+}
 
-// Sync globale stats & scoreboard
-billsRef.on('value', snap => { totalBills = snap.val() || 0; });
-scoresRef.on('value', snap => {
-    scores = {};
-    snap.forEach(child => {
-        const d = child.val();
-        if(d && d.name) scores[child.key] = { name: d.name, clicks: d.clicks };
+function drawObjects(bills){
+    const altM = bills * BILL_M;
+    const pxPerM = (H * 0.38) / Math.max(altM, BILL_M);
+    OBJECTS.forEach(obj => {
+        const ratio = obj.m / altM;
+        if(ratio > 0.001 && ratio < 8) {
+            const drawH = Math.min(obj.m * pxPerM, H*0.8);
+            if(drawH > 10) {
+                ctx.globalAlpha = Math.min(1, (8-ratio)/2);
+                ctx.font = `${Math.min(drawH, 150)}px serif`; ctx.textAlign='center';
+                ctx.fillText(obj.emoji, W/2 - 150, GY); 
+                ctx.globalAlpha = 1;
+            }
+        }
     });
-    updateScoreboard();
-});
+}
 
-// --- GAME FUNCTIES ---
-function fmtN(n){ return n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n.toLocaleString('nl-NL'); }
-function fmtH(m){ return m >= 1000 ? (m/1000).toFixed(2)+'km' : m.toFixed(2)+'m'; }
+// --- LOGIC ---
+function updateHUD(){
+    const altM = displayBills * BILL_M;
+    document.getElementById('alt').textContent = fmtH(altM);
+    let next = OBJECTS.find(o => o.m > altM);
+    document.getElementById('nxt').textContent = next ? `${next.emoji} ${next.label} - nog ${fmtN((next.m-altM)/BILL_M)} klikken` : 'Limit reached!';
+    document.getElementById('bnum').textContent = fmtN(totalBills);
+    
+    // Milestones banner
+    for(const obj of OBJECTS){
+        if(altM >= obj.m && !shownMS.has(obj.label)){
+            shownMS.add(obj.label); localStorage.setItem('md6_m', JSON.stringify([...shownMS]));
+            showBanner(obj); break;
+        }
+    }
+}
+
+function showBanner(obj){
+    document.getElementById('mse').textContent = obj.emoji;
+    document.getElementById('msn').textContent = obj.label;
+    document.getElementById('mss').textContent = `${fmtH(obj.m)} hoog`;
+    document.getElementById('msb').classList.add('show');
+    setTimeout(()=>document.getElementById('msb').classList.remove('show'), 3000);
+}
 
 function updateScoreboard(){
-    const sorted = Object.values(scores).sort((a,b)=>b.clicks-a.clicks).slice(0,5);
-    const list = document.getElementById('sl');
-    list.innerHTML = '';
+    const sorted = Object.values(scores).sort((a,b)=>b.clicks-a.clicks).slice(0,7);
+    const list = document.getElementById('sl'); list.innerHTML = '';
     sorted.forEach(s => {
         const row = document.createElement('div');
-        row.className = 'sr' + (s.name === myName ? ' me' : '');
+        row.className = 'sr'+(s.name===myName?' me':'');
         row.innerHTML = `<span class="sn">${s.name}</span><span class="sv">${fmtN(s.clicks)}</span>`;
         list.appendChild(row);
     });
 }
 
-document.getElementById('cbtn').addEventListener('click', () => {
-    myClicks++;
-    totalBills++;
-    spawnBill();
-    
-    // Save naar Cloud
-    if(currentUid) {
-        billsRef.transaction(v => (v || 0) + 1);
-        scoresRef.child(currentUid).set({
-            name: myName,
-            clicks: myClicks
-        });
-    }
+function spawnBill(){
+    const el = document.createElement('div'); el.className = 'fb'; el.textContent = '💵';
+    el.style.left = (W - 60 + (Math.random()-0.5)*40) + 'px';
+    el.style.top = (H - 80) + 'px';
+    document.body.appendChild(el); setTimeout(()=>el.remove(), 800);
+}
+
+document.getElementById('cbtn').addEventListener('click', ()=>{
+    myClicks++; totalBills++; spawnBill();
+    billsRef.transaction(v => (v||0)+1);
+    scoresRef.child(deviceId).update({ name: myName, clicks: myClicks });
 });
 
-function spawnBill(){
-    const btn = document.getElementById('cbtn').getBoundingClientRect();
-    const el = document.createElement('div');
-    el.className = 'fb'; el.textContent = '💵';
-    el.style.left = (btn.left + 20 + Math.random()*20) + 'px';
-    el.style.top = btn.top + 'px';
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 800);
-}
-
-// --- RENDER LOOP ---
-function drawSky(altM){
-    const t = Math.min(1, altM/100000);
-    const sg = ctx.createLinearGradient(0, 0, 0, GY);
-    sg.addColorStop(0, `rgb(${Math.round(20*(1-t))},${Math.round(42*(1-t))},${Math.round(58*(1-t))})`);
-    sg.addColorStop(1, `rgb(${Math.round(135*(1-t))},${Math.round(186*(1-t))},${Math.round(235*(1-t))})`);
-    ctx.fillStyle = sg; ctx.fillRect(0,0,W,GY);
-}
-
-function drawStack(bills){
-    const sh = Math.min(bills * 0.5, H * 0.4);
-    const top = GY - sh;
-    ctx.fillStyle = '#22c55e';
-    ctx.fillRect(W/2-50, top, 100, sh);
-    ctx.fillStyle = '#4ade80';
-    ctx.fillRect(W/2-50, top, 100, 5); // Bovenkant briefje
-}
+document.getElementById('ni').addEventListener('change', (e)=>{
+    myName = e.target.value; localStorage.setItem('md6_n', myName);
+    if(auth.currentUser) scoresRef.child(deviceId).update({name: myName});
+});
 
 function loop(){
     displayBills += (totalBills - displayBills) * 0.1;
     ctx.clearRect(0,0,W,H);
     drawSky(displayBills * BILL_M);
-    ctx.fillStyle = '#1c1c1c'; ctx.fillRect(0,GY,W,H-GY);
+    ctx.fillStyle = '#1c1c1c'; ctx.fillRect(0, GY, W, H-GY);
+    drawObjects(displayBills);
     drawStack(displayBills);
-    
-    const altM = displayBills * BILL_M;
-    document.getElementById('alt').textContent = fmtH(altM);
-    document.getElementById('bnum').textContent = fmtN(Math.round(displayBills));
-    
+    updateHUD();
     requestAnimationFrame(loop);
 }
 loop();
