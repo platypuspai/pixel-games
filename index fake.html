@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel-games</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #111; 
+            color: white; 
+            text-align: center; 
+            margin: 0; 
+            padding: 0; 
+        }
+
+        h1 { margin-top: 50px; margin-bottom: 30px; font-size: 2.5rem; }
+
+        .game { 
+            border: 1px solid #333; 
+            padding: 20px; 
+            margin: 20px auto; 
+            max-width: 500px; 
+            border-radius: 10px; 
+            background: #1a1a1a; 
+            transition: transform 0.2s; 
+        }
+        .game:hover { transform: scale(1.02); }
+
+        h2 { margin-top: 0; color: #eee; }
+
+        a { display: inline-block; margin: 10px; padding: 10px 20px; text-decoration: none; color: white; border-radius: 5px; font-weight: bold; }
+        .play { background: #22c55e; }
+        .chrome { background: #3b82f6; }
+
+        /* --- LOGIN SECTIE --- */
+        .login-container { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            display: flex; 
+            flex-direction: column;
+            align-items: flex-end; 
+            gap: 10px; 
+            z-index: 100; 
+            background: #222;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        
+        #user-info { 
+            font-weight: 500; 
+            color: #22c55e; 
+            font-size: 14px; 
+        }
+
+        .auth-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .auth-inputs input {
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #333;
+            color: white;
+            font-size: 12px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        button { 
+            border: none; 
+            padding: 8px 12px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 12px; 
+            transition: all 0.2s; 
+        }
+
+        #google-btn { background: #4285F4; color: white; }
+        #email-login-btn { background: #22c55e; color: white; }
+        #email-signup-btn { background: #6b7280; color: white; }
+        #logout-btn { background: #ef4444; color: white; display: none; }
+
+        button:hover { filter: brightness(1.1); }
+        
+        .hidden { display: none !important; }
+
+        @media (max-width: 600px) {
+            .login-container { position: static; margin: 20px auto; width: 90%; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <div id="user-info">Niet ingelogd</div>
+    
+    <div id="auth-form" class="auth-inputs">
+        <input type="email" id="email" placeholder="E-mail">
+        <input type="password" id="password" placeholder="Wachtwoord">
+        <div class="button-group">
+            <button id="email-login-btn">Inloggen</button>
+            <button id="email-signup-btn">Registreren</button>
+        </div>
+        <button id="google-btn">Inloggen met Google</button>
+    </div>
+
+    <button id="logout-btn">Log uit</button>
+</div>
+
+<h1>🎮 My Games</h1>
+
+<div class="game">
+    <h2>Dino World</h2>
+    <a class="play" href="dino-world.html">Play</a>
+    <a class="chrome" href="https://chromewebstore.google.com/detail/iejbajahighjdjjpembncgkgjolpbkfh?utm_source=item-share-cb">Extension</a>
+</div>
+
+<div class="game">
+    <h2>Mini Browser Platformer</h2>
+    <a class="play" href="mini-browser-platformer.html">Play</a>
+    <a class="chrome" href="https://chromewebstore.google.com/detail/nhgibefomkakkimjgfddgjafdjkjfekd?utm_source=item-share-cb">Extension</a>
+</div>
+
+<div class="game">
+    <h2>One Square</h2>
+    <a class="play" href="one-square.html">Play</a>
+    <a class="chrome" href="https://chromewebstore.google.com/detail/foelbpdicaedppibpblliahmdceaocjc?utm_source=item-share-cb">Extension</a>
+</div>
+
+<div class="game">
+    <h2>Dodging arena</h2>
+    <a class="play" href="dodging arena.html">Play</a>
+</div>
+
+<div class="game">
+    <h2>Money Digger</h2>
+    <a class="play" href="money-digger v10.html">Play</a>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+    // Jouw Firebase Configuratie
+    const firebaseConfig = {
+        apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+        authDomain: "money-digger-9b05e.firebaseapp.com",
+        projectId: "money-digger-9b05e",
+    };
+
+    // Initialiseer Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // Elementen ophalen
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const googleBtn = document.getElementById('google-btn');
+    const emailLoginBtn = document.getElementById('email-login-btn');
+    const emailSignupBtn = document.getElementById('email-signup-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const authForm = document.getElementById('auth-form');
+    const userInfo = document.getElementById('user-info');
+
+    // --- Google Login ---
+    googleBtn.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch(err => alert(err.message));
+    });
+
+    // --- E-mail Registratie ---
+    emailSignupBtn.addEventListener('click', () => {
+        const email = emailInput.value;
+        const password = passwordInput.value;
+        if(email && password) {
+            auth.createUserWithEmailAndPassword(email, password)
+                .catch(err => alert("Fout bij registreren: " + err.message));
+        } else {
+            alert("Vul een e-mail en wachtwoord in.");
+        }
+    });
+
+    // --- E-mail Login ---
+    emailLoginBtn.addEventListener('click', () => {
+        const email = emailInput.value;
+        const password = passwordInput.value;
+        if(email && password) {
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(err => alert("Fout bij inloggen: " + err.message));
+        } else {
+            alert("Vul een e-mail en wachtwoord in.");
+        }
+    });
+
+    // --- Uitloggen ---
+    logoutBtn.addEventListener('click', () => {
+        auth.signOut();
+    });
+
+    // --- Auth Status Bijhouden ---
+    auth.onAuthStateChanged(user => {
+        if(user) {
+            // Gebruiker is ingelogd
+            userInfo.textContent = "Ingelogd als: " + (user.displayName || user.email);
+            authForm.classList.add('hidden');
+            logoutBtn.style.display = 'block';
+            console.log("Ingelogd op dit apparaat:", user.uid);
+        } else {
+            // Gebruiker is uitgelogd
+            userInfo.textContent = "Niet ingelogd";
+            authForm.classList.remove('hidden');
+            logoutBtn.style.display = 'none';
+            emailInput.value = "";
+            passwordInput.value = "";
+        }
+    });
+</script>
+
+</body>
+</html>
