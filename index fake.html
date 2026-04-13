@@ -31,83 +31,9 @@
         a { display: inline-block; margin: 10px; padding: 10px 20px; text-decoration: none; color: white; border-radius: 5px; font-weight: bold; }
         .play { background: #22c55e; }
         .chrome { background: #3b82f6; }
-
-        /* --- LOGIN SECTIE RECHTSBOVEN (ORIGINELE STIJL) --- */
-        .login-container { 
-            position: absolute; 
-            top: 20px; 
-            right: 20px; 
-            display: flex; 
-            flex-direction: column;
-            align-items: flex-end; 
-            gap: 12px; 
-            z-index: 100; 
-        }
-        
-        #user-info { 
-            font-weight: 500; 
-            color: rgba(255,255,255,0.8); 
-            font-size: 14px; 
-        }
-
-        #auth-btn, .action-btn { 
-            background: #4285F4; 
-            color: white; 
-            border: none; 
-            padding: 8px 16px; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 14px; 
-            transition: all 0.2s; 
-        }
-        #auth-btn:hover { filter: brightness(1.1); }
-        #auth-btn.logout { background: #ef4444; }
-
-        /* Extra paneel voor Email/Wachtwoord */
-        #login-menu {
-            display: none;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 10px;
-            text-align: left;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-
-        #login-menu input {
-            display: block;
-            width: 180px;
-            margin-bottom: 8px;
-            padding: 8px;
-            background: #111;
-            border: 1px solid #444;
-            color: white;
-            border-radius: 4px;
-        }
-
-        .small-btns { display: flex; gap: 5px; }
-        .small-btns button { font-size: 11px; padding: 5px; flex: 1; cursor: pointer; }
     </style>
 </head>
 <body>
-
-<div class="login-container">
-    <span id="user-info"></span>
-    <button id="auth-btn">Login</button>
-    
-    <div id="login-menu">
-        <input type="email" id="email" placeholder="E-mail">
-        <input type="password" id="password" placeholder="Wachtwoord">
-        <div class="small-btns">
-            <button onclick="loginEmail()" style="background:#22c55e; color:white; border:none; border-radius:3px;">Log in</button>
-            <button onclick="signupEmail()" style="background:#666; color:white; border:none; border-radius:3px;">Registreer</button>
-        </div>
-        <hr style="border:0; border-top:1px solid #333; margin:10px 0;">
-        <button onclick="loginGoogle()" style="width:100%; background:#4285F4; color:white; border:none; border-radius:3px; padding:5px;">Google</button>
-    </div>
-</div>
 
 <h1>🎮 My Games</h1>
 
@@ -138,74 +64,6 @@
     <h2>Money Digger</h2>
     <a class="play" href="money-digger v10.html">Play</a>
 </div>
-
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-
-<script>
-    // Configuratie
-    const firebaseConfig = {
-        apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
-        authDomain: "money-digger-9b05e.firebaseapp.com",
-        projectId: "money-digger-9b05e",
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-
-    const authBtn = document.getElementById('auth-btn');
-    const userInfo = document.getElementById('user-info');
-    const loginMenu = document.getElementById('login-menu');
-
-    // Toon/verberg menu of log uit
-    authBtn.addEventListener('click', () => {
-        if(auth.currentUser) {
-            auth.signOut();
-        } else {
-            loginMenu.style.display = (loginMenu.style.display === 'block') ? 'none' : 'block';
-        }
-    });
-
-    // Google Login Functie
-    function loginGoogle() {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider)
-            .then(() => loginMenu.style.display = 'none')
-            .catch(err => alert(err.message));
-    }
-
-    // Email Login Functie
-    function loginEmail() {
-        const email = document.getElementById('email').value;
-        const pass = document.getElementById('password').value;
-        auth.signInWithEmailAndPassword(email, pass)
-            .then(() => loginMenu.style.display = 'none')
-            .catch(err => alert("Inloggen mislukt: " + err.message));
-    }
-
-    // Email Registreer Functie
-    function signupEmail() {
-        const email = document.getElementById('email').value;
-        const pass = document.getElementById('password').value;
-        auth.createUserWithEmailAndPassword(email, pass)
-            .then(() => loginMenu.style.display = 'none')
-            .catch(err => alert("Registreren mislukt: " + err.message));
-    }
-
-    // Status bijhouden (werkt per apparaat)
-    auth.onAuthStateChanged(user => {
-        if(user) {
-            userInfo.textContent = user.displayName || user.email;
-            authBtn.textContent = "Log uit";
-            authBtn.classList.add('logout');
-            loginMenu.style.display = 'none';
-        } else {
-            userInfo.textContent = "";
-            authBtn.textContent = "Login";
-            authBtn.classList.remove('logout');
-        }
-    });
-</script>
 
 </body>
 </html>
