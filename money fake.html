@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Money Digger - Volledige Versie</title>
+<title>Money Digger - Full Cloud v10</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&family=DM+Mono&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -41,20 +41,20 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 <body>
 <canvas id="c"></canvas>
 <div id="ui">
-  <div id="hud"><div id="alt">0,000</div><div id="unit">millimeter</div><div id="nxt">Laadt...</div></div>
-  <div id="sb"><h3>Top klikkers</h3><div id="sl"></div></div>
-  <div id="bctr"><div id="bnum">0</div><div id="blbl">biljetten gestapeld</div></div>
-  <div id="nw"><span id="nl">naam:</span><input id="ni" type="text" maxlength="16"/></div>
-  <div id="online">● verbinden...</div>
-  <div id="msb"><div id="mse"></div><div id="msn"></div><div id="mss"></div></div>
+    <div id="hud"><div id="alt">0,000</div><div id="unit">millimeter</div><div id="nxt">Laadt...</div></div>
+    <div id="sb"><h3>Top klikkers</h3><div id="sl"></div></div>
+    <div id="bctr"><div id="bnum">0</div><div id="blbl">biljetten gestapeld</div></div>
+    <div id="nw"><span id="nl">naam:</span><input id="ni" type="text" maxlength="16"/></div>
+    <div id="online">● verbinden...</div>
+    <div id="msb"><div id="mse"></div><div id="msn"></div><div id="mss"></div></div>
 </div>
 <button id="cbtn">💵</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <script>
-// --- CONSTANTS ---
 const BILL_M = 0.0001; 
 const OBJECTS = [
   {m:0.001, label:'Mier', emoji:'🐜'}, {m:0.015, label:'Druif', emoji:'🍇'},
@@ -70,24 +70,30 @@ const OBJECTS = [
   {m:115.0, label:'Reuzensequoia', emoji:'🌲'}, {m:169.0, label:'Washington Monument', emoji:'🏛️'},
   {m:324.0, label:'Eiffeltoren', emoji:'🗼'}, {m:443.0, label:'Empire State Building', emoji:'🏙️'},
   {m:600.0, label:'Pterodactylus', emoji:'🦕'}, {m:828.0, label:'Burj Khalifa', emoji:'🏙️'},
-  {m:1000, label:'1 kilometer!', emoji:'🎊'}, {m:3776, label:'Mount Fuji', emoji:'🗻'},
-  {m:8849, label:'Mount Everest', emoji:'🏔️'}, {m:100000, label:'Kármánlijn', emoji:'🌌'},
-  {m:384400000, label:'De Maan', emoji:'🌕'}, {m:149600000000, label:'De Zon', emoji:'☀️'}
+  {m:1000,  label:'1 kilometer!', emoji:'🎊'}, {m:1100, label:'Luchtballon', emoji:'🎈'},
+  {m:1178,  label:'Jeddah Tower', emoji:'🏗️'}, {m:1200, label:'Monarchvlinder', emoji:'🦋'},
+  {m:1345,  label:'Ben Nevis', emoji:'⛰️'}, {m:1620, label:'5× de Eiffeltoren', emoji:'🗼'},
+  {m:1909,  label:'Mont Ventoux', emoji:'🚴'}, {m:2250, label:'Mil V-12 helikopter', emoji:'🚁'},
+  {m:3776,  label:'Mount Fuji', emoji:'🗻'}, {m:4800, label:'1 uur wandelen omhoog', emoji:'🥾'},
+  {m:5500,  label:'Zuurstof gedaald tot 50%', emoji:'😮‍💨'}, {m:5850, label:'65 voetbalvelden op elkaar', emoji:'⚽'},
+  {m:7000,  label:'Death zone', emoji:'💀'}, {m:8849, label:'Mount Everest', emoji:'🏔️'},
+  {m:10000, label:'Verloren ballon knapt!', emoji:'🎈'}, {m:26000, label:'SR-71 Blackbird', emoji:'✈️'},
+  {m:38969, label:'Felix Baumgartner', emoji:'🪂'},
+  {m:60000, label:'Hoogste weerballon', emoji:'🎈'},
+  {m:80000, label:'Mesosfeer', emoji:'🌌'},
+  {m:100000,label:'Kármánlijn (Ruimte)', emoji:'🌌'},
+  {m:408000,label:'ISS Ruimtestation', emoji:'🛸'},
+  {m:384400000, label:'De Maan', emoji:'🌕'},
+  {m:149600000000, label:'De Zon', emoji:'☀️'}
 ];
 
-// --- STATE ---
-let totalBills = 0;
-let displayBills = 0;
-let cloudT = 0;
-let deviceId = localStorage.getItem('md6_did') || 'dev-'+Math.random().toString(36).slice(2,12);
-localStorage.setItem('md6_did', deviceId);
-let myName = localStorage.getItem('md6_n') || 'Gast';
-let myClicks = 0;
-let scores = {};
-let shownMS = new Set();
-try { shownMS = new Set(JSON.parse(localStorage.getItem('md6_m') || '[]')); } catch(e){}
+let totalBills = 0, displayBills = 0, cloudT = 0;
+let deviceId = localStorage.getItem('md_did') || 'dev-'+Math.random().toString(36).slice(2,12);
+localStorage.setItem('md_did', deviceId);
+let myName = localStorage.getItem('md_n') || 'Speler';
+let myClicks = 0, scores = {}, shownMS = new Set();
+try { shownMS = new Set(JSON.parse(localStorage.getItem('md_m') || '[]')); } catch(e){}
 
-// --- FIREBASE ---
 firebase.initializeApp({
     apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
     authDomain: "money-digger-9b05e.firebaseapp.com",
@@ -95,49 +101,39 @@ firebase.initializeApp({
     projectId: "money-digger-9b05e",
 });
 
-const auth = firebase.auth();
-const db = firebase.database();
-const billsRef = db.ref('totalBills');
-const scoresRef = db.ref('scores');
+const auth = firebase.auth(), db = firebase.database();
+const billsRef = db.ref('totalBills'), scoresRef = db.ref('scores');
 
-// --- LOGIN & SYNC ---
 auth.onAuthStateChanged(user => {
     if(user) {
-        deviceId = user.uid; // Gebruik Firebase UID voor opslag
+        deviceId = user.uid;
         myName = user.displayName;
         document.getElementById('ni').value = myName;
-        // Haal bestaande clicks op voor deze gebruiker
-        scoresRef.child(deviceId).once('value', snap => {
-            if(snap.val()) myClicks = snap.val().clicks || 0;
+        scoresRef.child(deviceId).on('value', snap => {
+            const data = snap.val();
+            if(data) myClicks = data.clicks || 0;
         });
     }
 });
 
-// Realtime updates van database
 billsRef.on('value', snap => { totalBills = snap.val() || 0; });
 scoresRef.on('value', snap => {
     scores = {};
-    snap.forEach(child => {
-        const rec = child.val();
-        if(rec && rec.name) scores[child.key] = rec;
-    });
+    snap.forEach(c => { const r = c.val(); if(r && r.name) scores[c.key] = r; });
     updateScoreboard();
 });
 
-const onlineRef = db.ref('online');
-const myPresence = onlineRef.push();
-myPresence.set(true);
-myPresence.onDisconnect().remove();
+const onlineRef = db.ref('online'), myPresence = onlineRef.push();
+myPresence.set(true); myPresence.onDisconnect().remove();
 onlineRef.on('value', snap => { document.getElementById('online').textContent = `● ${snap.numChildren()} online`; });
 
-// --- CANVAS & DRAWING ---
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
 let W, H, GY;
 function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; GY=Math.round(H*0.72); }
 resize(); window.addEventListener('resize', resize);
 
 function fmtN(n){
+    if(n>=1e15) return(n/1e15).toFixed(2)+'P';
     if(n>=1e12) return(n/1e12).toFixed(2)+'T';
     if(n>=1e9)  return(n/1e9).toFixed(2)+'B';
     if(n>=1e6)  return(n/1e6).toFixed(2)+'M';
@@ -146,6 +142,8 @@ function fmtN(n){
 }
 
 function fmtH(m){
+    if(m>=1e9)  return(m/1e9).toFixed(3)+' Gm';
+    if(m>=1e6)  return(m/1e6).toFixed(3)+' Mm';
     if(m>=1000) return(m/1000).toFixed(3)+' km';
     if(m>=1)    return m.toFixed(3)+' m';
     return(m*1000).toFixed(2)+' mm';
@@ -155,65 +153,64 @@ function drawSky(altM){
     const t = Math.min(1, altM/100000);
     const sg = ctx.createLinearGradient(0, 0, 0, GY);
     sg.addColorStop(0, `rgb(${Math.round(20*(1-t))},${Math.round(42*(1-t))},${Math.round(58*(1-t))})`);
-    sg.addColorStop(1, `rgb(${Math.round(135*(1-t)+2*t)},${Math.round(186*(1-t)+5*t)},${Math.round(235*(1-t)+18*t)})`);
+    sg.addColorStop(1, `rgb(${Math.round(135*(1-t))},${Math.round(186*(1-t))},${Math.round(235*(1-t))})`);
     ctx.fillStyle = sg; ctx.fillRect(0, 0, W, GY);
+    
+    // Sterren in de ruimte
+    if(altM > 30000){
+        ctx.save(); ctx.globalAlpha = Math.min(1, (altM-30000)/70000);
+        for(let i=0; i<100; i++){
+            ctx.fillStyle = "white";
+            ctx.beginPath(); ctx.arc((i*W/13)%W, (i*GY/7)%GY, 0.5, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+    }
 }
 
 function drawStack(bills){
     if(bills <= 0) return;
     const cx = W/2, maxH = H * 0.38, sh = Math.min(bills * 0.5, maxH), top = GY - sh, sw = 110, depth = 20;
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath(); ctx.ellipse(cx+depth*.4, GY+4, sw*.7, 10, 0, 0, Math.PI*2); ctx.fill();
-    // 3D Side
-    ctx.fillStyle = '#14532d';
-    ctx.beginPath(); ctx.moveTo(cx+sw/2, top); ctx.lineTo(cx+sw/2+depth, top-depth*.5);
-    ctx.lineTo(cx+sw/2+depth, GY-depth*.5); ctx.lineTo(cx+sw/2, GY); ctx.fill();
-    // Front
-    const ff = ctx.createLinearGradient(cx, top, cx, GY);
-    ff.addColorStop(0,'#166534'); ff.addColorStop(1,'#14532d');
-    ctx.fillStyle = ff; ctx.fillRect(cx-sw/2, top, sw, sh);
-    // $1 label
-    if(sh > 20){
-        ctx.fillStyle='rgba(255,255,255,.1)';
-        ctx.font=`bold ${Math.min(36,sh*.26)}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillText('$1', cx, top+sh*.52);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(cx+depth*.4, GY+4, sw*.7, 10, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#14532d'; ctx.beginPath(); ctx.moveTo(cx+sw/2, top); ctx.lineTo(cx+sw/2+depth, top-depth*.5); ctx.lineTo(cx+sw/2+depth, GY-depth*.5); ctx.lineTo(cx+sw/2, GY); ctx.fill();
+    const ff = ctx.createLinearGradient(cx, top, cx, GY); ff.addColorStop(0,'#166534'); ff.addColorStop(1,'#14532d'); ctx.fillStyle = ff; ctx.fillRect(cx-sw/2, top, sw, sh);
+    if(sh > 20){ 
+        ctx.fillStyle='rgba(255,255,255,.1)'; ctx.font=`bold ${Math.min(36,sh*.26)}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('$1', cx, top+sh*.52); 
     }
-    // Top
-    ctx.fillStyle = '#4ade80';
-    ctx.beginPath(); ctx.moveTo(cx-sw/2, top); ctx.lineTo(cx+sw/2, top);
-    ctx.lineTo(cx+sw/2+depth, top-depth*.5); ctx.lineTo(cx-sw/2+depth, top-depth*.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#4ade80'; ctx.beginPath(); ctx.moveTo(cx-sw/2, top); ctx.lineTo(cx+sw/2, top); ctx.lineTo(cx+sw/2+depth, top-depth*.5); ctx.lineTo(cx-sw/2+depth, top-depth*.5); ctx.closePath(); ctx.fill();
 }
 
 function drawObjects(bills){
-    const altM = bills * BILL_M;
-    const pxPerM = (H * 0.38) / Math.max(altM, BILL_M);
-    OBJECTS.forEach(obj => {
+    const altM = bills * BILL_M, pxPerM = (H * 0.38) / Math.max(altM, BILL_M);
+    const stackL = W/2 - 100, stackR = W/2 + 100;
+    OBJECTS.forEach((obj, i) => {
         const ratio = obj.m / altM;
-        if(ratio > 0.001 && ratio < 8) {
+        if(ratio > 0.0001 && ratio < 8) {
             const drawH = Math.min(obj.m * pxPerM, H*0.8);
             if(drawH > 10) {
-                ctx.globalAlpha = Math.min(1, (8-ratio)/2);
-                ctx.font = `${Math.min(drawH, 150)}px serif`; ctx.textAlign='center';
-                ctx.fillText(obj.emoji, W/2 - 150, GY); 
-                ctx.globalAlpha = 1;
+                const opacity = Math.min(1, (8-ratio)/2) * Math.min(1, (ratio-0.0001)*50);
+                const posX = (i % 2 === 0) ? stackL - 50 : stackR + 50;
+                ctx.save(); ctx.globalAlpha = opacity;
+                ctx.font = `${Math.min(drawH, 180)}px serif`; ctx.textAlign='center'; ctx.textBaseline='bottom';
+                ctx.fillText(obj.emoji, posX, GY);
+                if(drawH > 20){
+                    ctx.font = '600 12px DM Sans'; ctx.fillStyle = 'white'; ctx.fillText(obj.label, posX, GY + 18);
+                    ctx.font = '10px DM Mono'; ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillText(fmtH(obj.m), posX, GY + 32);
+                }
+                ctx.restore();
             }
         }
     });
 }
 
-// --- LOGIC ---
 function updateHUD(){
     const altM = displayBills * BILL_M;
     document.getElementById('alt').textContent = fmtH(altM);
     let next = OBJECTS.find(o => o.m > altM);
     document.getElementById('nxt').textContent = next ? `${next.emoji} ${next.label} - nog ${fmtN((next.m-altM)/BILL_M)} klikken` : 'Limit reached!';
     document.getElementById('bnum').textContent = fmtN(totalBills);
-    
-    // Milestones banner
     for(const obj of OBJECTS){
         if(altM >= obj.m && !shownMS.has(obj.label)){
-            shownMS.add(obj.label); localStorage.setItem('md6_m', JSON.stringify([...shownMS]));
+            shownMS.add(obj.label); localStorage.setItem('md_m', JSON.stringify([...shownMS]));
             showBanner(obj); break;
         }
     }
@@ -224,7 +221,7 @@ function showBanner(obj){
     document.getElementById('msn').textContent = obj.label;
     document.getElementById('mss').textContent = `${fmtH(obj.m)} hoog`;
     document.getElementById('msb').classList.add('show');
-    setTimeout(()=>document.getElementById('msb').classList.remove('show'), 3000);
+    setTimeout(()=>document.getElementById('msb').classList.remove('show'), 3800);
 }
 
 function updateScoreboard(){
@@ -239,10 +236,10 @@ function updateScoreboard(){
 }
 
 function spawnBill(){
+    const btn = document.getElementById('cbtn').getBoundingClientRect();
     const el = document.createElement('div'); el.className = 'fb'; el.textContent = '💵';
-    el.style.left = (W - 60 + (Math.random()-0.5)*40) + 'px';
-    el.style.top = (H - 80) + 'px';
-    document.body.appendChild(el); setTimeout(()=>el.remove(), 800);
+    el.style.left = (btn.left + 20 + Math.random()*20) + 'px'; el.style.top = (btn.top - 10) + 'px';
+    document.body.appendChild(el); setTimeout(()=>el.remove(), 850);
 }
 
 document.getElementById('cbtn').addEventListener('click', ()=>{
@@ -252,8 +249,8 @@ document.getElementById('cbtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('ni').addEventListener('change', (e)=>{
-    myName = e.target.value; localStorage.setItem('md6_n', myName);
-    if(auth.currentUser) scoresRef.child(deviceId).update({name: myName});
+    myName = e.target.value; localStorage.setItem('md_n', myName);
+    scoresRef.child(deviceId).update({name: myName});
 });
 
 function loop(){
