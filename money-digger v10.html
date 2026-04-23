@@ -41,11 +41,11 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 <body>
 <canvas id="c"></canvas>
 <div id="ui">
-  <div id="hud"><div id="alt">0,000</div><div id="unit">millimeter</div><div id="nxt">Laadt...</div></div>
-  <div id="sb"><h3>Top klikkers</h3><div id="sl"></div></div>
-  <div id="bctr"><div id="bnum">0</div><div id="blbl">biljetten gestapeld</div></div>
-  <div id="nw"><span id="nl">naam:</span><input id="ni" type="text" maxlength="16"/></div>
-  <div id="online">● verbinden...</div>
+  <div id="hud"><div id="alt">0,000</div><div id="unit">millimeter</div><div id="nxt">Loading...</div></div>
+  <div id="sb"><h3>Top clickers</h3><div id="sl"></div></div>
+  <div id="bctr"><div id="bnum">0</div><div id="blbl">stacked banknotes</div></div>
+  <div id="nw"><span id="nl">name:</span><input id="ni" type="text" maxlength="16"/></div>
+  <div id="online">● connect...</div>
   <div id="msb"><div id="mse"></div><div id="msn"></div><div id="mss"></div></div>
 </div>
 <button id="cbtn">💵</button>
@@ -65,53 +65,53 @@ function safeSetLS(key, val) { try { localStorage.setItem(key, val); } catch(e) 
 const BILL_M = 0.0001; 
 
 const OBJECTS = [
-  {m:0.001,   label:'Mier', emoji:'🐜'},
-  {m:0.015,   label:'Druif', emoji:'🍇'},
-  {m:0.040,   label:'Aardbei', emoji:'🍓'},
-  {m:0.070,   label:'Muis', emoji:'🐭'},
-  {m:0.112,   label:'Appel', emoji:'🍎'},
-  {m:0.240,   label:'Basketbal', emoji:'🏀'},
-  {m:0.300,   label:'Tulp', emoji:'🌷'},
-  {m:0.450,   label:'Zonnebloem', emoji:'🌻'},
-  {m:0.600,   label:'Kat', emoji:'🐱'},
-  {m:0.900,   label:'Hond', emoji:'🐕'},
-  {m:1.750,   label:'Mens', emoji:'🧍'},
-  {m:2.400,   label:'Paard', emoji:'🐴'},
-  {m:4.000,   label:'Olifant', emoji:'🐘'},
-  {m:5.500,   label:'Giraf', emoji:'🦒'},
-  {m:7.000,   label:'Jonge boom', emoji:'🌲'},
-  {m:8.500,   label:'Huis', emoji:'🏠'},
-  {m:15.00,   label:'Grote eik', emoji:'🌳'},
+  {m:0.001,   label:'Ant', emoji:'🐜'},
+  {m:0.015,   label:'Grape', emoji:'🍇'},
+  {m:0.040,   label:'Strawberry', emoji:'🍓'},
+  {m:0.070,   label:'Mouse', emoji:'🐭'},
+  {m:0.112,   label:'Apple', emoji:'🍎'},
+  {m:0.240,   label:'Basketball', emoji:'🏀'},
+  {m:0.300,   label:'Tulip', emoji:'🌷'},
+  {m:0.450,   label:'Sunflower', emoji:'🌻'},
+  {m:0.600,   label:'Cat', emoji:'🐱'},
+  {m:0.900,   label:'Dog', emoji:'🐕'},
+  {m:1.750,   label:'Human', emoji:'🧍'},
+  {m:2.400,   label:'Horse', emoji:'🐴'},
+  {m:4.000,   label:'Elephant', emoji:'🐘'},
+  {m:5.500,   label:'Giraffe', emoji:'🦒'},
+  {m:7.000,   label:'Young tree', emoji:'🌲'},
+  {m:8.500,   label:'House', emoji:'🏠'},
+  {m:15.00,   label:'Big oak', emoji:'🌳'},
   {m:25.00,   label:'Sequoia', emoji:'🌲'},
-  {m:46.00,   label:'Toren van Pisa', emoji:'🗼'},
-  {m:93.00,   label:'Vrijheidsbeeld', emoji:'🗽'},
-  {m:115.0,   label:'Reuzensequoia', emoji:'🌲'},
+  {m:46.00,   label:'Tower of Pisa', emoji:'🗼'},
+  {m:93.00,   label:'Statue of liberty', emoji:'🗽'},
+  {m:115.0,   label:'Giant sequoia', emoji:'🌲'},
   {m:169.0,   label:'Washington Monument', emoji:'🏛️'},
-  {m:324.0,   label:'Eiffeltoren', emoji:'🗼'},
+  {m:324.0,   label:'Eiffel tower', emoji:'🗼'},
   {m:443.0,   label:'Empire State Building', emoji:'🏙️'},
   {m:600.0,   label:'Pterodactylus', emoji:'🦕'},
   {m:828.0,   label:'Burj Khalifa', emoji:'🏙️'},
   {m:1000,    label:'1 kilometer!', emoji:'🎊'},
-  {m:1100,    label:'Luchtballon', emoji:'🎈'},
+  {m:1100,    label:'Hot air balloon flight altitude', emoji:'🎈'},
   {m:1178,    label:'Jeddah Tower', emoji:'🏗️'},
-  {m:1200,    label:'Monarchvlinder', emoji:'🦋'},
+  {m:1200,    label:'Monarch butterfly flight altitude', emoji:'🦋'},
   {m:1345,    label:'Ben Nevis', emoji:'⛰️'},
-  {m:1620,    label:'5× de Eiffeltoren', emoji:'🗼'},
+  {m:1620,    label:'5x the Eiffel Tower', emoji:'🗼'},
   {m:1909,    label:'Mont Ventoux', emoji:'🚴'},
-  {m:2250,    label:'Mil V-12 helikopter', emoji:'🚁'},
+  {m:2250,    label:'Mil V-12 helicopter flight height', emoji:'🚁'},
   {m:3776,    label:'Mount Fuji', emoji:'🗻'},
-  {m:4800,    label:'1 uur wandelen omhoog', emoji:'🥾'},
-  {m:5500,    label:'Zuurstof gedaald tot 50%', emoji:'😮‍💨'},
-  {m:6500,    label:'65 voetbalvelden op elkaar', emoji:'⚽'},
+  {m:4800,    label:'Distance of a 1-hour walk', emoji:'🥾'},
+  {m:5500,    label:'Oxygen dropped to 50%', emoji:'😮‍💨'},
+  {m:6500,    label:'65 football fields stacked on top of each other', emoji:'⚽'},
   {m:7000,    label:'Death zone', emoji:'💀'},
   {m:8849,    label:'Mount Everest', emoji:'🏔️'},
-  {m:10000,   label:'Verloren ballon knapt!', emoji:'🎈'},
-  {m:26000,   label:'SR-71 Blackbird', emoji:'✈️'},
+  {m:10000,   label:'The height a lost balloon bursts!', emoji:'🎈'},
+  {m:26000,   label:'SR-71 Blackbird maximum height', emoji:'✈️'},
   {m:38969,   label:'Felix Baumgartner', emoji:'🪂'},
-  {m:100000,  label:'Kármánlijn (Ruimte)', emoji:'🌌'},
-  {m:408000,  label:'ISS Ruimtestation', emoji:'🛸'},
-  {m:384400000, label:'De Maan', emoji:'🌕'},
-  {m:149600000000, label:'De Zon', emoji:'☀️'}
+  {m:100000,  label:'Kármán line (space)', emoji:'🌌'},
+  {m:408000,  label:'ISS Space Station', emoji:'🛸'},
+  {m:384400000, label:'The moon', emoji:'🌕'},
+  {m:149600000000, label:'The sun', emoji:'☀️'}
 ];
 
 // ═══════════════════════════════
@@ -446,7 +446,7 @@ function updateHUD(){
   for(const o of OBJECTS) if(o.m > altM){ next=o; break; }
   document.getElementById('nxt').textContent = next
     ? `${next.emoji} ${next.label} — nog ${fmtN(Math.ceil((next.m-altM)/BILL_M))} klikken`
-    : '🌌 Voorbij alle mijlpalen!';
+    : '🌌 Beyond all milestones!';
   document.getElementById('bnum').textContent = fmtN(Math.round(totalBills));
 
   for(const obj of OBJECTS){
