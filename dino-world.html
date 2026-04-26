@@ -28,6 +28,22 @@ body {
     box-sizing: border-box;
 }
 
+#home-btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+    background: #1a2a3a;
+    border: 1px solid #46a;
+    color: #8af;
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 4px;
+    text-align: left;
+}
+#home-btn:hover { background: #223344; color: #adf; }
+
 .canvas-panel {
     flex: 1;
     background-color: #2C3E50;
@@ -114,6 +130,7 @@ body { width: 100vw; height: 100vh; }
 <body>
   <div class="container">
     <div class="data-panel">
+      <button id="home-btn" onclick="window.location.href='index.html'">🏠 Home</button>
       <h1>🦕 DINO-WORLD 7.1 🦖</h1>
       <div class="dag-info">Day: <span id="dag">0</span></div>
       <div class="weer-info" id="weer">🌤️ Normal weather</div>
