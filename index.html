@@ -875,7 +875,11 @@
         const body    = encodeURIComponent('From: ' + name + '\nEmail: ' + email + '\n\n' + message);
 
         // mailto opens the user's mail app
-        window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
+        const toEmail = to === 'dev1' ? 'degreefmanno@gmail.com'
+              : to === 'dev2' ? 'arthurdenorre@gmail.com'
+              : 'degreefmanno@gmail.com,arthurdenorre@gmail.com';
+
+window.location.href = 'mailto:' + toEmail + '?subject=' + subject + '&body=' + body;
 
         // Show success message
         document.querySelector('.btn-send').style.display = 'none';
