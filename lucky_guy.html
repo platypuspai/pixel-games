@@ -29,7 +29,7 @@
         }
 
         header {
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             text-align: center;
         }
 
@@ -57,18 +57,55 @@
             width: 100%;
             max-width: 400px;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
+
+        /* --- VISUEEL RAD CSS --- */
+        .wheel-box {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            margin: 20px 0 30px 0;
+        }
+
+        .pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; 
+            height: 0; 
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 25px solid #fff;
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        }
+
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 4px solid var(--border);
+            /* Transitiesnelheid van de draai. Cubic-bezier zorgt dat hij langzaam uitslipt */
+            transition: transform 4s cubic-bezier(0.1, 0.9, 0.2, 1);
+            background: var(--surface);
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+        }
+        /* ---------------------- */
 
         .level-display {
             font-family: 'Press Start 2P', monospace;
-            font-size: 2rem;
+            font-size: 1.5rem;
             color: #fff;
-            margin: 20px 0;
+            margin: 10px 0;
         }
 
         .info-text {
             color: var(--text-muted);
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             font-size: 0.9rem;
         }
 
@@ -131,6 +168,7 @@
             padding: 0;
             margin: 0;
             text-align: left;
+            width: 100%;
         }
 
         .score-list li {
@@ -161,23 +199,13 @@
             color: #fff;
             border-color: #fff;
         }
-
-        /* Spinning animation for the result */
-        .spinning {
-            animation: spinFast 0.1s infinite;
-        }
-        @keyframes spinFast {
-            0% { transform: translateY(-2px); }
-            50% { transform: translateY(2px); }
-            100% { transform: translateY(-2px); }
-        }
     </style>
 </head>
 <body>
 
     <header>
         <h1>LUCKY GUY</h1>
-        <p style="color: var(--text-muted); font-size: 0.8rem;">Pick the right number. Survive the wheel.</p>
+        <p style="color: var(--text-muted); font-size: 0.8rem;">Spin the wheel. Pick the correct number.</p>
     </header>
 
     <div class="game-container">
@@ -186,13 +214,18 @@
             <div class="level-display" id="level-text">1</div>
             <p class="info-text" id="instruction">Kies een getal tussen 1 en 1</p>
             
-            <input type="number" id="guess-input" min="1" placeholder="?">
+            <div class="wheel-box">
+                <div class="pointer"></div>
+                <div class="wheel" id="wheel"></div>
+            </div>
+
+            <input type="number" id="guess-input" min="1" placeholder="Jou getal?">
             <button id="spin-btn" onclick="spinWheel()">DRAAI HET RAD</button>
 
             <div class="result-box" id="result-message"></div>
         </div>
 
-        <div class="play-area" id="game-over-ui" style="display: none;">
+        <div class="play-area" id="game-over-ui" style="display: none; justify-content: center;">
             <h2 style="color: #ff2222; font-family: 'Press Start 2P'; font-size: 1.2rem;">GAME OVER</h2>
             <p class="info-text" id="final-score">Je bereikte level X</p>
             <input type="text" id="player-name" placeholder="JOUW NAAM" maxlength="15">
@@ -201,8 +234,7 @@
 
         <div class="leaderboard">
             <h2>TOP 10 LUCKIEST</h2>
-            <ul class="score-list" id="leaderboard-list">
-                </ul>
+            <ul class="score-list" id="leaderboard-list"></ul>
         </div>
     </div>
 
@@ -211,8 +243,11 @@
     <script>
         let currentLevel = 1;
         let isSpinning = false;
+        let currentRotation = 0; // Houdt bij hoe ver het rad totaal is gedraaid
         
-        // Laad scores uit localStorage of maak een lege lijst
+        // De kleuren voor het rad uit je CSS thema
+        const wheelColors = ['#00e5ff', '#ff44aa', '#00ff88', '#ffdd00', '#ff8844'];
+        
         let topScores = JSON.parse(localStorage.getItem('luckyGuyScores')) || [];
 
         const levelText = document.getElementById('level-text');
@@ -220,8 +255,25 @@
         const guessInput = document.getElementById('guess-input');
         const resultMessage = document.getElementById('result-message');
         const spinBtn = document.getElementById('spin-btn');
+        const wheel = document.getElementById('wheel');
         const gameUI = document.getElementById('game-ui');
         const gameOverUI = document.getElementById('game-over-ui');
+
+        // Tekent het visuele rad
+        function renderWheel() {
+            let gradientStops = [];
+            // Cap de visuele vakjes op 360, anders crasht je browser bij hele hoge levels.
+            // Het math gedeelte (de kans) blijft gewoon groeien.
+            const visualSlices = Math.min(currentLevel, 360);
+            const step = 360 / visualSlices;
+
+            for (let i = 0; i < visualSlices; i++) {
+                const color = wheelColors[i % wheelColors.length];
+                gradientStops.push(`${color} ${i * step}deg ${(i + 1) * step}deg`);
+            }
+            
+            wheel.style.background = `conic-gradient(${gradientStops.join(', ')})`;
+        }
 
         function updateUI() {
             levelText.innerText = currentLevel;
@@ -229,6 +281,7 @@
             guessInput.value = '';
             guessInput.max = currentLevel;
             resultMessage.innerText = '';
+            renderWheel();
         }
 
         function spinWheel() {
@@ -236,34 +289,46 @@
 
             const guess = parseInt(guessInput.value);
             
-            // Validatie
+            // Controle of de speler een geldig getal heeft ingevuld
             if (isNaN(guess) || guess < 1 || guess > currentLevel) {
                 resultMessage.style.color = '#ff8844';
-                resultMessage.innerText = 'Ongeldig getal!';
+                resultMessage.innerText = 'Vul een geldig getal in!';
                 return;
             }
 
             isSpinning = true;
             spinBtn.disabled = true;
             resultMessage.style.color = '#fff';
-            resultMessage.classList.add('spinning');
+            resultMessage.innerText = 'Draaien...';
             
-            let spins = 0;
-            const spinInterval = setInterval(() => {
-                resultMessage.innerText = 'Draaien... ' + Math.floor(Math.random() * currentLevel + 1);
-                spins++;
-
-                if (spins > 15) {
-                    clearInterval(spinInterval);
-                    checkResult(guess);
-                }
-            }, 50);
-        }
-
-        function checkResult(guess) {
-            resultMessage.classList.remove('spinning');
+            // 1. Kies een willekeurig winnend getal
             const winningNumber = Math.floor(Math.random() * currentLevel) + 1;
             
+            // 2. Bereken waar het rad moet stoppen
+            // (We doen alsof de visuele vakjes ook echt 3582 stukjes hebben voor de berekening)
+            const sliceAngle = 360 / currentLevel;
+            // Vind het midden van het winnende vakje (vakje 1 begint op 0 graden)
+            const centerAngle = (winningNumber - 0.5) * sliceAngle;
+            
+            // Om dat vakje bovenaan de pijl te krijgen, moeten we het rad tegen de klok in draaien vanaf het nulpunt
+            const targetDegree = 360 - centerAngle;
+
+            // 3. Draai-animatie logica
+            const extraSpins = 5 * 360; // Draai minstens 5 keer rond voor het effect
+            const currentMod = currentRotation % 360;
+            let diff = targetDegree - currentMod;
+            if (diff < 0) diff += 360; // Zorg dat we vooruit draaien
+
+            currentRotation += extraSpins + diff;
+            wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+            // 4. Check resultaat nadat animatie klaar is (duurt 4s via CSS)
+            setTimeout(() => {
+                checkResult(guess, winningNumber);
+            }, 4000);
+        }
+
+        function checkResult(guess, winningNumber) {
             if (guess === winningNumber) {
                 resultMessage.style.color = 'var(--accent)';
                 resultMessage.innerText = `WINNAAR! Het was ${winningNumber}.`;
@@ -286,7 +351,7 @@
 
         function showGameOver() {
             gameUI.style.display = 'none';
-            gameOverUI.style.display = 'block';
+            gameOverUI.style.display = 'flex';
             document.getElementById('final-score').innerText = `Je bereikte level ${currentLevel}`;
             isSpinning = false;
             spinBtn.disabled = false;
@@ -296,19 +361,15 @@
             const nameInput = document.getElementById('player-name').value.trim() || 'ANONYMOUS';
             
             topScores.push({ name: nameInput, level: currentLevel });
-            
-            // Sorteer van hoogste naar laagste level
             topScores.sort((a, b) => b.level - a.level);
-            
-            // Bewaar alleen de top 10
             topScores = topScores.slice(0, 10);
-            
-            // Opslaan in browser
             localStorage.setItem('luckyGuyScores', JSON.stringify(topScores));
             
             // Reset game
             currentLevel = 1;
-            gameUI.style.display = 'block';
+            currentRotation = 0;
+            wheel.style.transform = `rotate(0deg)`;
+            gameUI.style.display = 'flex';
             gameOverUI.style.display = 'none';
             document.getElementById('player-name').value = '';
             
@@ -332,7 +393,6 @@
             });
         }
 
-        // Start de game
         updateUI();
         renderLeaderboard();
     </script>
