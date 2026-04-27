@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucky Guy - Pixel-Games</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --card: #1a1a28;
+            --border: #2a2a42;
+            --accent: #00e5ff;
+            --text: #e8e8ff;
+            --text-muted: #7777aa;
+        }
+
+        body {
+            font-family: 'Inconsolata', monospace;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        h1 {
+            font-family: 'Press Start 2P', monospace;
+            color: var(--accent);
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .play-area, .leaderboard {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 30px;
+            border-top: 3px solid var(--accent);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .level-display {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 2rem;
+            color: #fff;
+            margin: 20px 0;
+        }
+
+        .info-text {
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        input[type="number"], input[type="text"] {
+            width: 80%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'Press Start 2P', monospace;
+            font-size: 1rem;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+        }
+
+        button {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.7rem;
+            padding: 15px 20px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            cursor: pointer;
+            letter-spacing: 0.1em;
+            transition: 0.2s;
+            width: 80%;
+        }
+
+        button:hover {
+            filter: brightness(1.2);
+        }
+
+        button:disabled {
+            background: var(--border);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            min-height: 40px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .leaderboard h2 {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 1rem;
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+
+        .score-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+        }
+
+        .score-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed var(--border);
+            font-size: 0.9rem;
+        }
+
+        .score-list li span:last-child {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .back-btn {
+            margin-top: 40px;
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            text-decoration: none;
+            padding: 10px 20px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.6rem;
+        }
+
+        .back-btn:hover {
+            color: #fff;
+            border-color: #fff;
+        }
+
+        /* Spinning animation for the result */
+        .spinning {
+            animation: spinFast 0.1s infinite;
+        }
+        @keyframes spinFast {
+            0% { transform: translateY(-2px); }
+            50% { transform: translateY(2px); }
+            100% { transform: translateY(-2px); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>LUCKY GUY</h1>
+        <p style="color: var(--text-muted); font-size: 0.8rem;">Pick the right number. Survive the wheel.</p>
+    </header>
+
+    <div class="game-container">
+        <div class="play-area" id="game-ui">
+            <div class="info-text">HUIDIG LEVEL</div>
+            <div class="level-display" id="level-text">1</div>
+            <p class="info-text" id="instruction">Kies een getal tussen 1 en 1</p>
+            
+            <input type="number" id="guess-input" min="1" placeholder="?">
+            <button id="spin-btn" onclick="spinWheel()">DRAAI HET RAD</button>
+
+            <div class="result-box" id="result-message"></div>
+        </div>
+
+        <div class="play-area" id="game-over-ui" style="display: none;">
+            <h2 style="color: #ff2222; font-family: 'Press Start 2P'; font-size: 1.2rem;">GAME OVER</h2>
+            <p class="info-text" id="final-score">Je bereikte level X</p>
+            <input type="text" id="player-name" placeholder="JOUW NAAM" maxlength="15">
+            <button onclick="saveScore()">SLA OP & OPNIEUW</button>
+        </div>
+
+        <div class="leaderboard">
+            <h2>TOP 10 LUCKIEST</h2>
+            <ul class="score-list" id="leaderboard-list">
+                </ul>
+        </div>
+    </div>
+
+    <a href="index.html" class="back-btn">◀ TERUG NAAR HOME</a>
+
+    <script>
+        let currentLevel = 1;
+        let isSpinning = false;
+        
+        // Laad scores uit localStorage of maak een lege lijst
+        let topScores = JSON.parse(localStorage.getItem('luckyGuyScores')) || [];
+
+        const levelText = document.getElementById('level-text');
+        const instruction = document.getElementById('instruction');
+        const guessInput = document.getElementById('guess-input');
+        const resultMessage = document.getElementById('result-message');
+        const spinBtn = document.getElementById('spin-btn');
+        const gameUI = document.getElementById('game-ui');
+        const gameOverUI = document.getElementById('game-over-ui');
+
+        function updateUI() {
+            levelText.innerText = currentLevel;
+            instruction.innerText = `Kies een getal tussen 1 en ${currentLevel}`;
+            guessInput.value = '';
+            guessInput.max = currentLevel;
+            resultMessage.innerText = '';
+        }
+
+        function spinWheel() {
+            if (isSpinning) return;
+
+            const guess = parseInt(guessInput.value);
+            
+            // Validatie
+            if (isNaN(guess) || guess < 1 || guess > currentLevel) {
+                resultMessage.style.color = '#ff8844';
+                resultMessage.innerText = 'Ongeldig getal!';
+                return;
+            }
+
+            isSpinning = true;
+            spinBtn.disabled = true;
+            resultMessage.style.color = '#fff';
+            resultMessage.classList.add('spinning');
+            
+            let spins = 0;
+            const spinInterval = setInterval(() => {
+                resultMessage.innerText = 'Draaien... ' + Math.floor(Math.random() * currentLevel + 1);
+                spins++;
+
+                if (spins > 15) {
+                    clearInterval(spinInterval);
+                    checkResult(guess);
+                }
+            }, 50);
+        }
+
+        function checkResult(guess) {
+            resultMessage.classList.remove('spinning');
+            const winningNumber = Math.floor(Math.random() * currentLevel) + 1;
+            
+            if (guess === winningNumber) {
+                resultMessage.style.color = 'var(--accent)';
+                resultMessage.innerText = `WINNAAR! Het was ${winningNumber}.`;
+                
+                setTimeout(() => {
+                    currentLevel++;
+                    updateUI();
+                    isSpinning = false;
+                    spinBtn.disabled = false;
+                }, 1500);
+            } else {
+                resultMessage.style.color = '#ff2222';
+                resultMessage.innerText = `FOUT! Het rad stopte op ${winningNumber}.`;
+                
+                setTimeout(() => {
+                    showGameOver();
+                }, 2000);
+            }
+        }
+
+        function showGameOver() {
+            gameUI.style.display = 'none';
+            gameOverUI.style.display = 'block';
+            document.getElementById('final-score').innerText = `Je bereikte level ${currentLevel}`;
+            isSpinning = false;
+            spinBtn.disabled = false;
+        }
+
+        function saveScore() {
+            const nameInput = document.getElementById('player-name').value.trim() || 'ANONYMOUS';
+            
+            topScores.push({ name: nameInput, level: currentLevel });
+            
+            // Sorteer van hoogste naar laagste level
+            topScores.sort((a, b) => b.level - a.level);
+            
+            // Bewaar alleen de top 10
+            topScores = topScores.slice(0, 10);
+            
+            // Opslaan in browser
+            localStorage.setItem('luckyGuyScores', JSON.stringify(topScores));
+            
+            // Reset game
+            currentLevel = 1;
+            gameUI.style.display = 'block';
+            gameOverUI.style.display = 'none';
+            document.getElementById('player-name').value = '';
+            
+            updateUI();
+            renderLeaderboard();
+        }
+
+        function renderLeaderboard() {
+            const list = document.getElementById('leaderboard-list');
+            list.innerHTML = '';
+            
+            if (topScores.length === 0) {
+                list.innerHTML = '<li style="color: var(--text-muted);">Nog geen scores...</li>';
+                return;
+            }
+
+            topScores.forEach((score, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${index + 1}. ${score.name}</span> <span>LVL ${score.level}</span>`;
+                list.appendChild(li);
+            });
+        }
+
+        // Start de game
+        updateUI();
+        renderLeaderboard();
+    </script>
+</body>
+</html>
