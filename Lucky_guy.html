@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lucky Guy v4.1 - Pixel-Games</title>
+    <title>Lucky Guy v4.2 - Pixel-Games</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -230,12 +230,20 @@
             border-color: var(--accent);
             box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
         }
+
+        /* Kleine melding als we een savegame laden */
+        #save-status {
+            font-size: 0.6rem;
+            color: var(--success);
+            margin-top: 10px;
+            font-family: 'Press Start 2P', monospace;
+        }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>LUCKY GUY <span class="version-tag">v4.1</span></h1>
+        <h1>LUCKY GUY <span class="version-tag">v4.2</span></h1>
         <p style="color: var(--text-muted); font-size: 0.8rem;">Pure chaos mode. Pick your number.</p>
     </header>
 
@@ -246,6 +254,7 @@
             <p class="info-text">Vul je naam in om te beginnen.</p>
             <input type="text" id="player-name-input" placeholder="JOUW NAAM" maxlength="15">
             <button onclick="startGame()">START GAME</button>
+            <div id="save-status"></div>
         </div>
 
         <div class="play-area" id="game-ui" style="display: none;">
@@ -279,7 +288,10 @@
         let currentRotation = Math.floor(Math.random() * 360); 
         
         const wheelColors = ['#00e5ff', '#ff44aa', '#00ff88', '#ffdd00', '#ff8844', '#b344ff'];
+        
+        // Laad de Top 10 en de persoonlijke save data
         let topScores = JSON.parse(localStorage.getItem('luckyGuyScoresV3')) || [];
+        let personalSave = JSON.parse(localStorage.getItem('luckyGuySaveData')) || null;
 
         const startUI = document.getElementById('start-ui');
         const gameUI = document.getElementById('game-ui');
@@ -290,18 +302,58 @@
         const spinBtn = document.getElementById('spin-btn');
         const canvas = document.getElementById('wheel-canvas');
         const ctx = canvas.getContext('2d');
+        const nameInputEl = document.getElementById('player-name-input');
+        const saveStatusEl = document.getElementById('save-status');
 
         canvas.style.transform = `rotate(${currentRotation}deg)`;
 
+        // Check of er al een opgeslagen spel is als de pagina laadt
+        if (personalSave && personalSave.name) {
+            nameInputEl.value = personalSave.name;
+            saveStatusEl.innerText = `Opgeslagen level: ${personalSave.level}`;
+        }
+
+        // Wordt getriggerd als je je naam aanpast in het startscherm
+        nameInputEl.addEventListener('input', () => {
+            if (personalSave && nameInputEl.value.trim() !== personalSave.name) {
+                saveStatusEl.innerText = "Nieuwe speler: Start op Level 1";
+                saveStatusEl.style.color = "var(--text-muted)";
+            } else if (personalSave && nameInputEl.value.trim() === personalSave.name) {
+                saveStatusEl.innerText = `Opgeslagen level: ${personalSave.level}`;
+                saveStatusEl.style.color = "var(--success)";
+            } else {
+                saveStatusEl.innerText = "";
+            }
+        });
+
         function startGame() {
-            const nameInput = document.getElementById('player-name-input').value.trim();
-            currentPlayerName = nameInput !== "" ? nameInput : "ANONYMOUS";
+            const nameInput = nameInputEl.value.trim();
+            const finalName = nameInput !== "" ? nameInput : "ANONYMOUS";
             
+            // Controleer of de speler doorgaat met zijn opgeslagen game
+            if (personalSave && personalSave.name === finalName) {
+                currentPlayerName = finalName;
+                currentLevel = personalSave.level;
+            } else {
+                // Nieuwe speler of een andere naam ingevuld: begin bij level 1
+                currentPlayerName = finalName;
+                currentLevel = 1;
+            }
+            
+            savePersonalProgress(); // Sla direct de startstatus op
+
             startUI.style.display = 'none';
             gameUI.style.display = 'flex';
             
             updateUI();
             renderLeaderboard();
+        }
+
+        // Functie om je persoonlijke voortgang lokaal te bewaren
+        function savePersonalProgress() {
+            const saveData = { name: currentPlayerName, level: currentLevel };
+            localStorage.setItem('luckyGuySaveData', JSON.stringify(saveData));
+            personalSave = saveData; // Update de actieve variabele
         }
 
         function getSecureRandomNumber(maxNumber) {
@@ -411,10 +463,11 @@
                 resultMessage.style.color = 'var(--success)';
                 resultMessage.innerText = `BINGO! Het was ${winningNumber}.`;
                 
-                saveScore(currentLevel);
+                saveScoreToLeaderboard(currentLevel);
 
                 setTimeout(() => {
                     currentLevel++;
+                    savePersonalProgress(); // Sla je nieuwe level op!
                     updateUI();
                     isSpinning = false;
                     spinBtn.disabled = false;
@@ -425,8 +478,7 @@
                 resultMessage.innerText = `FOUT! Het was ${winningNumber}. Probeer het opnieuw!`;
                 
                 setTimeout(() => {
-                    // JE BEHOUDT JE LEVEL! (currentLevel wordt niet meer naar 1 gezet)
-                    
+                    // Je behoudt je level en we resetten alleen het rad
                     currentRotation = Math.floor(Math.random() * 360);
                     canvas.style.transition = 'none'; 
                     canvas.style.transform = `rotate(${currentRotation}deg)`;
@@ -438,7 +490,8 @@
             }
         }
 
-        function saveScore(levelReached) {
+        // Functie voor de Top 10 lijst
+        function saveScoreToLeaderboard(levelReached) {
             let existingPlayer = topScores.find(s => s.name === currentPlayerName);
             
             if (existingPlayer) {
