@@ -17,6 +17,7 @@
             --accent-orange: #ff8844;
             --accent-pink: #ff44aa;
             --accent-yellow: #ffdd00;
+            --accent-cyan: #00e5ff;
             --text: #e8e8ff;
             --text-muted: #7777aa;
             --pixel-size: 4px;
@@ -457,10 +458,8 @@
 </head>
 <body>
 
-<!-- Stars background -->
 <div class="stars" id="stars"></div>
 
-<!-- HEADER -->
 <header>
     <div class="logo-pixel-deco">
         <svg width="12" height="12" viewBox="0 0 3 3"><rect width="1" height="1" x="1" y="0" fill="#ff44aa"/><rect width="1" height="1" x="0" y="1" fill="#ff44aa"/><rect width="1" height="1" x="2" y="1" fill="#ff44aa"/><rect width="1" height="1" x="1" y="2" fill="#ff44aa"/></svg>
@@ -474,7 +473,7 @@
     <div class="logo-container">
         <h1><span class="title-pixel">PIXEL</span><span class="title-dash">-</span><span class="title-games">GAMES</span></h1>
     </div>
-    <p class="subtitle">5 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span></p>
+    <p class="subtitle">6 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span></p>
 
     <nav class="navbar">
         <button class="nav-btn active" onclick="showPage('home', this)">▶ HOME</button>
@@ -483,38 +482,29 @@
     </nav>
 </header>
 
-<!-- ===== HOME PAGE ===== -->
 <div id="page-home" class="page active">
 <main>
 
-    <!-- DINO WORLD -->
     <div class="game-card" style="--card-accent: #00ff88;">
         <div class="card-corner tl"></div>
         <div class="card-corner br"></div>
         <div class="card-preview" style="--preview-bg: #0a1a0a;">
             <svg class="animate-bob" width="80" height="80" viewBox="0 0 16 16" style="image-rendering:pixelated;">
-                <!-- Dino pixel art -->
                 <rect x="8" y="1" width="5" height="3" fill="#4caf50"/>
                 <rect x="7" y="2" width="1" height="2" fill="#4caf50"/>
                 <rect x="12" y="2" width="1" height="1" fill="white"/>
                 <rect x="12" y="2" width="1" height="1" fill="white"/>
                 <rect x="13" y="1" width="1" height="1" fill="#4caf50"/>
-                <!-- body -->
                 <rect x="5" y="4" width="8" height="5" fill="#4caf50"/>
                 <rect x="4" y="5" width="2" height="3" fill="#4caf50"/>
-                <!-- belly -->
                 <rect x="6" y="6" width="5" height="2" fill="#81c784"/>
-                <!-- tail -->
                 <rect x="3" y="5" width="2" height="1" fill="#4caf50"/>
                 <rect x="2" y="6" width="2" height="1" fill="#4caf50"/>
-                <!-- legs -->
                 <rect x="6" y="9" width="2" height="3" fill="#388e3c"/>
                 <rect x="9" y="9" width="2" height="3" fill="#388e3c"/>
                 <rect x="5" y="11" width="3" height="1" fill="#388e3c"/>
                 <rect x="9" y="11" width="3" height="1" fill="#388e3c"/>
-                <!-- arm -->
                 <rect x="9" y="5" width="3" height="1" fill="#4caf50"/>
-                <!-- ground -->
                 <rect x="0" y="13" width="16" height="1" fill="#1a3a1a" opacity="0.5"/>
             </svg>
         </div>
@@ -529,23 +519,17 @@
         </div>
     </div>
 
-    <!-- MINI BROWSER PLATFORMER -->
     <div class="game-card" style="--card-accent: #ff2222;">
         <div class="card-corner tl"></div>
         <div class="card-corner br"></div>
         <div class="card-preview" style="--preview-bg: #1a0505;">
             <svg width="80" height="80" viewBox="0 0 16 16" style="image-rendering:pixelated;">
-                <!-- platforms -->
                 <rect x="0" y="14" width="6" height="1" fill="#ff2222" opacity="0.4"/>
                 <rect x="5" y="10" width="5" height="1" fill="#ff2222" opacity="0.4"/>
                 <rect x="10" y="6" width="6" height="1" fill="#ff2222" opacity="0.4"/>
-                <!-- red square jumping between platforms -->
                 <g style="animation: platformJump 2.4s ease-in-out infinite;">
-                    <!-- glow -->
                     <rect x="4" y="10" width="6" height="6" fill="#ff2222" opacity="0.15"/>
-                    <!-- square -->
                     <rect x="5" y="11" width="4" height="4" fill="#ff2222"/>
-                    <!-- shine -->
                     <rect x="5" y="11" width="4" height="1" fill="#ff6666" opacity="0.6"/>
                     <rect x="5" y="11" width="1" height="4" fill="#ff6666" opacity="0.4"/>
                 </g>
@@ -573,18 +557,15 @@
         </div>
     </div>
 
-    <!-- ONE SQUARE -->
     <div class="game-card" style="--card-accent: #ffdd00;">
         <div class="card-corner tl"></div>
         <div class="card-corner br"></div>
         <div class="card-preview" style="--preview-bg: #1a1400;">
             <svg class="animate-pulse" width="70" height="70" viewBox="0 0 16 16" style="image-rendering:pixelated;">
-                <!-- Square with glow layers -->
                 <rect x="1" y="1" width="14" height="14" fill="#ffdd00" opacity="0.08"/>
                 <rect x="3" y="3" width="10" height="10" fill="#ffdd00" opacity="0.15"/>
                 <rect x="5" y="5" width="6" height="6" fill="#ffdd00" opacity="0.4"/>
                 <rect x="6" y="6" width="4" height="4" fill="#ffdd00"/>
-                <!-- Corner pixels -->
                 <rect x="0" y="0" width="2" height="2" fill="#ffdd00" opacity="0.5"/>
                 <rect x="14" y="0" width="2" height="2" fill="#ffdd00" opacity="0.5"/>
                 <rect x="0" y="14" width="2" height="2" fill="#ffdd00" opacity="0.5"/>
@@ -602,7 +583,6 @@
         </div>
     </div>
 
-    <!-- DODGING ARENA -->
     <div class="game-card" style="--card-accent: #ff44aa;">
         <div class="card-corner tl"></div>
         <div class="card-corner br"></div>
@@ -616,46 +596,35 @@
                     @keyframes stickmanDodge { 0%,100%{transform:translateY(0)} 30%{transform:translateY(-3px)} 60%{transform:translateY(2px)} }
                 </style>
 
-                <!-- stickman center -->
                 <g style="animation: stickmanDodge 1.6s ease-in-out infinite; transform-origin: 16px 16px;">
-                    <!-- head -->
                     <rect x="14" y="6" width="4" height="4" fill="none" stroke="#e8e8ff" stroke-width="1"/>
-                    <!-- body -->
                     <rect x="15" y="10" width="2" height="6" fill="#e8e8ff"/>
-                    <!-- left arm -->
                     <rect x="11" y="11" width="4" height="1" fill="#e8e8ff"/>
-                    <!-- right arm -->
                     <rect x="17" y="11" width="4" height="1" fill="#e8e8ff"/>
-                    <!-- left leg -->
                     <rect x="13" y="16" width="1" height="4" fill="#e8e8ff" style="transform-origin:13px 16px; transform:rotate(-10deg)"/>
                     <rect x="12" y="20" width="2" height="1" fill="#e8e8ff"/>
-                    <!-- right leg -->
                     <rect x="18" y="16" width="1" height="4" fill="#e8e8ff" style="transform-origin:18px 16px; transform:rotate(10deg)"/>
                     <rect x="18" y="20" width="2" height="1" fill="#e8e8ff"/>
                 </g>
 
-                <!-- axe top-left -->
                 <g style="animation: axe1 1.3s ease-in-out infinite; transform-origin: 5px 5px;">
                     <rect x="3" y="4" width="1" height="5" fill="#aaa"/>
                     <rect x="2" y="3" width="3" height="2" fill="#888"/>
                     <rect x="1" y="3" width="1" height="3" fill="#ff44aa"/>
                 </g>
 
-                <!-- axe top-right -->
                 <g style="animation: axe2 1.1s ease-in-out infinite 0.3s; transform-origin: 27px 5px;">
                     <rect x="26" y="4" width="1" height="5" fill="#aaa"/>
                     <rect x="25" y="3" width="3" height="2" fill="#888"/>
                     <rect x="27" y="3" width="1" height="3" fill="#ff44aa"/>
                 </g>
 
-                <!-- axe bottom-left -->
                 <g style="animation: axe3 1.4s ease-in-out infinite 0.6s; transform-origin: 5px 27px;">
                     <rect x="3" y="22" width="1" height="5" fill="#aaa"/>
                     <rect x="2" y="26" width="3" height="2" fill="#888"/>
                     <rect x="1" y="25" width="1" height="3" fill="#ff44aa"/>
                 </g>
 
-                <!-- axe bottom-right -->
                 <g style="animation: axe4 1.2s ease-in-out infinite 0.9s; transform-origin: 27px 27px;">
                     <rect x="26" y="22" width="1" height="5" fill="#aaa"/>
                     <rect x="25" y="26" width="3" height="2" fill="#888"/>
@@ -673,45 +642,35 @@
         </div>
     </div>
 
-    <!-- MONEY DIGGER -->
     <div class="game-card" style="--card-accent: #ff8844;">
         <div class="card-corner tl"></div>
         <div class="card-corner br"></div>
         <div class="card-preview" style="--preview-bg: #1a0d00;">
             <svg width="90" height="80" viewBox="0 0 18 16" style="image-rendering:pixelated;">
-                <!-- Floating banknote -->
                 <g style="animation: floatBill 2.5s ease-in-out infinite;">
-                    <!-- bill body -->
                     <rect x="2" y="5" width="14" height="8" fill="#2d6a2d"/>
-                    <!-- bill border -->
                     <rect x="2" y="5" width="14" height="1" fill="#3a8a3a"/>
                     <rect x="2" y="12" width="14" height="1" fill="#1a4a1a"/>
                     <rect x="2" y="5" width="1" height="8" fill="#3a8a3a"/>
                     <rect x="15" y="5" width="1" height="8" fill="#1a4a1a"/>
-                    <!-- inner border -->
                     <rect x="3" y="6" width="12" height="6" fill="none" stroke="#3a8a3a" stroke-width="0"/>
                     <rect x="3" y="6" width="12" height="1" fill="#3a8a3a" opacity="0.5"/>
                     <rect x="3" y="11" width="12" height="1" fill="#1a4a1a" opacity="0.5"/>
-                    <!-- center oval / seal -->
                     <rect x="7" y="7" width="4" height="4" fill="#3a8a3a" opacity="0.6"/>
                     <rect x="8" y="7" width="2" height="4" fill="#4aaa4a" opacity="0.8"/>
                     <rect x="7" y="8" width="4" height="2" fill="#4aaa4a" opacity="0.8"/>
-                    <!-- $ symbol (pixel) -->
                     <rect x="8" y="7" width="2" height="1" fill="#ffdd00"/>
                     <rect x="8" y="9" width="2" height="1" fill="#ffdd00"/>
                     <rect x="8" y="11" width="2" height="1" fill="#ffdd00"/>
                     <rect x="7" y="8" width="1" height="1" fill="#ffdd00"/>
                     <rect x="9" y="10" width="1" height="1" fill="#ffdd00"/>
                     <rect x="9" y="8" width="1" height="1" fill="#ffdd00" opacity="0.5"/>
-                    <!-- corner numbers -->
                     <rect x="3" y="6" width="1" height="2" fill="#ffdd00" opacity="0.7"/>
                     <rect x="4" y="7" width="1" height="1" fill="#ffdd00" opacity="0.7"/>
                     <rect x="14" y="10" width="1" height="2" fill="#ffdd00" opacity="0.7"/>
                     <rect x="13" y="10" width="1" height="1" fill="#ffdd00" opacity="0.7"/>
-                    <!-- shine -->
                     <rect x="3" y="6" width="5" height="1" fill="white" opacity="0.08"/>
                 </g>
-                <!-- sparkles around bill -->
                 <rect x="0" y="3" width="1" height="1" fill="#ffdd00" style="animation: sparkle 1.8s ease-in-out infinite 0.2s; opacity:0;"/>
                 <rect x="16" y="4" width="1" height="1" fill="#ffdd00" style="animation: sparkle 1.8s ease-in-out infinite 0.7s; opacity:0;"/>
                 <rect x="1" y="12" width="1" height="1" fill="#ffdd00" style="animation: sparkle 1.8s ease-in-out infinite 1.1s; opacity:0;"/>
@@ -740,11 +699,40 @@
         </div>
     </div>
 
-</main>
-</div><!-- end page-home -->
+    <div class="game-card" style="--card-accent: var(--accent-cyan);">
+        <div class="card-corner tl"></div>
+        <div class="card-corner br"></div>
+        <div class="card-preview" style="--preview-bg: #001a1a;">
+            <svg class="animate-spin" width="70" height="70" viewBox="0 0 32 32" style="image-rendering:pixelated;">
+                <circle cx="16" cy="16" r="14" fill="#12121a" stroke="var(--accent-cyan)" stroke-width="2"/>
+                
+                <path d="M16 16 L16 2 A14 14 0 0 1 30 16 Z" fill="#ff44aa" opacity="0.8"/>
+                <path d="M16 16 L30 16 A14 14 0 0 1 16 30 Z" fill="#00ff88" opacity="0.8"/>
+                <path d="M16 16 L16 30 A14 14 0 0 1 2 16 Z" fill="#ffdd00" opacity="0.8"/>
+                <path d="M16 16 L2 16 A14 14 0 0 1 16 2 Z" fill="#ff8844" opacity="0.8"/>
+                
+                <circle cx="16" cy="16" r="6" fill="#1a1a28" stroke="var(--accent-cyan)" stroke-width="1"/>
+                <circle cx="16" cy="16" r="2" fill="var(--accent-cyan)"/>
+                
+                <rect x="15" y="4" width="2" height="2" fill="#fff"/>
+                <rect x="26" y="15" width="2" height="2" fill="#fff"/>
+                <rect x="15" y="26" width="2" height="2" fill="#fff"/>
+                <rect x="4" y="15" width="2" height="2" fill="#fff"/>
+            </svg>
+            
+        </div>
+        <div class="card-body">
+            <span class="card-tag" style="color:var(--accent-cyan);">// 06 · luck</span>
+            <h2 class="card-title">Lucky Guy</h2>
+            <p class="card-desc">Pure chaos mode. Pick your number and survive the wheel.</p>
+            <div class="card-actions">
+                <a class="btn btn-play" href="Lucky_guy.html" style="background:var(--accent-cyan); color:#000;">▶ PLAY</a>
+            </div>
+        </div>
+    </div>
 
-<!-- ===== CONTACT PAGE ===== -->
-<div id="page-contact" class="page">
+</main>
+</div><div id="page-contact" class="page">
     <div class="contact-wrap">
         <h2>✉ CONTACT US</h2>
         <p>Questions, feedback or just want to say hi? Send us a message — we read everything!</p>
@@ -771,7 +759,6 @@
     </div>
 </div>
 
-<!-- ===== INFO PAGE ===== -->
 <div id="page-info" class="page">
     <div class="info-wrap">
         <h2>ℹ INFO</h2>
@@ -781,13 +768,14 @@
         </div>
         <div class="info-block">
             <h3>// THE GAMES</h3>
-            <p>There are currently 5 games available: Dino World, Mini Browser Platformer, One Square, Dodging Arena and Money Digger. Some games are also available as a Chrome extension.</p>
+            <p>There are currently 6 games available: Dino World, Mini Browser Platformer, One Square, Dodging Arena, Money Digger and Lucky Guy. Some games are also available as a Chrome extension.</p>
             <div class="info-tag-list">
                 <span class="info-tag">DINO WORLD</span>
                 <span class="info-tag">MINI PLATFORMER</span>
                 <span class="info-tag">ONE SQUARE</span>
                 <span class="info-tag">DODGING ARENA</span>
                 <span class="info-tag">MONEY DIGGER</span>
+                <span class="info-tag">LUCKY GUY</span>
             </div>
         </div>
         <div class="info-block">
@@ -804,7 +792,6 @@
     </div>
 </div>
 
-<!-- FOOTER -->
 <footer>
     <p style="margin-bottom:8px; font-family:'Press Start 2P', monospace; font-size:0.55rem; color: var(--text-muted); letter-spacing:0.15em;">
         &lt; PIXEL-GAMES &gt;
