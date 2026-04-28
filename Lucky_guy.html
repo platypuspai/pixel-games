@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lucky Guy v4.2 - Pixel-Games</title>
+    <title>Lucky Guy v4.3 - Pixel-Games (Online)</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -30,10 +30,7 @@
             padding: 20px;
         }
 
-        header {
-            margin-bottom: 20px;
-            text-align: center;
-        }
+        header { margin-bottom: 20px; text-align: center; }
 
         h1 {
             font-family: 'Press Start 2P', monospace;
@@ -91,8 +88,7 @@
             top: -10px;
             left: 50%;
             transform: translateX(-50%);
-            width: 0; 
-            height: 0; 
+            width: 0; height: 0; 
             border-left: 15px solid transparent;
             border-right: 15px solid transparent;
             border-top: 35px solid #fff;
@@ -125,129 +121,50 @@
             text-shadow: 0 0 5px rgba(255,255,255,0.5);
         }
 
-        .info-text {
-            color: var(--text-muted);
-            margin-bottom: 15px;
-            font-size: 0.9rem;
-        }
+        .info-text { color: var(--text-muted); margin-bottom: 15px; font-size: 0.9rem; }
 
         input[type="number"], input[type="text"] {
-            width: 80%;
-            background: var(--surface);
-            border: 2px solid var(--border);
-            color: var(--accent);
-            font-family: 'Press Start 2P', monospace;
-            font-size: 1rem;
-            padding: 15px;
-            text-align: center;
-            margin-bottom: 20px;
-            outline: none;
-            transition: 0.2s;
+            width: 80%; background: var(--surface);
+            border: 2px solid var(--border); color: var(--accent);
+            font-family: 'Press Start 2P', monospace; font-size: 1rem;
+            padding: 15px; text-align: center; margin-bottom: 20px; outline: none; transition: 0.2s;
         }
 
-        input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
-        }
+        input:focus { border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 229, 255, 0.2); }
 
         button {
-            font-family: 'Press Start 2P', monospace;
-            font-size: 0.8rem;
-            padding: 15px 20px;
-            background: var(--accent);
-            color: #000;
-            border: none;
-            cursor: pointer;
-            letter-spacing: 0.1em;
-            transition: 0.2s;
-            width: 80%;
-            box-shadow: 0 4px 0 #0099aa;
+            font-family: 'Press Start 2P', monospace; font-size: 0.8rem;
+            padding: 15px 20px; background: var(--accent); color: #000;
+            border: none; cursor: pointer; letter-spacing: 0.1em;
+            transition: 0.2s; width: 80%; box-shadow: 0 4px 0 #0099aa;
         }
 
-        button:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #0099aa;
-        }
+        button:active { transform: translateY(4px); box-shadow: 0 0 0 #0099aa; }
+        button:disabled { background: var(--border); color: var(--text-muted); box-shadow: 0 4px 0 #1a1a28; cursor: not-allowed; transform: none; }
 
-        button:disabled {
-            background: var(--border);
-            color: var(--text-muted);
-            box-shadow: 0 4px 0 #1a1a28;
-            cursor: not-allowed;
-            transform: none;
-        }
+        .result-box { margin-top: 25px; min-height: 40px; font-weight: bold; font-size: 1.1rem; text-shadow: 0 0 5px rgba(255,255,255,0.2); }
 
-        .result-box {
-            margin-top: 25px;
-            min-height: 40px;
-            font-weight: bold;
-            font-size: 1.1rem;
-            text-shadow: 0 0 5px rgba(255,255,255,0.2);
-        }
+        .leaderboard h2 { font-family: 'Press Start 2P', monospace; font-size: 1.2rem; margin-bottom: 10px; color: var(--accent); }
+        .global-badge { font-size: 0.6rem; color: var(--success); margin-bottom: 20px; letter-spacing: 0.1em; }
 
-        .leaderboard h2 {
-            font-family: 'Press Start 2P', monospace;
-            font-size: 1.2rem;
-            margin-bottom: 25px;
-            color: var(--accent);
-        }
+        .score-list { list-style: none; padding: 0; margin: 0; text-align: left; width: 100%; }
+        .score-list li { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed var(--border); font-size: 0.9rem; }
+        .score-list li span:last-child { color: var(--accent); font-weight: bold; }
 
-        .score-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            text-align: left;
-            width: 100%;
-        }
+        .back-btn { margin-top: 40px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); text-decoration: none; padding: 10px 20px; font-family: 'Press Start 2P', monospace; font-size: 0.6rem; transition: 0.3s; }
+        .back-btn:hover { color: #fff; border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
 
-        .score-list li {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px dashed var(--border);
-            font-size: 0.9rem;
-        }
-
-        .score-list li span:last-child {
-            color: var(--accent);
-            font-weight: bold;
-        }
-
-        .back-btn {
-            margin-top: 40px;
-            background: transparent;
-            color: var(--text-muted);
-            border: 1px solid var(--border);
-            text-decoration: none;
-            padding: 10px 20px;
-            font-family: 'Press Start 2P', monospace;
-            font-size: 0.6rem;
-            transition: 0.3s;
-        }
-
-        .back-btn:hover {
-            color: #fff;
-            border-color: var(--accent);
-            box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
-        }
-
-        #save-status {
-            font-size: 0.6rem;
-            color: var(--success);
-            margin-top: 10px;
-            font-family: 'Press Start 2P', monospace;
-        }
+        #save-status { font-size: 0.6rem; color: var(--success); margin-top: 10px; font-family: 'Press Start 2P', monospace; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>LUCKY GUY <span class="version-tag">v4.2</span></h1>
+        <h1>LUCKY GUY <span class="version-tag">v4.3 ONLINE</span></h1>
         <p style="color: var(--text-muted); font-size: 0.8rem;">Pure chaos mode. Pick your number.</p>
     </header>
 
     <div class="game-container">
-        
         <div class="play-area" id="start-ui">
             <h2 style="font-family: 'Press Start 2P'; font-size: 1.2rem; color: var(--accent); margin-bottom: 20px;">WHO ARE YOU?</h2>
             <p class="info-text">Enter your name to start.</p>
@@ -274,21 +191,42 @@
 
         <div class="leaderboard">
             <h2>TOP 10 LUCKIEST</h2>
-            <ul class="score-list" id="leaderboard-list"></ul>
+            <div class="global-badge">🌍 GLOBAL SERVERS ACTIVE</div>
+            <ul class="score-list" id="leaderboard-list">
+                <li style="color: var(--text-muted);">Connecting to database...</li>
+            </ul>
         </div>
     </div>
 
     <a href="index.html" class="back-btn">◀ BACK TO HOME</a>
 
-    <script>
-        let currentPlayerName = "";
-        let currentLevel = 1;
-        let isSpinning = false;
-        let currentRotation = Math.floor(Math.random() * 360); 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, getDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+        // =========================================================================
+        // JOUW AUTOMATISCH INGEVULDE FIREBASE CONFIG
+        // =========================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+            authDomain: "money-digger-9b05e.firebaseapp.com",
+            databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "money-digger-9b05e",
+            storageBucket: "money-digger-9b05e.firebasestorage.app",
+            messagingSenderId: "883506536944",
+            appId: "1:883506536944:web:921b342dff76154fcbbd35"
+        };
+        // =========================================================================
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.currentPlayerName = "";
+        window.currentLevel = 1;
+        window.isSpinning = false;
+        window.currentRotation = Math.floor(Math.random() * 360); 
         
         const wheelColors = ['#00e5ff', '#ff44aa', '#00ff88', '#ffdd00', '#ff8844', '#b344ff'];
-        
-        let topScores = JSON.parse(localStorage.getItem('luckyGuyScoresV3')) || [];
         let personalSave = JSON.parse(localStorage.getItem('luckyGuySaveData')) || null;
 
         const startUI = document.getElementById('start-ui');
@@ -303,7 +241,7 @@
         const nameInputEl = document.getElementById('player-name-input');
         const saveStatusEl = document.getElementById('save-status');
 
-        canvas.style.transform = `rotate(${currentRotation}deg)`;
+        canvas.style.transform = `rotate(${window.currentRotation}deg)`;
 
         if (personalSave && personalSave.name) {
             nameInputEl.value = personalSave.name;
@@ -322,16 +260,16 @@
             }
         });
 
-        function startGame() {
+        window.startGame = function() {
             const nameInput = nameInputEl.value.trim();
             const finalName = nameInput !== "" ? nameInput : "ANONYMOUS";
             
             if (personalSave && personalSave.name === finalName) {
-                currentPlayerName = finalName;
-                currentLevel = personalSave.level;
+                window.currentPlayerName = finalName;
+                window.currentLevel = personalSave.level;
             } else {
-                currentPlayerName = finalName;
-                currentLevel = 1;
+                window.currentPlayerName = finalName;
+                window.currentLevel = 1;
             }
             
             savePersonalProgress(); 
@@ -340,11 +278,10 @@
             gameUI.style.display = 'flex';
             
             updateUI();
-            renderLeaderboard();
-        }
+        };
 
         function savePersonalProgress() {
-            const saveData = { name: currentPlayerName, level: currentLevel };
+            const saveData = { name: window.currentPlayerName, level: window.currentLevel };
             localStorage.setItem('luckyGuySaveData', JSON.stringify(saveData));
             personalSave = saveData; 
         }
@@ -361,9 +298,9 @@
             const radius = canvas.width / 2 - 10; 
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const sliceAngle = (2 * Math.PI) / currentLevel;
+            const sliceAngle = (2 * Math.PI) / window.currentLevel;
 
-            for (let i = 0; i < currentLevel; i++) {
+            for (let i = 0; i < window.currentLevel; i++) {
                 ctx.beginPath();
                 ctx.moveTo(centerX, centerY);
                 ctx.arc(centerX, centerY, radius, i * sliceAngle, (i + 1) * sliceAngle);
@@ -374,15 +311,14 @@
                 ctx.strokeStyle = "#12121a";
                 ctx.stroke();
 
-                if (currentLevel <= 80) {
+                if (window.currentLevel <= 80) {
                     ctx.save();
                     ctx.translate(centerX, centerY);
                     ctx.rotate(i * sliceAngle + sliceAngle / 2);
                     ctx.textAlign = "right";
                     ctx.textBaseline = "middle";
                     ctx.fillStyle = "#000"; 
-                    
-                    const fontSize = Math.max(12, 35 - (currentLevel / 2));
+                    const fontSize = Math.max(12, 35 - (window.currentLevel / 2));
                     ctx.font = `bold ${fontSize}px Arial`;
                     ctx.fillText(i + 1, radius - 20, 0);
                     ctx.restore();
@@ -399,34 +335,33 @@
         }
 
         function updateUI() {
-            levelText.innerText = currentLevel;
-            instruction.innerText = `Pick a number between 1 and ${currentLevel}`;
+            levelText.innerText = window.currentLevel;
+            instruction.innerText = `Pick a number between 1 and ${window.currentLevel}`;
             guessInput.value = '';
-            guessInput.max = currentLevel;
+            guessInput.max = window.currentLevel;
             resultMessage.innerText = '';
-            
             drawWheel();
         }
 
-        function spinWheel() {
-            if (isSpinning) return;
+        window.spinWheel = function() {
+            if (window.isSpinning) return;
 
             const guess = parseInt(guessInput.value);
             
-            if (isNaN(guess) || guess < 1 || guess > currentLevel) {
+            if (isNaN(guess) || guess < 1 || guess > window.currentLevel) {
                 resultMessage.style.color = 'var(--accent-orange)';
                 resultMessage.innerText = 'Enter a valid number!';
                 return;
             }
 
-            isSpinning = true;
+            window.isSpinning = true;
             spinBtn.disabled = true;
             resultMessage.style.color = '#fff';
             resultMessage.innerText = 'Spinning...';
             
-            const winningNumber = getSecureRandomNumber(currentLevel);
+            const winningNumber = getSecureRandomNumber(window.currentLevel);
             
-            const sliceAngleDeg = 360 / currentLevel;
+            const sliceAngleDeg = 360 / window.currentLevel;
             const middleAngle = (winningNumber - 1 + 0.5) * sliceAngleDeg;
             
             const randomOffset = (Math.random() * 0.8 - 0.4) * sliceAngleDeg;
@@ -435,34 +370,34 @@
             const spinRounds = Math.floor(Math.random() * 8) + 5;
             const extraSpins = spinRounds * 360; 
             
-            const currentMod = currentRotation % 360;
+            const currentMod = window.currentRotation % 360;
             let diff = targetDegree - currentMod;
             if (diff < 0) diff += 360; 
 
-            currentRotation += extraSpins + diff;
+            window.currentRotation += extraSpins + diff;
             
             const spinDuration = Math.random() * 3.5 + 4;
             
             canvas.style.transition = `transform ${spinDuration}s cubic-bezier(0.15, 0.85, 0.1, 1)`;
-            canvas.style.transform = `rotate(${currentRotation}deg)`;
+            canvas.style.transform = `rotate(${window.currentRotation}deg)`;
 
             setTimeout(() => {
                 checkResult(guess, winningNumber);
             }, spinDuration * 1000);
-        }
+        };
 
         function checkResult(guess, winningNumber) {
             if (guess === winningNumber) {
                 resultMessage.style.color = 'var(--success)';
                 resultMessage.innerText = `BINGO! It was ${winningNumber}.`;
                 
-                saveScoreToLeaderboard(currentLevel);
+                saveScoreToFirebase(window.currentLevel);
 
                 setTimeout(() => {
-                    currentLevel++;
+                    window.currentLevel++;
                     savePersonalProgress(); 
                     updateUI();
-                    isSpinning = false;
+                    window.isSpinning = false;
                     spinBtn.disabled = false;
                 }, 2000);
 
@@ -471,52 +406,65 @@
                 resultMessage.innerText = `WRONG! It was ${winningNumber}. Try again!`;
                 
                 setTimeout(() => {
-                    currentRotation = Math.floor(Math.random() * 360);
+                    window.currentRotation = Math.floor(Math.random() * 360);
                     canvas.style.transition = 'none'; 
-                    canvas.style.transform = `rotate(${currentRotation}deg)`;
+                    canvas.style.transform = `rotate(${window.currentRotation}deg)`;
                     
                     updateUI();
-                    isSpinning = false;
+                    window.isSpinning = false;
                     spinBtn.disabled = false;
                 }, 2500);
             }
         }
 
-        function saveScoreToLeaderboard(levelReached) {
-            let existingPlayer = topScores.find(s => s.name === currentPlayerName);
-            
-            if (existingPlayer) {
-                if (levelReached > existingPlayer.level) {
-                    existingPlayer.level = levelReached;
+        async function saveScoreToFirebase(levelReached) {
+            try {
+                const playerRef = doc(db, "globalScores", window.currentPlayerName);
+                const docSnap = await getDoc(playerRef);
+
+                if (docSnap.exists()) {
+                    if (levelReached > docSnap.data().level) {
+                        await setDoc(playerRef, { name: window.currentPlayerName, level: levelReached });
+                    }
+                } else {
+                    await setDoc(playerRef, { name: window.currentPlayerName, level: levelReached });
                 }
-            } else {
-                topScores.push({ name: currentPlayerName, level: levelReached });
+                
+                fetchAndRenderLeaderboard();
+            } catch (e) {
+                console.error("Error saving score: ", e);
             }
-
-            topScores.sort((a, b) => b.level - a.level);
-            topScores = topScores.slice(0, 10);
-            localStorage.setItem('luckyGuyScoresV3', JSON.stringify(topScores));
-            
-            renderLeaderboard();
         }
 
-        function renderLeaderboard() {
+        async function fetchAndRenderLeaderboard() {
             const list = document.getElementById('leaderboard-list');
-            list.innerHTML = '';
             
-            if (topScores.length === 0) {
-                list.innerHTML = '<li style="color: var(--text-muted);">No scores yet...</li>';
-                return;
-            }
+            try {
+                const q = query(collection(db, "globalScores"), orderBy("level", "desc"), limit(10));
+                const querySnapshot = await getDocs(q);
 
-            topScores.forEach((score, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `<span>${index + 1}. ${score.name}</span> <span>LVL ${score.level}</span>`;
-                list.appendChild(li);
-            });
+                list.innerHTML = '';
+                let index = 1;
+
+                if (querySnapshot.empty) {
+                    list.innerHTML = '<li style="color: var(--text-muted);">No global scores yet. Be the first!</li>';
+                    return;
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const score = doc.data();
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span>${index}. ${score.name}</span> <span>LVL ${score.level}</span>`;
+                    list.appendChild(li);
+                    index++;
+                });
+            } catch (e) {
+                console.error("Error fetching scores: ", e);
+                list.innerHTML = '<li style="color: var(--error);">Could not connect to global servers.</li>';
+            }
         }
 
-        renderLeaderboard();
+        fetchAndRenderLeaderboard();
     </script>
 </body>
 </html>
