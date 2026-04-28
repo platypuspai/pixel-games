@@ -231,7 +231,6 @@
             box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
         }
 
-        /* Kleine melding als we een savegame laden */
         #save-status {
             font-size: 0.6rem;
             color: var(--success);
@@ -250,25 +249,25 @@
     <div class="game-container">
         
         <div class="play-area" id="start-ui">
-            <h2 style="font-family: 'Press Start 2P'; font-size: 1.2rem; color: var(--accent); margin-bottom: 20px;">WIE BEN JIJ?</h2>
-            <p class="info-text">Vul je naam in om te beginnen.</p>
-            <input type="text" id="player-name-input" placeholder="JOUW NAAM" maxlength="15">
+            <h2 style="font-family: 'Press Start 2P'; font-size: 1.2rem; color: var(--accent); margin-bottom: 20px;">WHO ARE YOU?</h2>
+            <p class="info-text">Enter your name to start.</p>
+            <input type="text" id="player-name-input" placeholder="YOUR NAME" maxlength="15">
             <button onclick="startGame()">START GAME</button>
             <div id="save-status"></div>
         </div>
 
         <div class="play-area" id="game-ui" style="display: none;">
-            <div class="info-text">HUIDIG LEVEL</div>
+            <div class="info-text">CURRENT LEVEL</div>
             <div class="level-display" id="level-text">1</div>
-            <p class="info-text" id="instruction">Kies een getal tussen 1 en 1</p>
+            <p class="info-text" id="instruction">Pick a number between 1 and 1</p>
             
             <div class="wheel-wrapper">
                 <div class="pointer"></div>
                 <canvas id="wheel-canvas" class="wheel-canvas" width="600" height="600"></canvas>
             </div>
 
-            <input type="number" id="guess-input" min="1" placeholder="Jouw getal?">
-            <button id="spin-btn" onclick="spinWheel()">DRAAI HET RAD</button>
+            <input type="number" id="guess-input" min="1" placeholder="Your number?">
+            <button id="spin-btn" onclick="spinWheel()">SPIN THE WHEEL</button>
 
             <div class="result-box" id="result-message"></div>
         </div>
@@ -279,7 +278,7 @@
         </div>
     </div>
 
-    <a href="index.html" class="back-btn">◀ TERUG NAAR HOME</a>
+    <a href="index.html" class="back-btn">◀ BACK TO HOME</a>
 
     <script>
         let currentPlayerName = "";
@@ -289,7 +288,6 @@
         
         const wheelColors = ['#00e5ff', '#ff44aa', '#00ff88', '#ffdd00', '#ff8844', '#b344ff'];
         
-        // Laad de Top 10 en de persoonlijke save data
         let topScores = JSON.parse(localStorage.getItem('luckyGuyScoresV3')) || [];
         let personalSave = JSON.parse(localStorage.getItem('luckyGuySaveData')) || null;
 
@@ -307,225 +305,12 @@
 
         canvas.style.transform = `rotate(${currentRotation}deg)`;
 
-        // Check of er al een opgeslagen spel is als de pagina laadt
         if (personalSave && personalSave.name) {
             nameInputEl.value = personalSave.name;
-            saveStatusEl.innerText = `Opgeslagen level: ${personalSave.level}`;
+            saveStatusEl.innerText = `Saved level: ${personalSave.level}`;
         }
 
-        // Wordt getriggerd als je je naam aanpast in het startscherm
         nameInputEl.addEventListener('input', () => {
             if (personalSave && nameInputEl.value.trim() !== personalSave.name) {
-                saveStatusEl.innerText = "Nieuwe speler: Start op Level 1";
-                saveStatusEl.style.color = "var(--text-muted)";
-            } else if (personalSave && nameInputEl.value.trim() === personalSave.name) {
-                saveStatusEl.innerText = `Opgeslagen level: ${personalSave.level}`;
-                saveStatusEl.style.color = "var(--success)";
-            } else {
-                saveStatusEl.innerText = "";
-            }
-        });
-
-        function startGame() {
-            const nameInput = nameInputEl.value.trim();
-            const finalName = nameInput !== "" ? nameInput : "ANONYMOUS";
-            
-            // Controleer of de speler doorgaat met zijn opgeslagen game
-            if (personalSave && personalSave.name === finalName) {
-                currentPlayerName = finalName;
-                currentLevel = personalSave.level;
-            } else {
-                // Nieuwe speler of een andere naam ingevuld: begin bij level 1
-                currentPlayerName = finalName;
-                currentLevel = 1;
-            }
-            
-            savePersonalProgress(); // Sla direct de startstatus op
-
-            startUI.style.display = 'none';
-            gameUI.style.display = 'flex';
-            
-            updateUI();
-            renderLeaderboard();
-        }
-
-        // Functie om je persoonlijke voortgang lokaal te bewaren
-        function savePersonalProgress() {
-            const saveData = { name: currentPlayerName, level: currentLevel };
-            localStorage.setItem('luckyGuySaveData', JSON.stringify(saveData));
-            personalSave = saveData; // Update de actieve variabele
-        }
-
-        function getSecureRandomNumber(maxNumber) {
-            const randomBuffer = new Uint32Array(1);
-            window.crypto.getRandomValues(randomBuffer);
-            return (randomBuffer[0] % maxNumber) + 1;
-        }
-
-        function drawWheel() {
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const radius = canvas.width / 2 - 10; 
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const sliceAngle = (2 * Math.PI) / currentLevel;
-
-            for (let i = 0; i < currentLevel; i++) {
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.arc(centerX, centerY, radius, i * sliceAngle, (i + 1) * sliceAngle);
-                ctx.fillStyle = wheelColors[i % wheelColors.length];
-                ctx.fill();
-                
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = "#12121a";
-                ctx.stroke();
-
-                if (currentLevel <= 80) {
-                    ctx.save();
-                    ctx.translate(centerX, centerY);
-                    ctx.rotate(i * sliceAngle + sliceAngle / 2);
-                    ctx.textAlign = "right";
-                    ctx.textBaseline = "middle";
-                    ctx.fillStyle = "#000"; 
-                    
-                    const fontSize = Math.max(12, 35 - (currentLevel / 2));
-                    ctx.font = `bold ${fontSize}px Arial`;
-                    ctx.fillText(i + 1, radius - 20, 0);
-                    ctx.restore();
-                }
-            }
-
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
-            ctx.fillStyle = "#1a1a28";
-            ctx.fill();
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = "#00e5ff";
-            ctx.stroke();
-        }
-
-        function updateUI() {
-            levelText.innerText = currentLevel;
-            instruction.innerText = `Kies een getal tussen 1 en ${currentLevel}`;
-            guessInput.value = '';
-            guessInput.max = currentLevel;
-            resultMessage.innerText = '';
-            
-            drawWheel();
-        }
-
-        function spinWheel() {
-            if (isSpinning) return;
-
-            const guess = parseInt(guessInput.value);
-            
-            if (isNaN(guess) || guess < 1 || guess > currentLevel) {
-                resultMessage.style.color = 'var(--accent-orange)';
-                resultMessage.innerText = 'Vul een geldig getal in!';
-                return;
-            }
-
-            isSpinning = true;
-            spinBtn.disabled = true;
-            resultMessage.style.color = '#fff';
-            resultMessage.innerText = 'Draaien...';
-            
-            const winningNumber = getSecureRandomNumber(currentLevel);
-            
-            const sliceAngleDeg = 360 / currentLevel;
-            const middleAngle = (winningNumber - 1 + 0.5) * sliceAngleDeg;
-            
-            const randomOffset = (Math.random() * 0.8 - 0.4) * sliceAngleDeg;
-            const targetDegree = 270 - middleAngle + randomOffset;
-
-            const spinRounds = Math.floor(Math.random() * 8) + 5;
-            const extraSpins = spinRounds * 360; 
-            
-            const currentMod = currentRotation % 360;
-            let diff = targetDegree - currentMod;
-            if (diff < 0) diff += 360; 
-
-            currentRotation += extraSpins + diff;
-            
-            const spinDuration = Math.random() * 3.5 + 4;
-            
-            canvas.style.transition = `transform ${spinDuration}s cubic-bezier(0.15, 0.85, 0.1, 1)`;
-            canvas.style.transform = `rotate(${currentRotation}deg)`;
-
-            setTimeout(() => {
-                checkResult(guess, winningNumber);
-            }, spinDuration * 1000);
-        }
-
-        function checkResult(guess, winningNumber) {
-            if (guess === winningNumber) {
-                resultMessage.style.color = 'var(--success)';
-                resultMessage.innerText = `BINGO! Het was ${winningNumber}.`;
-                
-                saveScoreToLeaderboard(currentLevel);
-
-                setTimeout(() => {
-                    currentLevel++;
-                    savePersonalProgress(); // Sla je nieuwe level op!
-                    updateUI();
-                    isSpinning = false;
-                    spinBtn.disabled = false;
-                }, 2000);
-
-            } else {
-                resultMessage.style.color = 'var(--error)';
-                resultMessage.innerText = `FOUT! Het was ${winningNumber}. Probeer het opnieuw!`;
-                
-                setTimeout(() => {
-                    // Je behoudt je level en we resetten alleen het rad
-                    currentRotation = Math.floor(Math.random() * 360);
-                    canvas.style.transition = 'none'; 
-                    canvas.style.transform = `rotate(${currentRotation}deg)`;
-                    
-                    updateUI();
-                    isSpinning = false;
-                    spinBtn.disabled = false;
-                }, 2500);
-            }
-        }
-
-        // Functie voor de Top 10 lijst
-        function saveScoreToLeaderboard(levelReached) {
-            let existingPlayer = topScores.find(s => s.name === currentPlayerName);
-            
-            if (existingPlayer) {
-                if (levelReached > existingPlayer.level) {
-                    existingPlayer.level = levelReached;
-                }
-            } else {
-                topScores.push({ name: currentPlayerName, level: levelReached });
-            }
-
-            topScores.sort((a, b) => b.level - a.level);
-            topScores = topScores.slice(0, 10);
-            localStorage.setItem('luckyGuyScoresV3', JSON.stringify(topScores));
-            
-            renderLeaderboard();
-        }
-
-        function renderLeaderboard() {
-            const list = document.getElementById('leaderboard-list');
-            list.innerHTML = '';
-            
-            if (topScores.length === 0) {
-                list.innerHTML = '<li style="color: var(--text-muted);">Nog geen scores...</li>';
-                return;
-            }
-
-            topScores.forEach((score, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `<span>${index + 1}. ${score.name}</span> <span>LVL ${score.level}</span>`;
-                list.appendChild(li);
-            });
-        }
-
-        renderLeaderboard();
-    </script>
-</body>
-</html>
+                saveStatusEl.innerText = "New player: Starting at Level 1";
+                saveStatusEl.style.color = "var(--text
