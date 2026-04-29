@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>One Square v1.5</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  overflow: hidden; background: #111; font-family: monospace;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh;
+}
+#top-bar {
+  width: 200px; height: 20px; background: #1a1a1a;
+  display: flex; align-items: center; padding: 0 6px;
+  border-bottom: 1px solid #333; position: relative;
+  flex-shrink: 0;
+}
+#game-title {
+  font-size: 8px; font-weight: bold; color: #666; flex: 1; letter-spacing: 1px;
+}
+#mode-badge {
+  font-size: 7px; color: #888; margin-right: 6px;
+}
+#btn-settings {
+  font-size: 9px; background: none; border: none; color: #aaa;
+  cursor: pointer; padding: 0 2px; line-height: 1;
+}
+#btn-settings:hover { color: #fff; }
+
+/* Settings panel */
+#settings-panel {
+  position: absolute; top: 20px; right: 0; width: 180px;
+  background: #1c1c1c; border: 1px solid #383838; border-top: none;
+  border-radius: 0 0 6px 6px; z-index: 50; padding: 8px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+#settings-panel.hidden { display: none; }
+.settings-row {
+  display: flex; gap: 4px; align-items: center;
+}
+.settings-row label {
+  font-size: 7px; color: #777; width: 52px; flex-shrink: 0;
+}
+.settings-row input[type=text] {
+  flex: 1; background: #2a2a2a; border: 1px solid #444; border-radius: 2px;
+  color: #eee; font-family: monospace; font-size: 8px; padding: 2px 4px; outline: none;
+}
+.settings-row input[type=text]:focus { border-color: #777; }
+.settings-sep {
+  border: none; border-top: 1px solid #2e2e2e; margin: 2px 0;
+}
+.s-btn {
+  font-size: 8px; padding: 3px 0; cursor: pointer; border-radius: 3px;
+  border: 1px solid; font-family: monospace; width: 100%; text-align: center;
+}
+.s-btn-mp   { background:#1a3a1a; border-color:#2a6a2a; color:#6f6; }
+.s-btn-mp:hover { background:#254a25; }
+.s-btn-mp.in-mp { background:#1a1a4a; border-color:#2a2a9a; color:#88f; }
+.s-btn-reset { background:#3a1a1a; border-color:#7a3a3a; color:#f88; }
+.s-btn-reset:hover { background:#4a2a2a; }
+.s-btn-name  { background:#2a2a1a; border-color:#6a6a2a; color:#ff8; }
+.s-btn-name:hover { background:#3a3a1a; }
+#mp-status { font-size: 7px; color: #5a5; text-align:center; }
+canvas { display: block; image-rendering: pixelated; }
+#name-modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+}
+#name-modal.hidden { display: none; }
+#name-box {
+  background: #1a1a1a; border: 1px solid #444; border-radius: 6px;
+  padding: 18px 22px; display: flex; flex-direction: column; gap: 10px;
+  font-family: monospace; color: #eee; text-align: center;
+}
+#name-box h2 { font-size: 13px; color: #aaa; letter-spacing: 1px; }
+#name-box input {
+  background: #2a2a2a; border: 1px solid #555; border-radius: 3px;
+  color: #fff; font-family: monospace; font-size: 12px;
+  padding: 5px 8px; outline: none; text-align: center;
+}
+#name-box input:focus { border-color: #888; }
+#name-box button {
+  background: #2a4a2a; border: 1px solid #3a7a3a; border-radius: 3px;
+  color: #6f6; font-family: monospace; font-size: 11px;
+  padding: 5px 0; cursor: pointer;
+}
+#name-box button:hover { background: #3a5a3a; }
+</style>
+</head>
+<body>
+<div id="top-bar">
+  <span id="game-title">ONE SQUARE</span>
+  <span id="mode-badge">🎮 SP</span>
+  <button id="btn-settings" title="Settings">⚙</button>
+  <div id="settings-panel" class="hidden">
+    <div class="settings-row">
+      <label>Name</label>
+      <input id="settings-name" type="text" maxlength="12" placeholder="your name..." />
+    </div>
+    <button class="s-btn s-btn-name" id="btn-save-name">Save name</button>
+    <hr class="settings-sep">
+    <button class="s-btn s-btn-mp" id="btn-toggle-mp">🌐 Go to Multiplayer</button>
+    <div id="mp-status" class="hidden"></div>
+    <hr class="settings-sep">
+    <button class="s-btn s-btn-reset" id="btn-reset">🗑 Reset singleplayer world</button>
+  </div>
+</div>
+<canvas id="game" width="200" height="200"></canvas>
+<div id="name-modal">
+  <div id="name-box">
+    <h2>ONE SQUARE v1.5</h2>
+    <input id="name-input" type="text" maxlength="12" placeholder="your name..." />
+    <button id="name-confirm">Play ▶</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  FIREBASE CONFIG (zelfde project als platformer)
+// ═══════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+  authDomain:        "money-digger-9b05e.firebaseapp.com",
+  databaseURL:       "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "money-digger-9b05e",
+  storageBucket:     "money-digger-9b05e.firebasestorage.app",
+  messagingSenderId: "883506536944",
+  appId:             "1:883506536944:web:921b342dff76154fcbbd35"
+};
+
+// ═══════════════════════════════════════════════════════
+//  EMBEDDED TEXTURES (standalone, geen externe files)
+// ═══════════════════════════════════════════════════════
+window._imgSrcs = {
+  'dirt.png':    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACU0lEQVR4nCXLy5LjNAAF0Kun3247cdIZmh6YomcxRbGh+HsW/AB/wIoUQ6enHUfxU5JliQVnf4gEOIEPyATWFQwgAAcoYIEAcI7ZIYoxaVAKnkv89uvPeRz5zQanE8EkJc5ZAB6UCXkbpmr/OGkLyn//40+abiDzFXMXr8OP+1y6YVUXoVXm58+nis3dUxmZ9p9oHU8ZSwG6bfjhWB/K+PzX3+pyfhAkF+H9awc7Tt2le71wN/fv/07dxfSdALgAnDGRYB8OcV2Wqn1jJPzy5TtCyE3dvj/VxPsvn3+6DWMsGAP4BlDGEYjqdZH1u+awGd1eO+89l3Ge5eNi+6Uv6mZedABoLNHb8K1fjk/Pu8ePXmS9CTyt3u82KZtRB+PF128KIjOeCwZ6tyBUMpl4KlrVG+s9FYRFZVVvhG+E36fl+dOLcYHH2biBAoiiSGudJMn5fLbWxnFsrRVChBAIIS8vLyGEtm23bWMALwWmUdllJLk8Nbuh7xLB8yw5n18ZBQhzembB5Ylk2ALAzYpC4PihCd7mVaKnNWKQZH2skzQis16G7rXt7jzO9s2h4qAEyNIkioVZps2teZoA3hq9qyuzjL1SCL7ZVfu6cKudHTgFrkr1dwVnUsmKNL5d72UhrPciTg9pRThX40KZpIwFgM+Aj/LmqXZ6WvUU1WUO/vBQXC6XY3FI8+L1vTu/3faPCRfU/B/Uyj8eTkP75gQZNhmSWm0kPjx3K+6jc0nVfKrr5ni93WeAFBLWggIUqFLMMwjAAEGgAzgBlRgMNiBLyTiH/wBja0E8/rQXwwAAAABJRU5ErkJggg==',
+  'grass.png':   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACn0lEQVR4nDXS2U4TUQAG4H/OnFk7LR1oC2JroJSgRoKJgkYhLtFovDEhPoMv40N44TN440JcolETjQIqLdiyB0opnensc2aON3r3PcAnQAJkQANEQAI4wAEGCAAAEQCQABEQABwUFIuPH3ZxFKmhMqD5vh/24+Jg0XN8qokh9yml759/enD7zjA99fTJMwoVge6KuhAj/Pj2a2kqf7pQfvHm9ehEcbw0fuJ0O+3OwqPLu3s7gRDABIWBgHorm8vZ0cz5e1VKqdOzry/OdTodKzlJdaaXVI94fW7JXAJAkMAoDRhD2Wb9kIlMMqSN3e2D3r6al1e/rHOZd/ptOStFQjxYLoJDwDlUb1aKk4OhGu4f7xu5rJTI+Zxp2w6h3IlsSqng8zwd/Plhzf/CCLoYHxnnMYkd5nY9yiQeCG7X317f4REZ0EzfCk+ObJVmZi/MIgFBCgKxvlLXZWNibIIS6WC/ncZ8qjaVhMlGo1XID42Wym7PiYIEEggUeJ5Xq9XiOG42m5ZlTU9PM8YajYYoitVqdfltXRRFRVEopWAgiKAbmpJV1lv1wnChUBra2mmpGaU6WVUNte/2Jq5WGs01TgGSgINAwst3b5zAGj5T0k3tx6vfuaKxfbgZk+jbyg89r6o5eaxW+bz0LZETDICA48ata4wxx7LTNC1fKfz6ujFkmqpMZ2bOeZ7nun0A0/OTpmnCAQEFs8NfS80zIxUFStSP5q7MaEIm6EWRHW59OpS52lrb1EWtu3uEBAR9ZHj27v2FP99bzp5DAznoRKvv6setYyXW5uYvEo+mNgRXPFs+jwgUAXLMPDo8uFSdTWU4jqPDuDm7IImy5fQQpeVcJXs6I9nyQbsNDuFf7zzAABGgQAgIQApI/5EF2gAHXPwFGMRBUVilbIQAAAAASUVORK5CYII=',
+  'stone.png':   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACjUlEQVR4nD2SwUrrQBSG50yaySTWmwQa2lQUYqsLi1koShD3uvBRXPkirn0AcesriF1YQVAD7UJtuzBaCG00tTaTZCZ30cs9qw/ODz8/fAghhBDSNA0hBAAIoaWlJYSQLMulUmkBqqouvpIkAaX09PQ0CILv7+9GoyHLcpIkGONOp+O6rm3bQRAwxtbX18MwvLi4wEmSRFFkGIbjOIqivL6+qqpKCEnTtF6vh2GoqqplWVdXV5xzWZYxxljX9bu7u6IoOOdra2u+70+nU8/zhsNhu90WQnS73ZOTk0qlkmUZFkIAwMHBAWNsPp8DwObmZrlcRgiZprm3tzcajVqtFgD8/PwghDDGeDwev7+/m6b5/PxsGAYA9Ho9SZKyLDNNs9VqTSaTx8dHQogkSbgoCtu2y+VymqY7OzvD4fDr66vZbCqKMhgM4ji+vLys1Wrb29sAwDnHADCZTLrdriRJnHNN0+r1elEUs9lsa2urUqkcHR0xxnq9HmMMIYQBgBDieR6lNM/zfr+f5/nNzU2pVPJ9HwB83xdCNJtNSilCCHPOsyzTNO3p6YlSqus659x1XUKI67qfn5+e5ymKUhRFFEX/GlRVnc1m1WqVUuo4jhBiZWWFMQYAg8GAc359fT2fz3Vd/zdakqR2u12r1cIwfHh4YIzd39/HcYwxPjw8FEIcHx9blpWmKee8tLy8HEXR7u4uQogQsr+/nySJ53kA8PLyEsfxxsZGv993HIdSSinF0+n0z58/hmHc3t7atr1QoNPpfHx8OI4zGo0opY1Go1qtjsdjxhgQQs7Ozt7e3lZXV39/fymlQghZlvM8F0IURZGmqWVZQRCYpnl+fo4wxv+VXui9uP+8CMiyvOC/6CVByxifm2sAAAAASUVORK5CYII=',
+  'log.png':     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACH0lEQVR4nD3EzY7UOBQG0M/2dRw7lapUq0E0aNjPkvd/AXa8Q2+QGuiqyp8d2/d6FkhzFkcF4Hkab/dFAUOPlGAAAAQUoAFhwLzBdlBN70XIk/r27d+4v01T760R5rQyGddYmmbTNW68xIPolIv//v0H5dqEH9IWbfh2v3WmS1Gm6ck62tNyPo8xZ+20SO2lFQGRwuXieu9IF6OzSLXWdLqmuP76/XbUP37o1z2L6i2JAbQ0pHW2SkpaT96ZVnvS+djItOvonIHvbdpT6AxBegtNgAKkyLbsBrojO4ZTb/vHn/vJD6Ef5Khph+88BKVAO8CZU9pEio5rdeakxGl0x85Kuk77knAerNXeaq8AnYEmGqKep4+d9efxiYvkyEO4MEPDCqvn6eNxsBQ4QANg5vf3dxEhonmeY4zOuZeXF2PM6+srACJyzjEzAwRgPIev9h9rS017cP6IrbZjn+fp6dz5T/sRY9kstAsBAAmwphsQG+cjz9JS5kaiRZWY51S337d1vA4QEpgCaNsBSj3Wh/NdGIctRhd6F9z1wxNDcj3EIJw8g401SkHHjAq9xFybydx+/kIzdlnTY95TFZBrwLIdb++P+7pzAzWA6HS9fjHWq4NDWKbp8/0+18p+GIpE21WYcLlMCucKUOjtuiky5/mRFfvT+CklEh6EOWez7NHoa5PQ2bHy0FutBqAB9u8aSvA/DVSg91gjGBgcrUf9D624R8eKD6q1AAAAAElFTkSuQmCC',
+  'mystery.png': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACp0lEQVR4nAXBz2scVQAH8O/7NfNm5+3O7ibbNTXNJhYSk0sPhUKL1EulFFG8eBNPgjf/h957EPwPPIkHexGpeK5YaItsq1JsaJOY7M9kd3Zm3vx8b/x8iHTBBGDBXMAABJKiLMEclBasRmkAipoAJaoKnBIM/3wgXZpmJ0JOKdN6Vfq+m+fLtV5vsbCMtq1VWeZ0Oztbg695M8BkfHTvznfCxdO/PhLeLHCJtVaQQhdz2cLkTH5y5wksfnz4TWcNVGu8e8VRAR7/8SUQCW7ydElMrhpNGJvn862B++i3L8II/Q26isFVE1H64vfhdekOWaWmx/bTj9+ES8Di9eHnmT2CXcn2s8Px3SQ6pgRcR1CKtbrzxeKEZVc//ODfp09urXcHWSR23/v+8fP3HbtQHZNluq73BQNlBh3/ymwcUtigbd4e36A0PZ+fxvG4FaDXI/13ZKZDwWSd+yYDJwSj0aS32TVEWyxPR/Pt/g0dOYzKKEZZRhej/1yPC0EY4dSCWsBv0jSLq6qoTNzw3apgaWIPDn569vw6Z67faIJWSTalPPd8UNTwpDI1Z9wBqW2d6SK8efvRi39uCZkuVyGlQnoOpbTdWU80qONgFXLp9svKKau6ve5XdJzWiM1Lt3UulbDWmc4Ka9RsapoKNM3BWNMW27zeTWJWmpLJ6uWry90N783JRLV8QK0F1wTZs7YRRqCqg0SXe9sPhbndbh/MLqK8tPsHZ+fzYntnK0r1eFLOT/b3Br/6KrAcPIzQCjZqg53Bt4ennylppeMNh5c54dPR0m3Q/qWr13Z/qCsk2soGOAPCsPz79X1rVxfTi2534+zocHNzs0wFspXwhMnlz7981e5sUSaSGES6cDwYAxA0HWiNoIU4Bgy4g6KCpfAkaopkhVaA/wEmaFDu9TutHAAAAABJRU5ErkJggg==',
+  'wool.png':    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAAB6klEQVR4nE2SuQ7iQAyGnUkgHBLikEBAAc/Gk9DR0/MavAQFPQUEEiARkEtMMmQOb2GW3c4eeezvt39wHAcAAMC2bQosy3Ic55f+gkajQQEEQbDf77XWVVUholJKCBGGIaXX6xURN5vNer0GAAYAWZb1er37/V6WJef8fD5zzkejUZqmxpjJZBKG4WKx0FrX63VgjL3f7zAMEfF4PMZxjIiIKKV8Pp+cc6UUDUHELyIiCiF+dcaY8/lsjEHEsizpXWvt+77rugAAP1Bqlue5MSaO47Isi6JQSj2fz/f7/Z3QbrdPpxMiep5HzTjnUkqtNSISKiImSfL9QBMIyRgjpfwVIeLr9TocDoT6+Xwcx7EAIAxDx3GMMZzz+XwupazValEU2bbd7/cZY0EQ2LY9Ho8tywIA0FqXZSmlpLmn0ynP89vtRqqUUp/Ph1C/SHmeJ0lSVZVS6v+N+b7/k0FH/KehKApEDIIAEekUURRRb1poFEVFUTQaDUZYzWYziqLpdFpVFXmm0+nYtp2mKWPMsixEbDabQgio1+vb7ZZwtdYkw/O8LMt837/dbo/HQ2sthFgulwDAqqoSQux2Ozp5t9v1PG82m7muOxwOx+PxYDBgjK1Wq8vl8tXQarUoIKvXajVKyQjfVf619x99A+NZhCMj0QAAAABJRU5ErkJggg==',
+  'glass.png':   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAABKElEQVR4nJ3TT0rDQBiG8Sczk9SkSdqC2BRaKXQh3sKt4Cm8gDfyFKI3kG5cuC7FLEIRtBjTsTFO/rgo7k3e/fNbfZ/1tF43rutS5DmO49CYH4qiIPT6SCnR2Y4gCEjTlDAMSdOMKIrYZZq6rrGeX+Lm/qNPl13aW4SjJAAX9itXg10rYDwZI7Zv7wC4do+7z6AVsNlsEJPoBICH/ahVDOD0FKLQ+9bh38qyREiszsBisUAYYzoDq9UK4ft+Z2A+nyO01p0BYwzi6zvvDFSmRMxms86AbdsIp+e2Dm/OhwAoSyEc96hVfD2VKKUA8H0f9bhcgn/2b+A2qSA5nL9SYGVV08RxzOlsSp7nmHyP53mEfkCSJBwPR9R1zWBw+JPiu0JKibRB64JfSCpn6IJKEQUAAAAASUVORK5CYII=',
+  'ladder.png':  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACKklEQVR4nC3RS4tcVRRA4bXP495bt6orle6BlJKoQ0UMopYDFUQHthP9u0FBIyIGk4FDESQ469AxJl19X+ecfbaDzvoJ60McDXz3+Tvnh7daEOhaJ+Ad3iHQwDcfvf3F+6+34DwhVgJM/z1brdqNY6qsqEArZMVBgNaV0PoApsg+8MF7+7MVlNl81IpKSCU7HFhAMW0c5ttJ+gcPn4SlUEt25ofrocbOxabUFGIzjmO/6lJKUtU0FZlk3RpIDwG+PuxrtfuPLzJEjxdyoYJBA99++uayzD88flocoYDAlFVVowehFBQAJ6hhMOUyzkmhVGTnuffu/u5pP7x41vd913VP/32O86p6dns3Xr0EmqYZs9n67MGvf7qshBCmaVLVnObLy0sHu+2JF4ZhiDEGLyLStu2yLGpI7/CV88PezL5/dEFDSdwUG+ZEA+eH/TAMv/91dcw4rXhhmQYzdcKSEAiCQE4ET3BoXhx1yQByAp99fOe0ReejmXX9+ng8Gs57H7zM82xamhCya7W79eNvT4LCUsjeliV5oauqqtXqdrsNXjSnKsF8MBdCuzaQEImVrz68u2rj/V/+zhAF4dVQgwBffnJnWvLPf1yUQNCCN0qal5pvpKphEAS1V3bBSfR2IyNb4XDvtf3ayjRM6k9u3R7HcV7GzWqDc8fj0VFPN00Rf8Xmp4f/BG+sgy3XLxrREx9jermLMqS89iml9Maum6fB6RR8m66fN/A/WpksJvn1R50AAAAASUVORK5CYII=',
+  'chicken.png': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect x="5" y="1" width="6" height="5" fill="%23388e3c"/><rect x="6" y="3" width="1" height="1" fill="%23111"/><rect x="9" y="3" width="1" height="1" fill="%23111"/><rect x="6" y="6" width="4" height="3" fill="%230288d1"/><rect x="4" y="6" width="2" height="1" fill="%23388e3c"/><rect x="10" y="6" width="2" height="1" fill="%23388e3c"/><rect x="5" y="10" width="6" height="4" fill="%23ffffff"/><rect x="4" y="11" width="1" height="2" fill="%23dddddd"/><rect x="11" y="11" width="1" height="2" fill="%23dddddd"/><rect x="6" y="7" width="4" height="4" fill="%23ffffff"/><rect x="6" y="8" width="1" height="1" fill="%23111"/><rect x="9" y="8" width="1" height="1" fill="%23111"/><rect x="7" y="9" width="2" height="1" fill="%23ffb300"/><rect x="7" y="10" width="1" height="1" fill="%23e53935"/><rect x="6" y="14" width="1" height="2" fill="%23ffb300"/><rect x="9" y="14" width="1" height="2" fill="%23ffb300"/></svg>'
+};
+const _origImage = window.Image;
+window.Image = function(...args) {
+  const img = new _origImage(...args);
+  const origSrcDesc = Object.getOwnPropertyDescriptor(_origImage.prototype, 'src');
+  Object.defineProperty(img, 'src', {
+    set(val) {
+      const key = val.split('/').pop().split('?')[0];
+      origSrcDesc.set.call(img, window._imgSrcs[key] || val);
+    },
+    get() { return origSrcDesc.get.call(img); }
+  });
+  return img;
+};
+
+// ═══════════════════════════════════════════════════════
+//  BLOCK LIST
+// ═══════════════════════════════════════════════════════
+const BLOCK_TYPES = [
+  { id: "dirt",   name: "Dirt",   color: "#8B5E3C", breakTime: 500,  texture: "dirt.png"   },
+  { id: "grass",  name: "Grass",  color: "#4CAF50", breakTime: 500,  texture: "grass.png"  },
+  { id: "stone",  name: "Stone",  color: "#9E9E9E", breakTime: 1200, texture: "stone.png"  },
+  { id: "log",    name: "Log",    color: "#795548", breakTime: 800,  texture: "log.png"    },
+  { id: "wool",   name: "Wool",   color: "#eeeeee", breakTime: 500,  texture: "wool.png"   },
+  { id: "ladder", name: "Ladder", color: "#a0522d", breakTime: 700,  texture: "ladder.png", isLadder: true },
+  { id: "glass",  name: "Glass",  color: "#aaddff", breakTime: 150,  texture: "glass.png"  },
+  { id: "chicken_jockey", name: "Chicken Jockey", color: "transparent", breakTime: 10000, texture: "chicken.png" },
+];
+const ONE_BLOCK_DROPS = [
+  { id: "dirt",   weight: 10 },
+  { id: "grass",  weight: 8  },
+  { id: "stone",  weight: 8  },
+  { id: "log",    weight: 6  },
+  { id: "wool",   weight: 5  },
+  { id: "ladder", weight: 3  },
+  { id: "glass",  weight: 3  },
+  { id: "chicken_jockey", weight: 0.004 }
+];
+
+const TEXTURES = {};
+for(const bt of BLOCK_TYPES) {
+  const img = new Image();
+  img.src = bt.texture;
+  TEXTURES[bt.id] = img;
+}
+const MYSTERY_TEX = new Image();
+MYSTERY_TEX.src = "mystery.png";
+
+// ═══════════════════════════════════════════════════════
+//  CONSTANTS — grotere wereld
+// ═══════════════════════════════════════════════════════
+const BLOCK_SIZE   = 16;
+const WORLD_W      = 60;   // was 25 — veel meer ruimte
+const WORLD_H      = 18;   // was 11
+const HOTBAR_SLOTS = 8;
+const CANVAS_W     = 200;
+const CANVAS_H     = 200;
+const HOTBAR_H     = 24;
+const VIEW_H       = CANVAS_H - HOTBAR_H;
+const FLOOR_Y      = VIEW_H;
+const GRAVITY      = 0.35;
+const JUMP_FORCE   = -5.5;
+const MOVE_SPEED   = 1.5;
+const LADDER_SPEED = 1.2;
+const LADDER_SINK  = 0.4;
+const ONE_BLOCK_X  = Math.floor(WORLD_W / 2);
+const ONE_BLOCK_Y  = Math.floor(WORLD_H / 2);
+
+const HOTBAR_SLOTS_N = HOTBAR_SLOTS;
+
+// ═══════════════════════════════════════════════════════
+//  MODE: singleplayer / multiplayer
+// ═══════════════════════════════════════════════════════
+let isMultiplayer = false;
+
+// ═══════════════════════════════════════════════════════
+//  PLAYER ID (persistent)
+// ═══════════════════════════════════════════════════════
+let myPlayerId = localStorage.getItem("onesquare_playerid");
+if(!myPlayerId) {
+  myPlayerId = Math.random().toString(36).slice(2, 10);
+  localStorage.setItem("onesquare_playerid", myPlayerId);
+}
+
+let myName = localStorage.getItem("onesquare_name") || "";
+
+// You are always red for yourself, others see you as blue
+const MY_COLOR    = "#e74c3c"; // rood (alleen jij ziet dit)
+const REMOTE_COLOR = "#3d8be8"; // blauw (zo zien anderen eruit voor jou)
+
+// ═══════════════════════════════════════════════════════
+//  STORAGE HELPERS
+// ═══════════════════════════════════════════════════════
+function loadSPWorld() {
+  try { const s = localStorage.getItem("onesquare_sp_world_" + myPlayerId); if(s) return JSON.parse(s); } catch(e) {}
+  return Array.from({length: WORLD_H}, () => Array(WORLD_W).fill(null));
+}
+function saveSPWorld() {
+  try { localStorage.setItem("onesquare_sp_world_" + myPlayerId, JSON.stringify(world)); } catch(e) {}
+}
+function loadSPHotbar() {
+  try { const s = localStorage.getItem("onesquare_sp_hotbar_" + myPlayerId); if(s) return JSON.parse(s); } catch(e) {}
+  return Array(HOTBAR_SLOTS).fill(null);
+}
+function saveSPHotbar() {
+  try { localStorage.setItem("onesquare_sp_hotbar_" + myPlayerId, JSON.stringify(hotbar)); } catch(e) {}
+}
+function loadMPHotbar() {
+  try { const s = localStorage.getItem("onesquare_mp_hotbar_" + myPlayerId); if(s) return JSON.parse(s); } catch(e) {}
+  return Array(HOTBAR_SLOTS).fill(null);
+}
+function saveMPHotbar() {
+  try { localStorage.setItem("onesquare_mp_hotbar_" + myPlayerId, JSON.stringify(hotbar)); } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════
+//  WORLD STATE
+// ═══════════════════════════════════════════════════════
+let world  = loadSPWorld();
+let hotbar = loadSPHotbar();
+let selectedSlot = 0;
+
+// ═══════════════════════════════════════════════════════
+//  CANVAS
+// ═══════════════════════════════════════════════════════
+const canvas = document.getElementById("game");
+const ctx    = canvas.getContext("2d");
+
+// ═══════════════════════════════════════════════════════
+//  HOTBAR HELPERS
+// ═══════════════════════════════════════════════════════
+function addToHotbar(id) {
+  for(let i=0;i<HOTBAR_SLOTS;i++) { if(hotbar[i]&&hotbar[i].id===id){hotbar[i].count++;return;} }
+  for(let i=0;i<HOTBAR_SLOTS;i++) { if(!hotbar[i]){hotbar[i]={id,count:1};return;} }
+}
+function removeFromHotbar(slot) {
+  if(!hotbar[slot]) return false;
+  hotbar[slot].count--;
+  if(hotbar[slot].count<=0) hotbar[slot]=null;
+  return true;
+}
+function getBlockType(id) { return BLOCK_TYPES.find(b=>b.id===id)||null; }
+function getRandomDrop() {
+  const total=ONE_BLOCK_DROPS.reduce((s,d)=>s+d.weight,0);
+  let r=Math.random()*total;
+  for(const d of ONE_BLOCK_DROPS){r-=d.weight;if(r<=0)return d.id;}
+  return ONE_BLOCK_DROPS[0].id;
+}
+
+// ═══════════════════════════════════════════════════════
+//  PLAYER CLASS
+// ═══════════════════════════════════════════════════════
+class Player {
+  constructor(x,y,color="red") {
+    this.px=x*BLOCK_SIZE; this.py=y*BLOCK_SIZE;
+    this.w=10; this.h=14; this.vx=0; this.vy=0;
+    this.onGround=false; this.color=color;
+  }
+  isBlockSolid(bx,by) {
+    if(bx<0||bx>=WORLD_W) return true;
+    if(by>=WORLD_H) return true;
+    if(by<0) return false;
+    if(bx===ONE_BLOCK_X&&by===ONE_BLOCK_Y) return true;
+    const id=world[by][bx];
+    if(!id) return false;
+    const bt=getBlockType(id);
+    if(bt&&bt.isLadder) return false;
+    return true;
+  }
+  isOnLadder() {
+    const left=Math.floor(this.px/BLOCK_SIZE);
+    const right=Math.floor((this.px+this.w-0.01)/BLOCK_SIZE);
+    const top=Math.floor(this.py/BLOCK_SIZE);
+    const bot=Math.floor((this.py+this.h-0.01)/BLOCK_SIZE);
+    for(let by=top;by<=bot;by++) for(let bx=left;bx<=right;bx++) {
+      if(by<0||by>=WORLD_H||bx<0||bx>=WORLD_W) continue;
+      const id=world[by][bx];
+      if(id){const bt=getBlockType(id);if(bt&&bt.isLadder)return true;}
+    }
+    return false;
+  }
+  update(keys) {
+    const onLadder=this.isOnLadder();
+    this.vx=0;
+    if(keys["ArrowLeft"]) this.vx=-MOVE_SPEED;
+    if(keys["ArrowRight"]) this.vx=MOVE_SPEED;
+    if(onLadder) {
+      if(keys["ArrowUp"]) this.vy=-LADDER_SPEED;
+      else this.vy=LADDER_SINK;
+      this.onGround=false;
+    } else {
+      if((keys["ArrowUp"]||keys[" "])&&this.onGround){this.vy=JUMP_FORCE;this.onGround=false;}
+      this.vy+=GRAVITY;
+    }
+    this.px+=this.vx;
+    const left=Math.floor(this.px/BLOCK_SIZE);
+    const right=Math.floor((this.px+this.w-0.01)/BLOCK_SIZE);
+    const top=Math.floor(this.py/BLOCK_SIZE);
+    const bot=Math.floor((this.py+this.h-0.01)/BLOCK_SIZE);
+    if(this.vx>0&&(this.isBlockSolid(right,top)||this.isBlockSolid(right,bot))) this.px=right*BLOCK_SIZE-this.w-0.01;
+    if(this.vx<0&&(this.isBlockSolid(left,top)||this.isBlockSolid(left,bot))) this.px=(left+1)*BLOCK_SIZE;
+    this.py+=this.vy;
+    const left2=Math.floor(this.px/BLOCK_SIZE);
+    const right2=Math.floor((this.px+this.w-0.01)/BLOCK_SIZE);
+    const top2=Math.floor(this.py/BLOCK_SIZE);
+    const bot2=Math.floor((this.py+this.h-0.01)/BLOCK_SIZE);
+    if(!onLadder) {
+      if(this.vy>0&&(this.isBlockSolid(left2,bot2)||this.isBlockSolid(right2,bot2))){this.py=bot2*BLOCK_SIZE-this.h;this.vy=0;this.onGround=true;}
+      else if(this.vy<0||(!this.isBlockSolid(left2,bot2+1)&&!this.isBlockSolid(right2,bot2+1))) this.onGround=false;
+      if(this.vy<0&&(this.isBlockSolid(left2,top2)||this.isBlockSolid(right2,top2))){this.py=(top2+1)*BLOCK_SIZE;this.vy=0;}
+    } else {
+      if(this.vy<0&&(this.isBlockSolid(left2,top2)||this.isBlockSolid(right2,top2))){this.py=(top2+1)*BLOCK_SIZE;this.vy=0;}
+      if(this.vy>0&&(this.isBlockSolid(left2,bot2)||this.isBlockSolid(right2,bot2))){this.py=bot2*BLOCK_SIZE-this.h;this.vy=0;this.onGround=true;}
+    }
+    if(this.py+this.h>=FLOOR_Y){this.py=FLOOR_Y-this.h;this.vy=0;this.onGround=true;}
+    if(this.py<0){this.py=0;this.vy=0;} // ceiling = top of canvas
+    camX=this.px-CANVAS_W/2+this.w/2;
+    camX=Math.max(0,Math.min(WORLD_W*BLOCK_SIZE-CANVAS_W,camX));
+  }
+  draw(label) {
+    const sx=Math.round(this.px-camX);
+    const sy=Math.round(this.py-camY);
+    ctx.fillStyle=this.color;
+    ctx.fillRect(sx,sy,this.w,this.h);
+    if(label) {
+      ctx.fillStyle="rgba(0,0,0,0.6)";
+      ctx.font="5px monospace";
+      const tw=ctx.measureText(label).width;
+      ctx.fillRect(sx+this.w/2-tw/2-1,sy-8,tw+2,7);
+      ctx.fillStyle="#fff";
+      ctx.fillText(label,sx+this.w/2-tw/2,sy-2);
+    }
+  }
+}
+
+let camX=0;
+const camY=0;
+
+function spawnPlayer() {
+  player.px=ONE_BLOCK_X*BLOCK_SIZE;
+  player.py=(ONE_BLOCK_Y-1)*BLOCK_SIZE;
+  player.vx=0; player.vy=0;
+}
+
+let player=new Player(ONE_BLOCK_X,ONE_BLOCK_Y-1,MY_COLOR);
+
+// ═══════════════════════════════════════════════════════
+//  BLOCK BREAKING
+// ═══════════════════════════════════════════════════════
+let breaking=null;
+
+function worldToScreen(bx,by){return{sx:bx*BLOCK_SIZE-camX,sy:by*BLOCK_SIZE-camY};}
+function screenToWorld(sx,sy){return{bx:Math.floor((sx+camX)/BLOCK_SIZE),by:Math.floor((sy+camY)/BLOCK_SIZE)};}
+
+canvas.addEventListener("mousedown",(e)=>{
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left;
+  const my=e.clientY-rect.top;
+  const slotW=CANVAS_W/HOTBAR_SLOTS;
+  if(my>=VIEW_H){
+    const slot=Math.floor(mx/slotW);
+    if(slot>=0&&slot<HOTBAR_SLOTS) selectedSlot=slot;
+    return;
+  }
+  const{bx,by}=screenToWorld(mx,my);
+  if(e.button===2){e.preventDefault();placeBlock(bx,by);}
+  else if(e.button===0){startBreaking(bx,by);}
+});
+canvas.addEventListener("mouseup",(e)=>{if(e.button===0)breaking=null;});
+canvas.addEventListener("contextmenu",e=>e.preventDefault());
+
+function startBreaking(bx,by) {
+  if(bx<0||bx>=WORLD_W||by<0||by>=WORLD_H) return;
+  if(bx===ONE_BLOCK_X&&by===ONE_BLOCK_Y){breaking={bx,by,startTime:Date.now(),duration:800,isOneBlock:true};return;}
+  if(world[by][bx]===null) return;
+  const bt=getBlockType(world[by][bx]);
+  if(!bt) return;
+  breaking={bx,by,startTime:Date.now(),duration:bt.breakTime,isOneBlock:false};
+}
+
+function placeBlock(bx,by) {
+  if(bx<0||bx>=WORLD_W||by<0||by>=WORLD_H) return;
+  if(bx===ONE_BLOCK_X&&by===ONE_BLOCK_Y) return;
+  if(world[by][bx]!==null) return;
+  const px1=Math.floor(player.px/BLOCK_SIZE);
+  const px2=Math.floor((player.px+player.w-0.01)/BLOCK_SIZE);
+  const py1=Math.floor(player.py/BLOCK_SIZE);
+  const py2=Math.floor((player.py+player.h-0.01)/BLOCK_SIZE);
+  const slot=hotbar[selectedSlot];
+  if(!slot) return;
+  const bt=getBlockType(slot.id);
+  if(!bt) return;
+  if(!bt.isLadder&&bx>=px1&&bx<=px2&&by>=py1&&by<=py2) return;
+  world[by][bx]=slot.id;
+  removeFromHotbar(selectedSlot);
+  onWorldChanged();
+}
+
+// ═══════════════════════════════════════════════════════
+//  FIREBASE MULTIPLAYER
+// ═══════════════════════════════════════════════════════
+let db=null, fbInited=false;
+let myFbRef=null, myOnlineRef=null, myHotbarRef=null;
+let fbWorldRef=null;
+let remotePlayers={};
+let fbListeners=[];
+
+const statusEl=document.getElementById("mp-status");
+const modeBadge=document.getElementById("mode-badge");
+const btnToggle=document.getElementById("btn-toggle-mp");
+const btnReset=document.getElementById("btn-reset");
+const settingsPanel=document.getElementById("settings-panel");
+const settingsNameInput=document.getElementById("settings-name");
+const btnSaveName=document.getElementById("btn-save-name");
+const btnSettingsToggle=document.getElementById("btn-settings");
+
+function setStatus(msg,color="#5a5"){
+  if(msg){statusEl.textContent=msg;statusEl.style.color=color;statusEl.classList.remove("hidden");}
+  else{statusEl.classList.add("hidden");}
+}
+
+function initFirebase() {
+  if(fbInited) return;
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db=firebase.database();
+    fbInited=true;
+  } catch(e) { console.warn("Firebase init failed",e); }
+}
+
+function enterMultiplayer() {
+  initFirebase();
+  if(!db){setStatus("❌ offline","#f66");return;}
+
+  // Load MP world from Firebase
+  fbWorldRef=db.ref("onesquare/world");
+  const fbPlayersRef=db.ref("onesquare/players");
+  const fbOnlineRef=db.ref("onesquare/online");
+
+  myFbRef=fbPlayersRef.child(myPlayerId);
+  myFbRef.onDisconnect().remove();
+  myOnlineRef=fbOnlineRef.child(myPlayerId);
+  myOnlineRef.set(true);
+  myOnlineRef.onDisconnect().remove();
+
+  myHotbarRef=db.ref("onesquare/hotbars/"+myPlayerId);
+
+  // Load hotbar for MP
+  hotbar=loadMPHotbar();
+
+  // Listen to online count
+  const onlineL=fbOnlineRef.on("value",snap=>{setStatus("● "+snap.numChildren()+" online");});
+  fbListeners.push(()=>fbOnlineRef.off("value",onlineL));
+
+  // Listen to world — éénmalig laden dan live updates
+  const worldL=fbWorldRef.on("value",snap=>{
+    const val=snap.val();
+    if(val) {
+      // Firebase returns an object, not a real array — convert it
+      const arr=Array.from({length:WORLD_H},()=>Array(WORLD_W).fill(null));
+      for(let r=0;r<WORLD_H;r++) {
+        if(!val[r]) continue;
+        for(let c=0;c<WORLD_W;c++) {
+          arr[r][c]=val[r][c]||null;
+        }
+      }
+      world=arr;
+    } else {
+      world=Array.from({length:WORLD_H},()=>Array(WORLD_W).fill(null));
+    }
+  });
+  fbListeners.push(()=>fbWorldRef.off("value",worldL));
+
+  // Listen to other players
+  const addL=fbPlayersRef.on("child_added",snap=>{if(snap.key!==myPlayerId&&snap.val())remotePlayers[snap.key]=snap.val();});
+  const chgL=fbPlayersRef.on("child_changed",snap=>{if(snap.key!==myPlayerId&&snap.val())remotePlayers[snap.key]=snap.val();});
+  const remL=fbPlayersRef.on("child_removed",snap=>{delete remotePlayers[snap.key];});
+  fbListeners.push(()=>{fbPlayersRef.off("child_added",addL);fbPlayersRef.off("child_changed",chgL);fbPlayersRef.off("child_removed",remL);});
+
+  isMultiplayer=true;
+  modeBadge.textContent="🌐 MP";
+  btnToggle.textContent="🏠 Go to Singleplayer";
+  btnToggle.classList.add("in-mp");
+  btnReset.style.display="none";
+  spawnPlayer();
+}
+
+function exitMultiplayer() {
+  // Remove listeners
+  fbListeners.forEach(fn=>fn());
+  fbListeners=[];
+  if(myFbRef){myFbRef.remove();myFbRef=null;}
+  if(myOnlineRef){myOnlineRef.remove();myOnlineRef=null;}
+  myHotbarRef=null;
+  fbWorldRef=null;
+  remotePlayers={};
+
+  // Save MP hotbar
+  saveMPHotbar();
+
+  // Return to SP
+  world=loadSPWorld();
+  hotbar=loadSPHotbar();
+  isMultiplayer=false;
+  modeBadge.textContent="🎮 SP";
+  btnToggle.textContent="🌐 Go to Multiplayer";
+  btnToggle.classList.remove("in-mp");
+  btnReset.style.display="";
+  setStatus("");
+  spawnPlayer();
+}
+
+btnToggle.addEventListener("click",()=>{
+  if(isMultiplayer) exitMultiplayer();
+  else enterMultiplayer();
+});
+
+btnReset.addEventListener("click",()=>{
+  if(isMultiplayer) return;
+  world=Array.from({length:WORLD_H},()=>Array(WORLD_W).fill(null));
+  hotbar=Array(HOTBAR_SLOTS).fill(null);
+  saveSPWorld();
+  saveSPHotbar();
+  spawnPlayer();
+});
+
+// Called after every world change
+function onWorldChanged() {
+  if(isMultiplayer) {
+    saveMPHotbar();
+    if(fbWorldRef) try { fbWorldRef.set(world); } catch(e){}
+  } else {
+    saveSPWorld();
+    saveSPHotbar();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  POSITIE BROADCAST (MP)
+// ═══════════════════════════════════════════════════════
+let lastSentX=-1,lastSentY=-1,fbThrottle=0;
+function broadcastPos() {
+  if(!isMultiplayer||!myFbRef) return;
+  fbThrottle++;
+  const moved=Math.round(player.px)!==lastSentX||Math.round(player.py)!==lastSentY;
+  if(!moved&&fbThrottle<20) return;
+  fbThrottle=0;
+  lastSentX=Math.round(player.px);
+  lastSentY=Math.round(player.py);
+  try { myFbRef.set({px:lastSentX,py:lastSentY,name:myName,t:Date.now()}); } catch(e){}
+}
+
+function cleanupRemote() {
+  const now=Date.now();
+  for(let id in remotePlayers) if(now-(remotePlayers[id].t||0)>15000) delete remotePlayers[id];
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW
+// ═══════════════════════════════════════════════════════
+function drawWorld() {
+  ctx.fillStyle="#87CEEB";
+  ctx.fillRect(0,0,CANVAS_W,VIEW_H);
+
+  for(let by=0;by<WORLD_H;by++) for(let bx=0;bx<WORLD_W;bx++) {
+    const{sx,sy}=worldToScreen(bx,by);
+    if(sx+BLOCK_SIZE<0||sx>CANVAS_W) continue;
+
+    if(bx===ONE_BLOCK_X&&by===ONE_BLOCK_Y) {
+      if(MYSTERY_TEX.complete&&MYSTERY_TEX.naturalWidth>0){ctx.imageSmoothingEnabled=false;ctx.drawImage(MYSTERY_TEX,sx,sy,BLOCK_SIZE,BLOCK_SIZE);}
+      else{ctx.fillStyle="#7B1FA2";ctx.fillRect(sx,sy,BLOCK_SIZE,BLOCK_SIZE);}
+      if(breaking&&breaking.bx===bx&&breaking.by===by){const prog=Math.min(1,(Date.now()-breaking.startTime)/breaking.duration);ctx.fillStyle=`rgba(0,0,0,${prog*0.7})`;ctx.fillRect(sx,sy,BLOCK_SIZE,BLOCK_SIZE);}
+      continue;
+    }
+
+    const id=world[by][bx];
+    if(!id) continue;
+    const bt=getBlockType(id);
+    if(!bt) continue;
+    const tex=TEXTURES[id];
+    if(tex&&tex.complete&&tex.naturalWidth>0){ctx.imageSmoothingEnabled=false;ctx.drawImage(tex,sx,sy,BLOCK_SIZE,BLOCK_SIZE);}
+    else{ctx.fillStyle=bt.color;ctx.fillRect(sx,sy,BLOCK_SIZE,BLOCK_SIZE);}
+
+    if(breaking&&breaking.bx===bx&&breaking.by===by) {
+      const prog=Math.min(1,(Date.now()-breaking.startTime)/breaking.duration);
+      ctx.fillStyle=`rgba(0,0,0,${prog*0.7})`;
+      ctx.fillRect(sx,sy,BLOCK_SIZE,BLOCK_SIZE);
+      const cracks=Math.floor(prog*4);
+      ctx.strokeStyle=`rgba(0,0,0,${prog})`;
+      ctx.lineWidth=1;
+      if(cracks>=1){ctx.beginPath();ctx.moveTo(sx+4,sy+4);ctx.lineTo(sx+8,sy+10);ctx.stroke();}
+      if(cracks>=2){ctx.beginPath();ctx.moveTo(sx+8,sy+2);ctx.lineTo(sx+13,sy+8);ctx.stroke();}
+      if(cracks>=3){ctx.beginPath();ctx.moveTo(sx+3,sy+10);ctx.lineTo(sx+9,sy+14);ctx.stroke();}
+      if(cracks>=4){ctx.beginPath();ctx.moveTo(sx+11,sy+5);ctx.lineTo(sx+15,sy+12);ctx.stroke();}
+    }
+  }
+}
+
+function drawHotbar() {
+  const slotW=CANVAS_W/HOTBAR_SLOTS;
+  const barY=VIEW_H;
+  ctx.fillStyle="#333";
+  ctx.fillRect(0,barY,CANVAS_W,HOTBAR_H);
+  for(let i=0;i<HOTBAR_SLOTS;i++) {
+    const sx=i*slotW;
+    const sy=barY+2;
+    const sw=slotW-2;
+    const sh=HOTBAR_H-4;
+    ctx.fillStyle=i===selectedSlot?"#666":"#444";
+    ctx.fillRect(sx+1,sy,sw,sh);
+    ctx.strokeStyle=i===selectedSlot?"#fff":"#555";
+    ctx.strokeRect(sx+1.5,sy+0.5,sw-1,sh-1);
+    const slot=hotbar[i];
+    if(slot) {
+      const bt=getBlockType(slot.id);
+      if(bt) {
+        const tex=TEXTURES[slot.id];
+        if(tex&&tex.complete&&tex.naturalWidth>0){ctx.imageSmoothingEnabled=false;ctx.drawImage(tex,sx+3,sy+2,sw-4,sh-4);}
+        else{ctx.fillStyle=bt.color;ctx.fillRect(sx+3,sy+2,sw-4,sh-4);}
+        ctx.fillStyle="white";
+        ctx.font="5px monospace";
+        ctx.fillText(slot.count,sx+2,barY+HOTBAR_H-4);
+      }
+    }
+  }
+}
+
+function drawRemotePlayers() {
+  for(let id in remotePlayers) {
+    const rp=remotePlayers[id];
+    const sx=Math.round(rp.px-camX);
+    const sy=Math.round(rp.py-camY);
+    if(sx<-20||sx>CANVAS_W+20) continue;
+    ctx.fillStyle=REMOTE_COLOR;
+    ctx.fillRect(sx,sy,10,14);
+    const label=rp.name||id.slice(0,4);
+    ctx.fillStyle="rgba(0,0,0,0.65)";
+    ctx.font="5px monospace";
+    const tw=ctx.measureText(label).width;
+    ctx.fillRect(sx+5-tw/2-1,sy-8,tw+2,7);
+    ctx.fillStyle="#fff";
+    ctx.fillText(label,sx+5-tw/2,sy-2);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════════════════
+const keys={};
+window.addEventListener("keydown",e=>{
+  keys[e.key]=true;
+  if(e.key>="1"&&e.key<="8") selectedSlot=parseInt(e.key)-1;
+});
+window.addEventListener("keyup",e=>keys[e.key]=false);
+canvas.addEventListener("wheel",e=>{
+  e.preventDefault();
+  selectedSlot=(selectedSlot+(e.deltaY>0?1:-1)+HOTBAR_SLOTS)%HOTBAR_SLOTS;
+},{passive:false});
+
+// ═══════════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════════
+const TARGET_FPS=60;
+const FRAME_TIME=1000/TARGET_FPS;
+let lastTime=0,frameCount=0;
+
+function loop(timestamp) {
+  requestAnimationFrame(loop);
+  if(timestamp-lastTime<FRAME_TIME) return;
+  lastTime=timestamp;
+
+  player.update(keys);
+
+  if(breaking) {
+    const elapsed=Date.now()-breaking.startTime;
+    if(elapsed>=breaking.duration) {
+      const{bx,by}=breaking;
+      if(breaking.isOneBlock){addToHotbar(getRandomDrop());}
+      else{const id=world[by][bx];if(id){addToHotbar(id);world[by][bx]=null;}}
+      onWorldChanged();
+      breaking=null;
+    }
+  }
+
+  frameCount++;
+  broadcastPos();
+  if(frameCount%30===0) cleanupRemote();
+
+  ctx.clearRect(0,0,CANVAS_W,CANVAS_H);
+  drawWorld();
+  drawRemotePlayers();
+  player.draw(isMultiplayer ? myName : null);
+  drawHotbar();
+}
+
+// Settings toggle
+btnSettingsToggle.addEventListener("click", e => {
+  e.stopPropagation();
+  settingsPanel.classList.toggle("hidden");
+  if(!settingsPanel.classList.contains("hidden")) {
+    settingsNameInput.value = myName;
+    settingsNameInput.focus();
+  }
+});
+document.addEventListener("click", e => {
+  if(!settingsPanel.contains(e.target) && e.target !== btnSettingsToggle) {
+    settingsPanel.classList.add("hidden");
+  }
+});
+settingsPanel.addEventListener("mousedown", e => e.stopPropagation());
+
+// Save name from settings
+btnSaveName.addEventListener("click", () => {
+  const n = settingsNameInput.value.trim();
+  if(!n) return;
+  myName = n;
+  localStorage.setItem("onesquare_name", myName);
+  btnSaveName.textContent = "✓ Saved!";
+  setTimeout(() => { btnSaveName.textContent = "Save name"; }, 1500);
+});
+settingsNameInput.addEventListener("keydown", e => {
+  if(e.key === "Enter") btnSaveName.click();
+  e.stopPropagation();
+});
+
+// Name modal
+const nameModal   = document.getElementById("name-modal");
+const nameInput   = document.getElementById("name-input");
+const nameConfirm = document.getElementById("name-confirm");
+
+function startGame() {
+  const n = nameInput.value.trim();
+  if(!n) return;
+  myName = n;
+  localStorage.setItem("onesquare_name", myName);
+  nameModal.classList.add("hidden");
+  requestAnimationFrame(loop);
+}
+
+nameConfirm.addEventListener("click", startGame);
+nameInput.addEventListener("keydown", e => { if(e.key === "Enter") startGame(); });
+
+if(myName) {
+  nameInput.value = myName;
+  nameModal.classList.add("hidden");
+  requestAnimationFrame(loop);
+} else {
+  nameInput.focus();
+}
+</script>
+</body>
+</html>
