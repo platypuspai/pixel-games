@@ -1058,7 +1058,7 @@
         <div class="lb-name-bar">
             <span class="lb-name-bar-label">// PLAYING AS</span>
             <span class="lb-name-bar-value" id="lb-bar-name">—</span>
-            <button class="lb-change-btn" onclick="lbShowNameModal()">CHANGE NAME</button>
+            <button class="lb-change-btn" id="lb-change-btn">CHANGE NAME</button>
         </div>
 
         <!-- Three boards -->
@@ -1108,12 +1108,11 @@
 </div>
 
 <!-- ===== LEADERBOARD SCRIPTS ===== -->
+<!-- ===== LEADERBOARD SCRIPTS ===== -->
 <script type="module">
-import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-import {
-    getFirestore, collection, query, orderBy,
-    onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+// Use Firebase Modular SDK for Firestore (Lucky Guy)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
 const FB_CONFIG = {
     apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
@@ -1125,48 +1124,17 @@ const FB_CONFIG = {
     appId: "1:883506536944:web:921b342dff76154fcbbd35"
 };
 
-// Init module app (separate from compat app used by Money Digger game)
 const moduleApp = initializeApp(FB_CONFIG, "lb-module");
 const firestoreDb = getFirestore(moduleApp);
 
-window._lbFirestoreDb = firestoreDb;
-window._lbOnSnapshot   = onSnapshot;
-window._lbCollection   = collection;
-window._lbQuery        = query;
-window._lbOrderBy      = orderBy;
-
-window.dispatchEvent(new Event('lb-firestore-ready'));
-</script>
-
-<script>
-// ══════════════════════════════════════════════════════════════════
-//  LEADERBOARD — shared state & helpers
-// ══════════════════════════════════════════════════════════════════
+// ── Helpers ──────────────────────────────────────────────────────
 const LB_NAME_KEY = 'pg_player_name';
-let _lbUnsubMD = null;   // unsubscribe Money Digger realtime listener
-let _lbUnsubLG = null;   // unsubscribe Lucky Guy realtime listener
+let _unsubMD = null;
+let _unsubLG = null;
+let _cacheMD = null;
+let _cacheLG = null;
 
-function lbGetName() { return localStorage.getItem(LB_NAME_KEY) || ''; }
-
-function lbSaveName(name) {
-    if (!name.trim()) return;
-    localStorage.setItem(LB_NAME_KEY, name.trim());
-    document.getElementById('lb-bar-name').textContent = name.trim();
-    // Re-render boards to highlight the new name
-    lbRerenderHighlight();
-}
-
-function lbShowNameModal() {
-    const overlay = document.getElementById('lb-name-overlay');
-    overlay.classList.remove('hidden');
-    const inp = document.getElementById('lb-modal-input');
-    inp.value = lbGetName();
-    inp.focus();
-}
-
-function lbHideNameModal() {
-    document.getElementById('lb-name-overlay').classList.add('hidden');
-}
+function getName() { return localStorage.getItem(LB_NAME_KEY) || ''; }
 
 function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1185,15 +1153,14 @@ function rankClass(i) {
     return '';
 }
 
-// rows = [{name, scoreText}], unlimited length, scrollable
-function lbRenderBoard(bodyId, footerId, rows, myName) {
+function renderBoard(bodyId, footerId, rows, myName) {
     const body   = document.getElementById(bodyId);
     const footer = document.getElementById(footerId);
     if (!body) return;
 
     if (!rows || rows.length === 0) {
         body.innerHTML = '<div class="lb-empty">No scores yet.<br>Be the first to play!</div>';
-        footer.style.display = 'none';
+        if (footer) footer.style.display = 'none';
         return;
     }
 
@@ -1212,42 +1179,35 @@ function lbRenderBoard(bodyId, footerId, rows, myName) {
     });
     body.innerHTML = html;
 
-    // Footer: show my rank
-    if (myName) {
-        if (myPos >= 0) {
-            footer.innerHTML = `Your rank: <span>#${myPos + 1}</span> &nbsp;·&nbsp; ${escHtml(rows[myPos].scoreText)}`;
+    if (footer) {
+        if (myName && myPos >= 0) {
+            footer.innerHTML = `Jouw rang: <span>#${myPos + 1}</span> &nbsp;·&nbsp; ${escHtml(rows[myPos].scoreText)}`;
+            footer.style.display = '';
+        } else if (myName) {
+            footer.innerHTML = `Jij staat nog niet op dit bord.`;
             footer.style.display = '';
         } else {
-            footer.innerHTML = `You are not on this board yet.`;
-            footer.style.display = '';
+            footer.style.display = 'none';
         }
-    } else {
-        footer.style.display = 'none';
     }
 }
 
-// Re-render all boards with updated name highlighting (without re-fetching)
-// We keep last data cached
-let _lbCacheMD = null;
-let _lbCacheLG = null;
-
-function lbRerenderHighlight() {
-    const name = lbGetName();
-    if (_lbCacheMD) lbRenderBoard('lb-md-body','lb-md-footer', _lbCacheMD, name);
-    lbLoadPlatformer(); // local, fast
-    if (_lbCacheLG) lbRenderBoard('lb-lg-body','lb-lg-footer', _lbCacheLG, name);
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  MONEY DIGGER — Firebase Realtime DB, real-time listener
-// ══════════════════════════════════════════════════════════════════
-function lbInitMoneyDigger() {
+// ── Money Digger — Realtime DB (compat SDK) ──────────────────────
+function initMoneyDigger() {
     const body = document.getElementById('lb-md-body');
-    body.innerHTML = '<div class="lb-loading">Connecting</div>';
+    if (!body) return;
+    body.innerHTML = '<div class="lb-loading">Verbinden</div>';
 
-    const tryConnect = () => {
+    // Compat firebase (already loaded via <script> tag in <head>)
+    const waitForCompat = (cb) => {
+        if (typeof firebase !== 'undefined') { cb(); return; }
+        const id = setInterval(() => {
+            if (typeof firebase !== 'undefined') { clearInterval(id); cb(); }
+        }, 100);
+    };
+
+    waitForCompat(() => {
         try {
-            // Init compat app if not already done
             if (!firebase.apps.length) {
                 firebase.initializeApp({
                     apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
@@ -1260,26 +1220,17 @@ function lbInitMoneyDigger() {
             }
         } catch(e) {}
 
-        const db = firebase.database();
+        if (_unsubMD) { _unsubMD(); _unsubMD = null; }
 
-        // Remove old listener if any
-        if (_lbUnsubMD) { _lbUnsubMD(); _lbUnsubMD = null; }
+        const ref = firebase.database().ref('scores');
 
-        const ref = db.ref('scores');
         const handler = snap => {
-            const data = snap.val();
-            if (!data) {
-                _lbCacheMD = [];
-                lbRenderBoard('lb-md-body','lb-md-footer', [], lbGetName());
-                return;
-            }
-            // Aggregate by name (same logic as the game itself)
             const byName = {};
             snap.forEach(child => {
                 const rec = child.val();
-                if (rec === null || rec === undefined) return;
+                if (!rec) return;
                 if (typeof rec === 'number') {
-                    byName['unknown'] = (byName['unknown'] || 0) + rec;
+                    byName['Onbekend'] = (byName['Onbekend'] || 0) + rec;
                     return;
                 }
                 const name   = rec.name   || child.key;
@@ -1291,34 +1242,20 @@ function lbInitMoneyDigger() {
                 .sort((a, b) => b[1] - a[1])
                 .map(([name, clicks]) => ({ name, scoreText: clicks.toLocaleString() + ' clicks' }));
 
-            _lbCacheMD = rows;
-            lbRenderBoard('lb-md-body', 'lb-md-footer', rows, lbGetName());
+            _cacheMD = rows;
+            renderBoard('lb-md-body', 'lb-md-footer', rows, getName());
         };
 
-        ref.on('value', handler, err => {
-            body.innerHTML = '<div class="lb-empty">Could not connect.</div>';
+        ref.on('value', handler, () => {
+            body.innerHTML = '<div class="lb-empty">Kon niet verbinden.</div>';
         });
 
-        // Store unsubscribe
-        _lbUnsubMD = () => ref.off('value', handler);
-    };
-
-    if (typeof firebase !== 'undefined') {
-        tryConnect();
-    } else {
-        const id = setInterval(() => {
-            if (typeof firebase !== 'undefined') {
-                clearInterval(id);
-                tryConnect();
-            }
-        }, 150);
-    }
+        _unsubMD = () => ref.off('value', handler);
+    });
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  MINI PLATFORMER — localStorage only, show own score
-// ══════════════════════════════════════════════════════════════════
-function lbLoadPlatformer() {
+// ── Mini Platformer — localStorage ──────────────────────────────
+function loadPlatformer() {
     const body   = document.getElementById('lb-pf-body');
     const footer = document.getElementById('lb-pf-footer');
     if (!body) return;
@@ -1331,107 +1268,113 @@ function lbLoadPlatformer() {
     }
 
     const raw = localStorage.getItem('platformer_highscore');
-    const myName = lbGetName();
+    const myName = getName();
 
     if (raw === null) {
-        body.innerHTML = '<div class="lb-empty">No score yet.<br>Play Mini Platformer first!</div>';
-        footer.style.display = 'none';
+        body.innerHTML = '<div class="lb-empty">Nog geen score.<br>Speel eerst Mini Platformer!</div>';
+        if (footer) footer.style.display = 'none';
         return;
     }
 
-    const t = parseInt(raw);
-    const rows = [{ name: myName || 'You (this browser)', scoreText: timerString(t) }];
-    lbRenderBoard('lb-pf-body', 'lb-pf-footer', rows, myName || 'You (this browser)');
+    const rows = [{ name: myName || 'Jij (deze browser)', scoreText: timerString(parseInt(raw)) }];
+    renderBoard('lb-pf-body', 'lb-pf-footer', rows, myName || 'Jij (deze browser)');
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  LUCKY GUY — Firestore, real-time listener
-// ══════════════════════════════════════════════════════════════════
-function lbInitLuckyGuy() {
+// ── Lucky Guy — Firestore realtime ───────────────────────────────
+function initLuckyGuy() {
     const body = document.getElementById('lb-lg-body');
-    body.innerHTML = '<div class="lb-loading">Connecting</div>';
+    if (!body) return;
+    body.innerHTML = '<div class="lb-loading">Verbinden</div>';
 
-    const tryConnect = () => {
-        const fs        = window._lbFirestoreDb;
-        const onSnap    = window._lbOnSnapshot;
-        const col       = window._lbCollection;
-        const q         = window._lbQuery;
-        const orderBy   = window._lbOrderBy;
+    if (_unsubLG) { _unsubLG(); _unsubLG = null; }
 
-        if (_lbUnsubLG) { _lbUnsubLG(); _lbUnsubLG = null; }
+    const ref = query(collection(firestoreDb, 'globalScores'), orderBy('level', 'desc'));
 
-        const ref = q(col(fs, 'globalScores'), orderBy('level', 'desc'));
-        _lbUnsubLG = onSnap(ref, snap => {
-            const rows = [];
-            snap.forEach(doc => {
-                const d = doc.data();
-                rows.push({ name: d.name || doc.id, scoreText: 'LVL ' + (d.level || 0) });
-            });
-            _lbCacheLG = rows;
-            lbRenderBoard('lb-lg-body', 'lb-lg-footer', rows, lbGetName());
-        }, err => {
-            body.innerHTML = '<div class="lb-empty">Could not connect.</div>';
+    _unsubLG = onSnapshot(ref, snap => {
+        const rows = [];
+        snap.forEach(doc => {
+            const d = doc.data();
+            rows.push({ name: d.name || doc.id, scoreText: 'LVL ' + (d.level || 0) });
         });
-    };
+        _cacheLG = rows;
+        renderBoard('lb-lg-body', 'lb-lg-footer', rows, getName());
+    }, () => {
+        body.innerHTML = '<div class="lb-empty">Kon niet verbinden.</div>';
+    });
+}
 
-    if (window._lbFirestoreDb) {
-        tryConnect();
-    } else {
-        window.addEventListener('lb-firestore-ready', tryConnect, { once: true });
+// ── Name modal ───────────────────────────────────────────────────
+function showNameModal() {
+    const overlay = document.getElementById('lb-name-overlay');
+    if (overlay) {
+        overlay.classList.remove('hidden');
+        const inp = document.getElementById('lb-modal-input');
+        if (inp) { inp.value = getName(); inp.focus(); }
     }
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  PAGE OPEN / CLOSE
-// ══════════════════════════════════════════════════════════════════
-const _origShowPage = showPage;
-window.showPage = function(name, btn) {
-    _origShowPage(name, btn);
+function hideNameModal() {
+    const overlay = document.getElementById('lb-name-overlay');
+    if (overlay) overlay.classList.add('hidden');
+}
 
-    if (name === 'leaderboard') {
-        // Update name bar
-        const n = lbGetName();
-        document.getElementById('lb-bar-name').textContent = n || '—';
-
-        // Show name modal if no name set yet
-        if (!n) {
-            lbShowNameModal();
-        }
-
-        // Start/restart listeners
-        lbInitMoneyDigger();
-        lbLoadPlatformer();
-        lbInitLuckyGuy();
-
-    } else {
-        // Detach real-time listeners when leaving the page to save bandwidth
-        if (_lbUnsubMD) { _lbUnsubMD(); _lbUnsubMD = null; }
-        if (_lbUnsubLG) { _lbUnsubLG(); _lbUnsubLG = null; }
-    }
-};
-
-// ══════════════════════════════════════════════════════════════════
-//  NAME MODAL wiring
-// ══════════════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
+function confirmName() {
     const inp = document.getElementById('lb-modal-input');
+    const val = inp ? inp.value.trim() : '';
+    if (!val) { if (inp) inp.focus(); return; }
+    localStorage.setItem(LB_NAME_KEY, val);
+    document.getElementById('lb-bar-name').textContent = val;
+    hideNameModal();
+    // Re-highlight boards
+    if (_cacheMD) renderBoard('lb-md-body', 'lb-md-footer', _cacheMD, val);
+    loadPlatformer();
+    if (_cacheLG) renderBoard('lb-lg-body', 'lb-lg-footer', _cacheLG, val);
+}
+
+// ── Wire up events once DOM is ready ────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('lb-modal-btn');
+    const inp = document.getElementById('lb-modal-input');
+    const overlay = document.getElementById('lb-name-overlay');
+    const changeBtn = document.getElementById('lb-change-btn');
 
-    function confirmName() {
-        const val = inp.value.trim();
-        if (!val) { inp.focus(); return; }
-        lbSaveName(val);
-        lbHideNameModal();
-    }
-
-    btn.addEventListener('click', confirmName);
-    inp.addEventListener('keydown', e => { if (e.key === 'Enter') confirmName(); });
-
-    // Close on backdrop click
-    document.getElementById('lb-name-overlay').addEventListener('click', e => {
-        if (e.target === e.currentTarget && lbGetName()) lbHideNameModal();
+    if (btn) btn.addEventListener('click', confirmName);
+    if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') confirmName(); });
+    if (overlay) overlay.addEventListener('click', e => {
+        if (e.target === overlay && getName()) hideNameModal();
     });
+    if (changeBtn) changeBtn.addEventListener('click', showNameModal);
 });
+
+// ── Hook into page navigation ────────────────────────────────────
+// We wait until showPage is defined in the global scope
+function hookShowPage() {
+    if (typeof window.showPage !== 'function') {
+        setTimeout(hookShowPage, 50);
+        return;
+    }
+    const orig = window.showPage;
+    window.showPage = function(name, btn) {
+        orig(name, btn);
+
+        if (name === 'leaderboard') {
+            const n = getName();
+            const bar = document.getElementById('lb-bar-name');
+            if (bar) bar.textContent = n || '—';
+
+            if (!n) showNameModal();
+
+            initMoneyDigger();
+            loadPlatformer();
+            initLuckyGuy();
+        } else {
+            if (_unsubMD) { _unsubMD(); _unsubMD = null; }
+            if (_unsubLG) { _unsubLG(); _unsubLG = null; }
+        }
+    };
+}
+hookShowPage();
+
 </script>
 </body>
 </html>
