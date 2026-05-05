@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixel-Games</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase for leaderboard -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
         :root {
             --bg: #0a0a0f;
@@ -454,6 +457,174 @@
         .animate-bob { animation: bobUp 2s ease-in-out infinite; }
         .animate-spin { animation: spin 4s linear infinite; transform-origin: center; }
         .animate-pulse { animation: pulse 2s ease-in-out infinite; }
+
+        /* ===== LEADERBOARD PAGE ===== */
+        .lb-wrap {
+            position: relative; z-index: 10;
+            max-width: 960px; margin: 50px auto 80px; padding: 0 20px;
+        }
+
+        .lb-header-row {
+            display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 28px;
+        }
+        .lb-wrap > .lb-header-row h2 {
+            font-family: 'Press Start 2P', monospace; font-size: 0.85rem;
+            color: var(--accent-yellow); margin: 0;
+        }
+        .lb-wrap > .lb-header-row p {
+            color: var(--text-muted); font-size: 0.78rem; line-height: 1.6; margin: 0;
+        }
+
+        /* ─── Name overlay ─── */
+        .lb-name-overlay {
+            position: fixed; inset: 0; z-index: 500;
+            background: rgba(0,0,0,0.75);
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .lb-name-overlay.hidden { display: none; }
+        .lb-name-modal {
+            background: var(--card); border: 1px solid var(--border);
+            border-top: 3px solid var(--accent-yellow);
+            padding: 40px 36px; max-width: 420px; width: 90%; position: relative;
+        }
+        .lb-name-modal h3 {
+            font-family: 'Press Start 2P', monospace; font-size: 0.65rem;
+            color: var(--accent-yellow); margin-bottom: 10px; letter-spacing: 0.12em;
+        }
+        .lb-name-modal p {
+            color: var(--text-muted); font-size: 0.78rem; line-height: 1.6; margin-bottom: 24px;
+        }
+        .lb-name-modal input {
+            width: 100%; background: var(--surface); border: 1px solid var(--border);
+            color: var(--text); font-family: 'Inconsolata', monospace; font-size: 1rem;
+            padding: 11px 14px; outline: none; transition: border-color 0.15s; margin-bottom: 16px;
+        }
+        .lb-name-modal input:focus { border-color: var(--accent-yellow); }
+        .lb-name-modal-btn {
+            font-family: 'Press Start 2P', monospace; font-size: 0.5rem;
+            padding: 12px 20px; background: var(--accent-yellow); color: #000;
+            border: none; cursor: pointer; letter-spacing: 0.1em; width: 100%;
+            transition: filter 0.15s;
+        }
+        .lb-name-modal-btn:hover { filter: brightness(1.1); }
+
+        /* ─── Name bar (top of page) ─── */
+        .lb-name-bar {
+            display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+            background: var(--card); border: 1px solid var(--border);
+            border-left: 3px solid var(--accent-yellow);
+            padding: 14px 20px; margin-bottom: 24px;
+        }
+        .lb-name-bar-label {
+            font-family: 'Press Start 2P', monospace; font-size: 0.45rem;
+            color: var(--text-muted); letter-spacing: 0.1em;
+        }
+        .lb-name-bar-value {
+            font-size: 0.88rem; font-weight: 700; color: var(--accent-yellow); flex: 1;
+        }
+        .lb-change-btn {
+            font-family: 'Press Start 2P', monospace; font-size: 0.4rem;
+            padding: 7px 14px; background: transparent; color: var(--text-muted);
+            border: 1px solid var(--border); cursor: pointer; letter-spacing: 0.08em;
+            transition: all 0.15s;
+        }
+        .lb-change-btn:hover { border-color: var(--accent-yellow); color: var(--accent-yellow); }
+
+        /* ─── Boards grid ─── */
+        .lb-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 22px;
+            align-items: start;
+        }
+
+        .lb-board {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 2px; overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+
+        .lb-board-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 14px 18px; border-bottom: 1px solid var(--border);
+            background: rgba(0,0,0,0.2);
+        }
+        .lb-board-title {
+            font-family: 'Press Start 2P', monospace; font-size: 0.48rem;
+            letter-spacing: 0.08em; flex: 1; line-height: 1.6;
+        }
+        .lb-board-meta {
+            font-size: 0.6rem; color: var(--text-muted); white-space: nowrap;
+        }
+        .lb-live-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 1.5s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+
+        /* scrollable list area */
+        .lb-board-body {
+            max-height: 420px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+        .lb-board-body::-webkit-scrollbar { width: 4px; }
+        .lb-board-body::-webkit-scrollbar-track { background: transparent; }
+        .lb-board-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        .lb-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 18px; transition: background 0.1s;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .lb-row:hover { background: rgba(255,255,255,0.04); }
+        .lb-row.is-me-row { background: rgba(255,221,0,0.06); }
+
+        .lb-rank {
+            font-family: 'Press Start 2P', monospace; font-size: 0.4rem;
+            color: var(--text-muted); width: 22px; text-align: center; flex-shrink: 0;
+        }
+        .lb-rank.gold   { color: #ffd700; font-size: 0.7rem; }
+        .lb-rank.silver { color: #c0c0c0; font-size: 0.7rem; }
+        .lb-rank.bronze { color: #cd7f32; font-size: 0.7rem; }
+
+        .lb-name-col {
+            flex: 1; font-size: 0.82rem;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .lb-name-col.is-me { color: var(--accent-yellow); font-weight: 700; }
+
+        .lb-score-col {
+            font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;
+            font-family: 'Inconsolata', monospace;
+        }
+
+        .lb-empty, .lb-loading {
+            padding: 24px 18px; color: var(--text-muted); font-size: 0.75rem;
+            text-align: center; line-height: 1.7;
+        }
+        .lb-loading::after { content: '...'; animation: blink 1s step-end infinite; }
+
+        /* my-score footer inside board */
+        .lb-board-footer {
+            border-top: 1px solid var(--border);
+            padding: 10px 18px;
+            font-size: 0.7rem; color: var(--text-muted);
+            background: rgba(255,221,0,0.04);
+            display: none;
+        }
+        .lb-board-footer span { color: var(--accent-yellow); font-weight: 700; }
+
+        /* local-only notice */
+        .lb-local-notice {
+            padding: 8px 18px 14px;
+            font-size: 0.65rem; color: var(--text-muted);
+            line-height: 1.6; border-top: 1px solid var(--border);
+        }
     </style>
 </head>
 <body>
@@ -479,6 +650,7 @@
         <button class="nav-btn active" onclick="showPage('home', this)">▶ HOME</button>
         <button class="nav-btn" onclick="showPage('contact', this)">✉ CONTACT</button>
         <button class="nav-btn" onclick="showPage('info', this)">ℹ INFO</button>
+        <button class="nav-btn" onclick="showPage('leaderboard', this)">LEADERBOARD</button>
     </nav>
 </header>
 
@@ -862,6 +1034,404 @@
             }
         });
     }
+</script>
+<!-- ===== LEADERBOARD PAGE ===== -->
+<div id="page-leaderboard" class="page">
+
+    <!-- Name overlay (shown first time) -->
+    <div class="lb-name-overlay hidden" id="lb-name-overlay">
+        <div class="lb-name-modal">
+            <h3>// CHOOSE YOUR NAME</h3>
+            <p>This name is used across all game leaderboards. You can change it at any time.</p>
+            <input id="lb-modal-input" type="text" maxlength="18" placeholder="Enter your player name..." autocomplete="off" />
+            <button class="lb-name-modal-btn" id="lb-modal-btn">► CONFIRM NAME</button>
+        </div>
+    </div>
+
+    <div class="lb-wrap">
+        <div class="lb-header-row">
+            <h2>LEADERBOARD</h2>
+            <p>Live rankings for all Pixel-Games.</p>
+        </div>
+
+        <!-- Name bar -->
+        <div class="lb-name-bar">
+            <span class="lb-name-bar-label">// PLAYING AS</span>
+            <span class="lb-name-bar-value" id="lb-bar-name">—</span>
+            <button class="lb-change-btn" onclick="lbShowNameModal()">CHANGE NAME</button>
+        </div>
+
+        <!-- Three boards -->
+        <div class="lb-grid">
+
+            <!-- Money Digger -->
+            <div class="lb-board" style="border-top:2px solid var(--accent-orange);">
+                <div class="lb-board-header">
+                    <span class="lb-live-dot" title="Live"></span>
+                    <span class="lb-board-title" style="color:var(--accent-orange);">MONEY DIGGER</span>
+                    <span class="lb-board-meta">total clicks</span>
+                </div>
+                <div class="lb-board-body" id="lb-md-body">
+                    <div class="lb-loading">Connecting</div>
+                </div>
+                <div class="lb-board-footer" id="lb-md-footer"></div>
+            </div>
+
+            <!-- Mini Platformer -->
+            <div class="lb-board" style="border-top:2px solid var(--accent-green);">
+                <div class="lb-board-header">
+                    <span class="lb-board-title" style="color:var(--accent-green);">MINI PLATFORMER</span>
+                    <span class="lb-board-meta">best time</span>
+                </div>
+                <div class="lb-board-body" id="lb-pf-body">
+                    <div class="lb-loading">Loading</div>
+                </div>
+                <div class="lb-board-footer" id="lb-pf-footer"></div>
+                <div class="lb-local-notice">⚠ Scores are saved locally per browser — no shared online ranking available for this game.</div>
+            </div>
+
+            <!-- Lucky Guy -->
+            <div class="lb-board" style="border-top:2px solid var(--accent-cyan);">
+                <div class="lb-board-header">
+                    <span class="lb-live-dot" title="Live"></span>
+                    <span class="lb-board-title" style="color:var(--accent-cyan);">LUCKY GUY</span>
+                    <span class="lb-board-meta">highest level</span>
+                </div>
+                <div class="lb-board-body" id="lb-lg-body">
+                    <div class="lb-loading">Connecting</div>
+                </div>
+                <div class="lb-board-footer" id="lb-lg-footer"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ===== LEADERBOARD SCRIPTS ===== -->
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import {
+    getFirestore, collection, query, orderBy,
+    onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+const FB_CONFIG = {
+    apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+    authDomain: "money-digger-9b05e.firebaseapp.com",
+    databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "money-digger-9b05e",
+    storageBucket: "money-digger-9b05e.firebasestorage.app",
+    messagingSenderId: "883506536944",
+    appId: "1:883506536944:web:921b342dff76154fcbbd35"
+};
+
+// Init module app (separate from compat app used by Money Digger game)
+const moduleApp = initializeApp(FB_CONFIG, "lb-module");
+const firestoreDb = getFirestore(moduleApp);
+
+window._lbFirestoreDb = firestoreDb;
+window._lbOnSnapshot   = onSnapshot;
+window._lbCollection   = collection;
+window._lbQuery        = query;
+window._lbOrderBy      = orderBy;
+
+window.dispatchEvent(new Event('lb-firestore-ready'));
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+//  LEADERBOARD — shared state & helpers
+// ══════════════════════════════════════════════════════════════════
+const LB_NAME_KEY = 'pg_player_name';
+let _lbUnsubMD = null;   // unsubscribe Money Digger realtime listener
+let _lbUnsubLG = null;   // unsubscribe Lucky Guy realtime listener
+
+function lbGetName() { return localStorage.getItem(LB_NAME_KEY) || ''; }
+
+function lbSaveName(name) {
+    if (!name.trim()) return;
+    localStorage.setItem(LB_NAME_KEY, name.trim());
+    document.getElementById('lb-bar-name').textContent = name.trim();
+    // Re-render boards to highlight the new name
+    lbRerenderHighlight();
+}
+
+function lbShowNameModal() {
+    const overlay = document.getElementById('lb-name-overlay');
+    overlay.classList.remove('hidden');
+    const inp = document.getElementById('lb-modal-input');
+    inp.value = lbGetName();
+    inp.focus();
+}
+
+function lbHideNameModal() {
+    document.getElementById('lb-name-overlay').classList.add('hidden');
+}
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function rankLabel(i) {
+    if (i === 0) return '🥇';
+    if (i === 1) return '🥈';
+    if (i === 2) return '🥉';
+    return '#' + (i + 1);
+}
+function rankClass(i) {
+    if (i === 0) return 'gold';
+    if (i === 1) return 'silver';
+    if (i === 2) return 'bronze';
+    return '';
+}
+
+// rows = [{name, scoreText}], unlimited length, scrollable
+function lbRenderBoard(bodyId, footerId, rows, myName) {
+    const body   = document.getElementById(bodyId);
+    const footer = document.getElementById(footerId);
+    if (!body) return;
+
+    if (!rows || rows.length === 0) {
+        body.innerHTML = '<div class="lb-empty">No scores yet.<br>Be the first to play!</div>';
+        footer.style.display = 'none';
+        return;
+    }
+
+    const lowerMe = (myName || '').toLowerCase();
+    let html = '';
+    let myPos = -1;
+
+    rows.forEach((r, i) => {
+        const isMe = lowerMe && r.name.toLowerCase() === lowerMe;
+        if (isMe) myPos = i;
+        html += `<div class="lb-row${isMe ? ' is-me-row' : ''}">
+            <span class="lb-rank ${rankClass(i)}">${rankLabel(i)}</span>
+            <span class="lb-name-col${isMe ? ' is-me' : ''}">${escHtml(r.name)}</span>
+            <span class="lb-score-col">${escHtml(r.scoreText)}</span>
+        </div>`;
+    });
+    body.innerHTML = html;
+
+    // Footer: show my rank
+    if (myName) {
+        if (myPos >= 0) {
+            footer.innerHTML = `Your rank: <span>#${myPos + 1}</span> &nbsp;·&nbsp; ${escHtml(rows[myPos].scoreText)}`;
+            footer.style.display = '';
+        } else {
+            footer.innerHTML = `You are not on this board yet.`;
+            footer.style.display = '';
+        }
+    } else {
+        footer.style.display = 'none';
+    }
+}
+
+// Re-render all boards with updated name highlighting (without re-fetching)
+// We keep last data cached
+let _lbCacheMD = null;
+let _lbCacheLG = null;
+
+function lbRerenderHighlight() {
+    const name = lbGetName();
+    if (_lbCacheMD) lbRenderBoard('lb-md-body','lb-md-footer', _lbCacheMD, name);
+    lbLoadPlatformer(); // local, fast
+    if (_lbCacheLG) lbRenderBoard('lb-lg-body','lb-lg-footer', _lbCacheLG, name);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  MONEY DIGGER — Firebase Realtime DB, real-time listener
+// ══════════════════════════════════════════════════════════════════
+function lbInitMoneyDigger() {
+    const body = document.getElementById('lb-md-body');
+    body.innerHTML = '<div class="lb-loading">Connecting</div>';
+
+    const tryConnect = () => {
+        try {
+            // Init compat app if not already done
+            if (!firebase.apps.length) {
+                firebase.initializeApp({
+                    apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+                    authDomain: "money-digger-9b05e.firebaseapp.com",
+                    databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+                    projectId: "money-digger-9b05e",
+                    storageBucket: "money-digger-9b05e.firebasestorage.app",
+                    appId: "1:883506536944:web:921b342dff76154fcbbd35"
+                });
+            }
+        } catch(e) {}
+
+        const db = firebase.database();
+
+        // Remove old listener if any
+        if (_lbUnsubMD) { _lbUnsubMD(); _lbUnsubMD = null; }
+
+        const ref = db.ref('scores');
+        const handler = snap => {
+            const data = snap.val();
+            if (!data) {
+                _lbCacheMD = [];
+                lbRenderBoard('lb-md-body','lb-md-footer', [], lbGetName());
+                return;
+            }
+            // Aggregate by name (same logic as the game itself)
+            const byName = {};
+            snap.forEach(child => {
+                const rec = child.val();
+                if (rec === null || rec === undefined) return;
+                if (typeof rec === 'number') {
+                    byName['unknown'] = (byName['unknown'] || 0) + rec;
+                    return;
+                }
+                const name   = rec.name   || child.key;
+                const clicks = rec.clicks || 0;
+                byName[name] = (byName[name] || 0) + clicks;
+            });
+
+            const rows = Object.entries(byName)
+                .sort((a, b) => b[1] - a[1])
+                .map(([name, clicks]) => ({ name, scoreText: clicks.toLocaleString() + ' clicks' }));
+
+            _lbCacheMD = rows;
+            lbRenderBoard('lb-md-body', 'lb-md-footer', rows, lbGetName());
+        };
+
+        ref.on('value', handler, err => {
+            body.innerHTML = '<div class="lb-empty">Could not connect.</div>';
+        });
+
+        // Store unsubscribe
+        _lbUnsubMD = () => ref.off('value', handler);
+    };
+
+    if (typeof firebase !== 'undefined') {
+        tryConnect();
+    } else {
+        const id = setInterval(() => {
+            if (typeof firebase !== 'undefined') {
+                clearInterval(id);
+                tryConnect();
+            }
+        }, 150);
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  MINI PLATFORMER — localStorage only, show own score
+// ══════════════════════════════════════════════════════════════════
+function lbLoadPlatformer() {
+    const body   = document.getElementById('lb-pf-body');
+    const footer = document.getElementById('lb-pf-footer');
+    if (!body) return;
+
+    function timerString(ms) {
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        const tenth = Math.floor((ms % 1000) / 100);
+        return m > 0 ? `${m}m ${s % 60}.${tenth}s` : `${s}.${tenth}s`;
+    }
+
+    const raw = localStorage.getItem('platformer_highscore');
+    const myName = lbGetName();
+
+    if (raw === null) {
+        body.innerHTML = '<div class="lb-empty">No score yet.<br>Play Mini Platformer first!</div>';
+        footer.style.display = 'none';
+        return;
+    }
+
+    const t = parseInt(raw);
+    const rows = [{ name: myName || 'You (this browser)', scoreText: timerString(t) }];
+    lbRenderBoard('lb-pf-body', 'lb-pf-footer', rows, myName || 'You (this browser)');
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  LUCKY GUY — Firestore, real-time listener
+// ══════════════════════════════════════════════════════════════════
+function lbInitLuckyGuy() {
+    const body = document.getElementById('lb-lg-body');
+    body.innerHTML = '<div class="lb-loading">Connecting</div>';
+
+    const tryConnect = () => {
+        const fs        = window._lbFirestoreDb;
+        const onSnap    = window._lbOnSnapshot;
+        const col       = window._lbCollection;
+        const q         = window._lbQuery;
+        const orderBy   = window._lbOrderBy;
+
+        if (_lbUnsubLG) { _lbUnsubLG(); _lbUnsubLG = null; }
+
+        const ref = q(col(fs, 'globalScores'), orderBy('level', 'desc'));
+        _lbUnsubLG = onSnap(ref, snap => {
+            const rows = [];
+            snap.forEach(doc => {
+                const d = doc.data();
+                rows.push({ name: d.name || doc.id, scoreText: 'LVL ' + (d.level || 0) });
+            });
+            _lbCacheLG = rows;
+            lbRenderBoard('lb-lg-body', 'lb-lg-footer', rows, lbGetName());
+        }, err => {
+            body.innerHTML = '<div class="lb-empty">Could not connect.</div>';
+        });
+    };
+
+    if (window._lbFirestoreDb) {
+        tryConnect();
+    } else {
+        window.addEventListener('lb-firestore-ready', tryConnect, { once: true });
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  PAGE OPEN / CLOSE
+// ══════════════════════════════════════════════════════════════════
+const _origShowPage = showPage;
+window.showPage = function(name, btn) {
+    _origShowPage(name, btn);
+
+    if (name === 'leaderboard') {
+        // Update name bar
+        const n = lbGetName();
+        document.getElementById('lb-bar-name').textContent = n || '—';
+
+        // Show name modal if no name set yet
+        if (!n) {
+            lbShowNameModal();
+        }
+
+        // Start/restart listeners
+        lbInitMoneyDigger();
+        lbLoadPlatformer();
+        lbInitLuckyGuy();
+
+    } else {
+        // Detach real-time listeners when leaving the page to save bandwidth
+        if (_lbUnsubMD) { _lbUnsubMD(); _lbUnsubMD = null; }
+        if (_lbUnsubLG) { _lbUnsubLG(); _lbUnsubLG = null; }
+    }
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  NAME MODAL wiring
+// ══════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+    const inp = document.getElementById('lb-modal-input');
+    const btn = document.getElementById('lb-modal-btn');
+
+    function confirmName() {
+        const val = inp.value.trim();
+        if (!val) { inp.focus(); return; }
+        lbSaveName(val);
+        lbHideNameModal();
+    }
+
+    btn.addEventListener('click', confirmName);
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') confirmName(); });
+
+    // Close on backdrop click
+    document.getElementById('lb-name-overlay').addEventListener('click', e => {
+        if (e.target === e.currentTarget && lbGetName()) lbHideNameModal();
+    });
+});
 </script>
 </body>
 </html>
