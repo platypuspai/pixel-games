@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <style>
         :root {
             --bg: #0a0a0f;
@@ -459,96 +458,45 @@
         .animate-pulse { animation: pulse 2s ease-in-out infinite; }
 
         /* ===== LEADERBOARD ===== */
-        .lb-wrap {
-            position: relative; z-index: 10;
-            max-width: 960px; margin: 50px auto 80px; padding: 0 20px;
-        }
-        .lb-wrap > h2 {
-            font-family: 'Press Start 2P', monospace; font-size: 0.85rem;
-            color: var(--accent-yellow); margin-bottom: 6px;
-        }
-        .lb-wrap > p { color: var(--text-muted); font-size: 0.78rem; margin-bottom: 24px; }
-
-        /* name bar */
-        .lb-name-bar {
-            display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-            background: var(--card); border: 1px solid var(--border);
-            border-left: 3px solid var(--accent-yellow);
-            padding: 14px 20px; margin-bottom: 24px;
-        }
-        .lb-name-bar-label {
-            font-family: 'Press Start 2P', monospace; font-size: 0.45rem;
-            color: var(--text-muted); letter-spacing: 0.1em;
-        }
-        .lb-name-bar-value { font-size: 0.88rem; font-weight: 700; color: var(--accent-yellow); flex: 1; }
-        .lb-change-btn {
-            font-family: 'Press Start 2P', monospace; font-size: 0.4rem;
-            padding: 7px 14px; background: transparent; color: var(--text-muted);
-            border: 1px solid var(--border); cursor: pointer; letter-spacing: 0.08em; transition: all 0.15s;
-        }
-        .lb-change-btn:hover { border-color: var(--accent-yellow); color: var(--accent-yellow); }
-
-        /* name modal */
-        .lb-overlay {
-            position: fixed; inset: 0; z-index: 500;
-            background: rgba(0,0,0,0.78); display: flex; align-items: center;
-            justify-content: center; backdrop-filter: blur(4px);
-        }
-        .lb-overlay.lb-hidden { display: none; }
-        .lb-modal {
-            background: var(--card); border: 1px solid var(--border);
-            border-top: 3px solid var(--accent-yellow);
-            padding: 40px 36px; max-width: 420px; width: 90%;
-        }
-        .lb-modal h3 {
-            font-family: 'Press Start 2P', monospace; font-size: 0.62rem;
-            color: var(--accent-yellow); margin-bottom: 10px;
-        }
-        .lb-modal p { color: var(--text-muted); font-size: 0.78rem; line-height: 1.6; margin-bottom: 22px; }
-        .lb-modal input {
-            width: 100%; background: var(--surface); border: 1px solid var(--border);
-            color: var(--text); font-family: 'Inconsolata', monospace; font-size: 1rem;
-            padding: 11px 14px; outline: none; transition: border-color 0.15s; margin-bottom: 14px;
-        }
-        .lb-modal input:focus { border-color: var(--accent-yellow); }
-        .lb-modal-btn {
-            font-family: 'Press Start 2P', monospace; font-size: 0.5rem;
-            padding: 12px 20px; background: var(--accent-yellow); color: #000;
-            border: none; cursor: pointer; width: 100%; letter-spacing: 0.1em; transition: filter 0.15s;
-        }
-        .lb-modal-btn:hover { filter: brightness(1.1); }
-
-        /* boards */
-        .lb-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 22px; align-items: start;
-        }
-        .lb-board { background: var(--card); border: 1px solid var(--border); border-radius: 2px; }
-        .lb-board-head {
-            display: flex; align-items: center; gap: 10px;
-            padding: 13px 18px; border-bottom: 1px solid var(--border);
-            background: rgba(0,0,0,0.18);
-        }
-        .lb-live { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green); animation: pulse 1.5s ease-in-out infinite; flex-shrink:0; }
-        .lb-board-title { font-family: 'Press Start 2P', monospace; font-size: 0.47rem; letter-spacing: 0.08em; flex:1; line-height:1.6; }
-        .lb-board-meta { font-size: 0.6rem; color: var(--text-muted); white-space: nowrap; }
-        .lb-board-body { max-height: 400px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-        .lb-board-body::-webkit-scrollbar { width: 4px; }
-        .lb-board-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-        .lb-row { display: flex; align-items: center; gap: 10px; padding: 9px 18px; border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.1s; }
-        .lb-row:hover { background: rgba(255,255,255,0.04); }
-        .lb-row.me { background: rgba(255,221,0,0.07); }
-        .lb-rank { font-family: 'Press Start 2P', monospace; font-size: 0.4rem; color: var(--text-muted); width: 22px; text-align:center; flex-shrink:0; }
-        .lb-rank.g { color: #ffd700; font-size: 0.68rem; }
-        .lb-rank.s { color: #c0c0c0; font-size: 0.68rem; }
-        .lb-rank.b { color: #cd7f32; font-size: 0.68rem; }
-        .lb-name-c { flex:1; font-size: 0.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .lb-name-c.me { color: var(--accent-yellow); font-weight:700; }
-        .lb-score-c { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; font-family: 'Inconsolata', monospace; }
-        .lb-empty, .lb-loading { padding: 24px 18px; color: var(--text-muted); font-size: 0.75rem; text-align:center; line-height:1.7; }
-        .lb-loading::after { content: '...'; animation: blink 1s step-end infinite; }
-        .lb-foot { border-top: 1px solid var(--border); padding: 9px 18px; font-size: 0.7rem; color: var(--text-muted); background: rgba(255,221,0,0.04); display:none; }
-        .lb-foot span { color: var(--accent-yellow); font-weight:700; }
-        .lb-notice { padding: 8px 18px 14px; font-size: 0.64rem; color: var(--text-muted); line-height:1.6; border-top: 1px solid var(--border); }
+        .lb-wrap { position:relative; z-index:10; max-width:960px; margin:50px auto 80px; padding:0 20px; }
+        .lb-wrap > h2 { font-family:'Press Start 2P',monospace; font-size:0.85rem; color:var(--accent-yellow); margin-bottom:6px; }
+        .lb-wrap > p { color:var(--text-muted); font-size:0.78rem; margin-bottom:24px; }
+        .lb-name-bar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:var(--card); border:1px solid var(--border); border-left:3px solid var(--accent-yellow); padding:14px 20px; margin-bottom:24px; }
+        .lb-name-bar-label { font-family:'Press Start 2P',monospace; font-size:0.45rem; color:var(--text-muted); letter-spacing:0.1em; }
+        .lb-name-bar-value { font-size:0.88rem; font-weight:700; color:var(--accent-yellow); flex:1; }
+        .lb-change-btn { font-family:'Press Start 2P',monospace; font-size:0.4rem; padding:7px 14px; background:transparent; color:var(--text-muted); border:1px solid var(--border); cursor:pointer; letter-spacing:0.08em; transition:all 0.15s; }
+        .lb-change-btn:hover { border-color:var(--accent-yellow); color:var(--accent-yellow); }
+        .lb-overlay { position:fixed; inset:0; z-index:500; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+        .lb-overlay.lb-hidden { display:none; }
+        .lb-modal { background:var(--card); border:1px solid var(--border); border-top:3px solid var(--accent-yellow); padding:40px 36px; max-width:420px; width:90%; }
+        .lb-modal h3 { font-family:'Press Start 2P',monospace; font-size:0.62rem; color:var(--accent-yellow); margin-bottom:10px; }
+        .lb-modal p { color:var(--text-muted); font-size:0.78rem; line-height:1.6; margin-bottom:22px; }
+        .lb-modal input { width:100%; background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:'Inconsolata',monospace; font-size:1rem; padding:11px 14px; outline:none; transition:border-color 0.15s; margin-bottom:14px; box-sizing:border-box; }
+        .lb-modal input:focus { border-color:var(--accent-yellow); }
+        .lb-modal-btn { font-family:'Press Start 2P',monospace; font-size:0.5rem; padding:12px 20px; background:var(--accent-yellow); color:#000; border:none; cursor:pointer; width:100%; letter-spacing:0.1em; transition:filter 0.15s; }
+        .lb-modal-btn:hover { filter:brightness(1.1); }
+        .lb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:22px; align-items:start; }
+        .lb-board { background:var(--card); border:1px solid var(--border); border-radius:2px; }
+        .lb-board-head { display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid var(--border); background:rgba(0,0,0,0.18); }
+        .lb-live { width:6px; height:6px; border-radius:50%; background:var(--accent-green); animation:pulse 1.5s ease-in-out infinite; flex-shrink:0; }
+        .lb-board-title { font-family:'Press Start 2P',monospace; font-size:0.47rem; letter-spacing:0.08em; flex:1; line-height:1.6; }
+        .lb-board-meta { font-size:0.6rem; color:var(--text-muted); white-space:nowrap; }
+        .lb-board-body { max-height:400px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+        .lb-board-body::-webkit-scrollbar { width:4px; }
+        .lb-board-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+        .lb-row { display:flex; align-items:center; gap:10px; padding:9px 18px; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.1s; }
+        .lb-row:hover { background:rgba(255,255,255,0.04); }
+        .lb-row.me { background:rgba(255,221,0,0.07); }
+        .lb-rank { font-family:'Press Start 2P',monospace; font-size:0.4rem; color:var(--text-muted); width:22px; text-align:center; flex-shrink:0; }
+        .lb-rank.g { color:#ffd700; font-size:0.68rem; } .lb-rank.s { color:#c0c0c0; font-size:0.68rem; } .lb-rank.b { color:#cd7f32; font-size:0.68rem; }
+        .lb-name-c { flex:1; font-size:0.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .lb-name-c.me { color:var(--accent-yellow); font-weight:700; }
+        .lb-score-c { font-size:0.75rem; color:var(--text-muted); white-space:nowrap; font-family:'Inconsolata',monospace; }
+        .lb-empty, .lb-loading { padding:24px 18px; color:var(--text-muted); font-size:0.75rem; text-align:center; line-height:1.7; }
+        .lb-loading::after { content:'...'; animation:blink 1s step-end infinite; }
+        .lb-foot { border-top:1px solid var(--border); padding:9px 18px; font-size:0.7rem; color:var(--text-muted); background:rgba(255,221,0,0.04); display:none; }
+        .lb-foot span { color:var(--accent-yellow); font-weight:700; }
+        .lb-notice { padding:8px 18px 14px; font-size:0.64rem; color:var(--text-muted); line-height:1.6; border-top:1px solid var(--border); }
     </style>
 </head>
 <body>
@@ -933,8 +881,12 @@
     document.getElementById('page-' + name).classList.add('active');
     btn.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (name === 'leaderboard') lbOpen();
-    else lbClose();
+    if (name === 'leaderboard') {
+        // lbOpen is defined later in the same script — hoisting via var zorgt ervoor dat dit werkt
+        if (typeof lbOpen === 'function') lbOpen();
+    } else {
+        if (typeof lbClose === 'function') lbClose();
+    }
 }
 
     // Contact form — Formspree
@@ -963,41 +915,34 @@
 </script>
 <!-- ===== LEADERBOARD PAGE ===== -->
 <div id="page-leaderboard" class="page">
-
-  <!-- Name modal -->
   <div class="lb-overlay lb-hidden" id="lb-overlay">
     <div class="lb-modal">
       <h3>// KIES JE NAAM</h3>
-      <p>Deze naam wordt gebruikt voor alle leaderboards. Je kan hem altijd aanpassen.</p>
+      <p>Deze naam wordt gebruikt om jezelf te herkennen in de ranglijsten. Je kan hem altijd aanpassen.</p>
       <input id="lb-modal-inp" type="text" maxlength="18" placeholder="Jouw spelernaam..." autocomplete="off">
-      <button class="lb-modal-btn" id="lb-modal-btn">► BEVESTIG NAAM</button>
+      <button class="lb-modal-btn" onclick="lbConfirmName()">► BEVESTIG NAAM</button>
     </div>
   </div>
-
   <div class="lb-wrap">
     <h2>LEADERBOARD</h2>
     <p>Live ranglijsten voor alle Pixel-Games.</p>
-
     <div class="lb-name-bar">
       <span class="lb-name-bar-label">// SPELER</span>
       <span class="lb-name-bar-value" id="lb-bar-name">—</span>
-      <button class="lb-change-btn" id="lb-change-btn">NAAM WIJZIGEN</button>
+      <button class="lb-change-btn" onclick="lbShowModal()">NAAM WIJZIGEN</button>
     </div>
-
     <div class="lb-grid">
 
-      <!-- Money Digger -->
       <div class="lb-board" style="border-top:2px solid var(--accent-orange)">
         <div class="lb-board-head">
           <span class="lb-live"></span>
           <span class="lb-board-title" style="color:var(--accent-orange)">MONEY DIGGER</span>
           <span class="lb-board-meta">clicks</span>
         </div>
-        <div class="lb-board-body" id="lb-md-body"><div class="lb-loading">Laden</div></div>
+        <div class="lb-board-body" id="lb-md-body"><div class="lb-loading">Verbinden</div></div>
         <div class="lb-foot" id="lb-md-foot"></div>
       </div>
 
-      <!-- Mini Platformer -->
       <div class="lb-board" style="border-top:2px solid var(--accent-green)">
         <div class="lb-board-head">
           <span class="lb-board-title" style="color:var(--accent-green)">MINI PLATFORMER</span>
@@ -1005,17 +950,16 @@
         </div>
         <div class="lb-board-body" id="lb-pf-body"><div class="lb-loading">Laden</div></div>
         <div class="lb-foot" id="lb-pf-foot"></div>
-        <div class="lb-notice">⚠ Scores worden lokaal opgeslagen per browser — geen gedeeld online klassement.</div>
+        <div class="lb-notice">⚠ Scores worden lokaal opgeslagen — geen gedeeld online klassement voor dit spel.</div>
       </div>
 
-      <!-- Lucky Guy -->
       <div class="lb-board" style="border-top:2px solid var(--accent-cyan)">
         <div class="lb-board-head">
           <span class="lb-live"></span>
           <span class="lb-board-title" style="color:var(--accent-cyan)">LUCKY GUY</span>
           <span class="lb-board-meta">hoogste level</span>
         </div>
-        <div class="lb-board-body" id="lb-lg-body"><div class="lb-loading">Laden</div></div>
+        <div class="lb-board-body" id="lb-lg-body"><div class="lb-loading">Verbinden</div></div>
         <div class="lb-foot" id="lb-lg-foot"></div>
       </div>
 
@@ -1024,40 +968,31 @@
 </div>
 
 <script>
-// ═══════════════════════════════════════════════
-//  LEADERBOARD — volledig via compat SDK (geen module)
-// ═══════════════════════════════════════════════
-var LB_KEY = 'pg_player_name';
-var _lbMDoff = null;
-var _lbLGoff = null;
-var _lbCacheMD = null;
-var _lbCacheLG = null;
-var _lbFbReady = false;
-
-var FB_CFG = {
-  apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
-  authDomain: "money-digger-9b05e.firebaseapp.com",
-  databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "money-digger-9b05e",
-  storageBucket: "money-digger-9b05e.firebasestorage.app",
-  messagingSenderId: "883506536944",
-  appId: "1:883506536944:web:921b342dff76154fcbbd35"
+// ════════════════════════════════════════════════════════
+//  LEADERBOARD — alle functies globaal zodat showPage ze
+//  altijd kan aanroepen ongeacht scriptvolgorde
+// ════════════════════════════════════════════════════════
+var LB_KEY  = 'pg_player_name';
+var _mdOff  = null;
+var _lgOff  = null;
+var _mdData = null;
+var _lgData = null;
+var FB_CFG  = {
+  apiKey:'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',
+  authDomain:'money-digger-9b05e.firebaseapp.com',
+  databaseURL:'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app',
+  projectId:'money-digger-9b05e',
+  storageBucket:'money-digger-9b05e.firebasestorage.app',
+  messagingSenderId:'883506536944',
+  appId:'1:883506536944:web:921b342dff76154fcbbd35'
 };
 
 function lbGetName() { return localStorage.getItem(LB_KEY) || ''; }
+function lbEsc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function lbMedal(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1); }
+function lbMedalCls(i){ return i===0?'g':i===1?'s':i===2?'b':''; }
 
-function lbEsc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function lbRankLabel(i) {
-  return i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1);
-}
-function lbRankCls(i) {
-  return i===0?'g':i===1?'s':i===2?'b':'';
-}
-
-function lbRender(bodyId, footId, rows, myName) {
+function lbRender(bodyId, footId, rows, me) {
   var body = document.getElementById(bodyId);
   var foot = document.getElementById(footId);
   if (!body) return;
@@ -1066,24 +1001,24 @@ function lbRender(bodyId, footId, rows, myName) {
     if (foot) foot.style.display = 'none';
     return;
   }
-  var low = (myName||'').toLowerCase();
-  var html = ''; var myPos = -1;
-  for (var i=0; i<rows.length; i++) {
+  var low = (me||'').toLowerCase();
+  var html = ''; var pos = -1;
+  for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
     var isMe = low && r.name.toLowerCase() === low;
-    if (isMe) myPos = i;
+    if (isMe) pos = i;
     html += '<div class="lb-row'+(isMe?' me':'')+'">'+
-      '<span class="lb-rank '+lbRankCls(i)+'">'+lbRankLabel(i)+'</span>'+
+      '<span class="lb-rank '+lbMedalCls(i)+'">'+lbMedal(i)+'</span>'+
       '<span class="lb-name-c'+(isMe?' me':'')+'">'+lbEsc(r.name)+'</span>'+
       '<span class="lb-score-c">'+lbEsc(r.score)+'</span>'+
     '</div>';
   }
   body.innerHTML = html;
   if (foot) {
-    if (myName && myPos >= 0) {
-      foot.innerHTML = 'Jouw rang: <span>#'+(myPos+1)+'</span> &nbsp;·&nbsp; '+lbEsc(rows[myPos].score);
+    if (me && pos >= 0) {
+      foot.innerHTML = 'Jouw rang: <span>#'+(pos+1)+'</span> &nbsp;·&nbsp; '+lbEsc(rows[pos].score);
       foot.style.display = '';
-    } else if (myName) {
+    } else if (me) {
       foot.innerHTML = 'Jij staat nog niet in dit klassement.';
       foot.style.display = '';
     } else {
@@ -1092,32 +1027,17 @@ function lbRender(bodyId, footId, rows, myName) {
   }
 }
 
-function lbEnsureFirebase(cb) {
-  if (_lbFbReady) { cb(); return; }
-  var wait = setInterval(function() {
-    if (typeof firebase === 'undefined') return;
-    clearInterval(wait);
-    try {
-      // Try to get or create the lb app
-      var existing = null;
-      firebase.apps.forEach(function(a){ if(a.name==='lb') existing=a; });
-      if (!existing) firebase.initializeApp(FB_CFG, 'lb');
-    } catch(e) {}
-    _lbFbReady = true;
-    cb();
-  }, 100);
-}
-
-// ── Money Digger ─────────────────────────────
+// ── Money Digger — Realtime DB ───────────────────────────────────
 function lbInitMD() {
   var body = document.getElementById('lb-md-body');
   if (!body) return;
   body.innerHTML = '<div class="lb-loading">Verbinden</div>';
-  lbEnsureFirebase(function() {
-    if (_lbMDoff) { _lbMDoff(); _lbMDoff = null; }
-    var app = firebase.app('lb');
+  function go() {
+    var app;
+    try { app = firebase.app('lb'); } catch(e) { app = firebase.initializeApp(FB_CFG,'lb'); }
     var ref = app.database().ref('scores');
-    function handler(snap) {
+    if (_mdOff) { _mdOff(); _mdOff = null; }
+    function onVal(snap) {
       var byName = {};
       snap.forEach(function(child) {
         var rec = child.val();
@@ -1127,85 +1047,88 @@ function lbInitMD() {
         var c = rec.clicks || 0;
         byName[n] = (byName[n]||0)+c;
       });
-      var rows = Object.entries(byName).sort(function(a,b){return b[1]-a[1];}).map(function(e){return {name:e[0],score:e[1].toLocaleString()+' clicks'};});
-      _lbCacheMD = rows;
+      var rows = Object.keys(byName)
+        .map(function(n){ return {name:n,score:byName[n].toLocaleString()+' clicks',val:byName[n]}; })
+        .sort(function(a,b){ return b.val-a.val; })
+        .map(function(r){ return {name:r.name,score:r.score}; });
+      _mdData = rows;
       lbRender('lb-md-body','lb-md-foot',rows,lbGetName());
     }
-    ref.on('value', handler, function(){ body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>'; });
-    _lbMDoff = function(){ ref.off('value',handler); };
-  });
+    ref.on('value', onVal, function(err){ body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>'; });
+    _mdOff = function(){ ref.off('value',onVal); };
+  }
+  if (typeof firebase !== 'undefined') { go(); }
+  else { var t=setInterval(function(){ if(typeof firebase!=='undefined'){clearInterval(t);go();} },100); }
 }
 
-// ── Mini Platformer ──────────────────────────
+// ── Mini Platformer — localStorage ──────────────────────────────
 function lbLoadPF() {
   var body = document.getElementById('lb-pf-body');
+  var foot = document.getElementById('lb-pf-foot');
   if (!body) return;
-  function ts(ms) {
-    var s=Math.floor(ms/1000), m=Math.floor(s/60), t=Math.floor((ms%1000)/100);
-    return m>0?m+'m '+(s%60)+'.'+t+'s':s+'.'+t+'s';
-  }
+  function ts(ms){ var s=Math.floor(ms/1000),m=Math.floor(s/60),t=Math.floor((ms%1000)/100); return m>0?m+'m '+(s%60)+'.'+t+'s':s+'.'+t+'s'; }
   var raw = localStorage.getItem('platformer_highscore');
-  var myName = lbGetName();
-  if (!raw) {
-    body.innerHTML = '<div class="lb-empty">Nog geen score.<br>Speel eerst Mini Platformer!</div>';
-    var f = document.getElementById('lb-pf-foot'); if(f) f.style.display='none';
+  var me = lbGetName();
+  if (raw===null) {
+    body.innerHTML='<div class="lb-empty">Nog geen score.<br>Speel eerst Mini Platformer!</div>';
+    if(foot) foot.style.display='none';
     return;
   }
-  lbRender('lb-pf-body','lb-pf-foot',[{name:myName||'Jij',score:ts(parseInt(raw))}],myName||'Jij');
+  lbRender('lb-pf-body','lb-pf-foot',[{name:me||'Jij',score:ts(parseInt(raw))}],me||'Jij');
 }
 
-// ── Lucky Guy ────────────────────────────────
+// ── Lucky Guy — Firestore via dynamic import ─────────────────────
 function lbInitLG() {
   var body = document.getElementById('lb-lg-body');
   if (!body) return;
   body.innerHTML = '<div class="lb-loading">Verbinden</div>';
-  lbEnsureFirebase(function() {
-    if (_lbLGoff) { _lbLGoff(); _lbLGoff = null; }
-    var app = firebase.app('lb');
-    var ref = app.firestore().collection('globalScores').orderBy('level','desc');
-    _lbLGoff = ref.onSnapshot(function(snap) {
+  if (_lgOff) { _lgOff(); _lgOff = null; }
+  Promise.all([
+    import('https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js'),
+    import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js')
+  ]).then(function(mods) {
+    var fbApp = mods[0]; var fs = mods[1];
+    var apps = fbApp.getApps(); var app = null;
+    for(var i=0;i<apps.length;i++){if(apps[i].name==='lb-mod'){app=apps[i];break;}}
+    if(!app) app = fbApp.initializeApp(FB_CFG,'lb-mod');
+    var db = fs.getFirestore(app);
+    var ref = fs.query(fs.collection(db,'globalScores'),fs.orderBy('level','desc'));
+    _lgOff = fs.onSnapshot(ref, function(snap) {
       var rows = [];
-      snap.forEach(function(doc) {
-        var d = doc.data();
-        rows.push({name: d.name||doc.id, score:'LVL '+(d.level||0)});
-      });
-      _lbCacheLG = rows;
+      snap.forEach(function(doc){ var d=doc.data(); rows.push({name:d.name||doc.id,score:'LVL '+(d.level||0)}); });
+      _lgData = rows;
       lbRender('lb-lg-body','lb-lg-foot',rows,lbGetName());
     }, function(){ body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>'; });
-  });
+  }).catch(function(err){ body.innerHTML='<div class="lb-empty">Kon Firebase niet laden.</div>'; console.error(err); });
 }
 
-// ── Open / Close ─────────────────────────────
+// ── Open / Sluit ─────────────────────────────────────────────────
 function lbOpen() {
-  var n = lbGetName();
   var bar = document.getElementById('lb-bar-name');
+  var n = lbGetName();
   if (bar) bar.textContent = n || '—';
   if (!n) lbShowModal();
   lbInitMD();
   lbLoadPF();
   lbInitLG();
 }
-
 function lbClose() {
-  if (_lbMDoff) { _lbMDoff(); _lbMDoff = null; }
-  if (_lbLGoff) { _lbLGoff(); _lbLGoff = null; }
+  if (_mdOff) { _mdOff(); _mdOff = null; }
+  if (_lgOff) { _lgOff(); _lgOff = null; }
 }
 
-// ── Modal ─────────────────────────────────────
+// ── Naam modal ────────────────────────────────────────────────────
 function lbShowModal() {
   var ov = document.getElementById('lb-overlay');
-  if (ov) {
-    ov.classList.remove('lb-hidden');
-    var inp = document.getElementById('lb-modal-inp');
-    if (inp) { inp.value = lbGetName(); setTimeout(function(){inp.focus();},50); }
-  }
+  if (!ov) return;
+  ov.classList.remove('lb-hidden');
+  var inp = document.getElementById('lb-modal-inp');
+  if (inp) { inp.value = lbGetName(); setTimeout(function(){ inp.focus(); },50); }
 }
-
 function lbHideModal() {
   var ov = document.getElementById('lb-overlay');
   if (ov) ov.classList.add('lb-hidden');
 }
-
 function lbConfirmName() {
   var inp = document.getElementById('lb-modal-inp');
   var val = inp ? inp.value.trim() : '';
@@ -1214,25 +1137,18 @@ function lbConfirmName() {
   var bar = document.getElementById('lb-bar-name');
   if (bar) bar.textContent = val;
   lbHideModal();
-  // Re-highlight without re-fetching
-  if (_lbCacheMD) lbRender('lb-md-body','lb-md-foot',_lbCacheMD,val);
+  if (_mdData) lbRender('lb-md-body','lb-md-foot',_mdData,val);
   lbLoadPF();
-  if (_lbCacheLG) lbRender('lb-lg-body','lb-lg-foot',_lbCacheLG,val);
+  if (_lgData) lbRender('lb-lg-body','lb-lg-foot',_lgData,val);
 }
 
-// ── Wire events ───────────────────────────────
+// Enter-toets in naam input
 document.addEventListener('DOMContentLoaded', function() {
-  var btn    = document.getElementById('lb-modal-btn');
-  var inp    = document.getElementById('lb-modal-inp');
-  var ov     = document.getElementById('lb-overlay');
-  var chgBtn = document.getElementById('lb-change-btn');
-
-  if (btn)    btn.addEventListener('click', lbConfirmName);
-  if (inp)    inp.addEventListener('keydown', function(e){ if(e.key==='Enter') lbConfirmName(); });
-  if (ov)     ov.addEventListener('click', function(e){ if(e.target===ov && lbGetName()) lbHideModal(); });
-  if (chgBtn) chgBtn.addEventListener('click', lbShowModal);
+  var inp = document.getElementById('lb-modal-inp');
+  if (inp) inp.addEventListener('keydown', function(e){ if(e.key==='Enter') lbConfirmName(); });
+  var ov = document.getElementById('lb-overlay');
+  if (ov) ov.addEventListener('click', function(e){ if(e.target===ov && lbGetName()) lbHideModal(); });
 });
 </script>
-
 </body>
 </html>
