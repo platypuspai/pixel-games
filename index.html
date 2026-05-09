@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixel-Games</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase compat SDK — Realtime Database (Money Digger + Lucky Guy leaderboard) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
@@ -458,45 +460,45 @@
         .animate-pulse { animation: pulse 2s ease-in-out infinite; }
 
         /* ===== LEADERBOARD ===== */
-        .lb-wrap { position:relative; z-index:10; max-width:960px; margin:50px auto 80px; padding:0 20px; }
-        .lb-wrap > h2 { font-family:'Press Start 2P',monospace; font-size:0.85rem; color:var(--accent-yellow); margin-bottom:6px; }
-        .lb-wrap > p { color:var(--text-muted); font-size:0.78rem; margin-bottom:24px; }
-        .lb-name-bar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:var(--card); border:1px solid var(--border); border-left:3px solid var(--accent-yellow); padding:14px 20px; margin-bottom:24px; }
-        .lb-name-bar-label { font-family:'Press Start 2P',monospace; font-size:0.45rem; color:var(--text-muted); letter-spacing:0.1em; }
-        .lb-name-bar-value { font-size:0.88rem; font-weight:700; color:var(--accent-yellow); flex:1; }
-        .lb-change-btn { font-family:'Press Start 2P',monospace; font-size:0.4rem; padding:7px 14px; background:transparent; color:var(--text-muted); border:1px solid var(--border); cursor:pointer; letter-spacing:0.08em; transition:all 0.15s; }
-        .lb-change-btn:hover { border-color:var(--accent-yellow); color:var(--accent-yellow); }
-        .lb-overlay { position:fixed; inset:0; z-index:500; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
-        .lb-overlay.lb-hidden { display:none; }
-        .lb-modal { background:var(--card); border:1px solid var(--border); border-top:3px solid var(--accent-yellow); padding:40px 36px; max-width:420px; width:90%; }
-        .lb-modal h3 { font-family:'Press Start 2P',monospace; font-size:0.62rem; color:var(--accent-yellow); margin-bottom:10px; }
-        .lb-modal p { color:var(--text-muted); font-size:0.78rem; line-height:1.6; margin-bottom:22px; }
-        .lb-modal input { width:100%; background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:'Inconsolata',monospace; font-size:1rem; padding:11px 14px; outline:none; transition:border-color 0.15s; margin-bottom:14px; box-sizing:border-box; }
-        .lb-modal input:focus { border-color:var(--accent-yellow); }
-        .lb-modal-btn { font-family:'Press Start 2P',monospace; font-size:0.5rem; padding:12px 20px; background:var(--accent-yellow); color:#000; border:none; cursor:pointer; width:100%; letter-spacing:0.1em; transition:filter 0.15s; }
-        .lb-modal-btn:hover { filter:brightness(1.1); }
-        .lb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:22px; align-items:start; }
-        .lb-board { background:var(--card); border:1px solid var(--border); border-radius:2px; }
-        .lb-board-head { display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid var(--border); background:rgba(0,0,0,0.18); }
-        .lb-live { width:6px; height:6px; border-radius:50%; background:var(--accent-green); animation:pulse 1.5s ease-in-out infinite; flex-shrink:0; }
-        .lb-board-title { font-family:'Press Start 2P',monospace; font-size:0.47rem; letter-spacing:0.08em; flex:1; line-height:1.6; }
-        .lb-board-meta { font-size:0.6rem; color:var(--text-muted); white-space:nowrap; }
-        .lb-board-body { max-height:400px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
-        .lb-board-body::-webkit-scrollbar { width:4px; }
-        .lb-board-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-        .lb-row { display:flex; align-items:center; gap:10px; padding:9px 18px; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.1s; }
-        .lb-row:hover { background:rgba(255,255,255,0.04); }
-        .lb-row.me { background:rgba(255,221,0,0.07); }
-        .lb-rank { font-family:'Press Start 2P',monospace; font-size:0.4rem; color:var(--text-muted); width:22px; text-align:center; flex-shrink:0; }
-        .lb-rank.g { color:#ffd700; font-size:0.68rem; } .lb-rank.s { color:#c0c0c0; font-size:0.68rem; } .lb-rank.b { color:#cd7f32; font-size:0.68rem; }
-        .lb-name-c { flex:1; font-size:0.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .lb-name-c.me { color:var(--accent-yellow); font-weight:700; }
-        .lb-score-c { font-size:0.75rem; color:var(--text-muted); white-space:nowrap; font-family:'Inconsolata',monospace; }
-        .lb-empty, .lb-loading { padding:24px 18px; color:var(--text-muted); font-size:0.75rem; text-align:center; line-height:1.7; }
-        .lb-loading::after { content:'...'; animation:blink 1s step-end infinite; }
-        .lb-foot { border-top:1px solid var(--border); padding:9px 18px; font-size:0.7rem; color:var(--text-muted); background:rgba(255,221,0,0.04); display:none; }
-        .lb-foot span { color:var(--accent-yellow); font-weight:700; }
-        .lb-notice { padding:8px 18px 14px; font-size:0.64rem; color:var(--text-muted); line-height:1.6; border-top:1px solid var(--border); }
+        .lb-wrap{position:relative;z-index:10;max-width:960px;margin:50px auto 80px;padding:0 20px}
+        .lb-wrap>h2{font-family:'Press Start 2P',monospace;font-size:.85rem;color:var(--accent-yellow);margin-bottom:6px}
+        .lb-wrap>p{color:var(--text-muted);font-size:.78rem;margin-bottom:24px}
+        .lb-name-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent-yellow);padding:14px 20px;margin-bottom:24px}
+        .lb-name-bar-label{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--text-muted);letter-spacing:.1em}
+        .lb-name-bar-value{font-size:.88rem;font-weight:700;color:var(--accent-yellow);flex:1}
+        .lb-change-btn{font-family:'Press Start 2P',monospace;font-size:.4rem;padding:7px 14px;background:transparent;color:var(--text-muted);border:1px solid var(--border);cursor:pointer;letter-spacing:.08em;transition:all .15s}
+        .lb-change-btn:hover{border-color:var(--accent-yellow);color:var(--accent-yellow)}
+        .lb-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+        .lb-overlay.lb-hidden{display:none}
+        .lb-modal{background:var(--card);border:1px solid var(--border);border-top:3px solid var(--accent-yellow);padding:40px 36px;max-width:420px;width:90%}
+        .lb-modal h3{font-family:'Press Start 2P',monospace;font-size:.62rem;color:var(--accent-yellow);margin-bottom:10px}
+        .lb-modal p{color:var(--text-muted);font-size:.78rem;line-height:1.6;margin-bottom:22px}
+        .lb-modal input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Inconsolata',monospace;font-size:1rem;padding:11px 14px;outline:none;transition:border-color .15s;margin-bottom:14px;box-sizing:border-box}
+        .lb-modal input:focus{border-color:var(--accent-yellow)}
+        .lb-modal-btn{font-family:'Press Start 2P',monospace;font-size:.5rem;padding:12px 20px;background:var(--accent-yellow);color:#000;border:none;cursor:pointer;width:100%;letter-spacing:.1em;transition:filter .15s}
+        .lb-modal-btn:hover{filter:brightness(1.1)}
+        .lb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:22px;align-items:start}
+        .lb-board{background:var(--card);border:1px solid var(--border);border-radius:2px}
+        .lb-board-head{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.18)}
+        .lb-live{width:6px;height:6px;border-radius:50%;background:var(--accent-green);animation:pulse 1.5s ease-in-out infinite;flex-shrink:0}
+        .lb-board-title{font-family:'Press Start 2P',monospace;font-size:.47rem;letter-spacing:.08em;flex:1;line-height:1.6}
+        .lb-board-meta{font-size:.6rem;color:var(--text-muted);white-space:nowrap}
+        .lb-board-body{max-height:400px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+        .lb-board-body::-webkit-scrollbar{width:4px}
+        .lb-board-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+        .lb-row{display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid rgba(255,255,255,.03);transition:background .1s}
+        .lb-row:hover{background:rgba(255,255,255,.04)}
+        .lb-row.me{background:rgba(255,221,0,.07)}
+        .lb-rank{font-family:'Press Start 2P',monospace;font-size:.4rem;color:var(--text-muted);width:22px;text-align:center;flex-shrink:0}
+        .lb-rank.g{color:#ffd700;font-size:.68rem}.lb-rank.s{color:#c0c0c0;font-size:.68rem}.lb-rank.b{color:#cd7f32;font-size:.68rem}
+        .lb-name-c{flex:1;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .lb-name-c.me{color:var(--accent-yellow);font-weight:700}
+        .lb-score-c{font-size:.75rem;color:var(--text-muted);white-space:nowrap;font-family:'Inconsolata',monospace}
+        .lb-empty,.lb-loading{padding:24px 18px;color:var(--text-muted);font-size:.75rem;text-align:center;line-height:1.7}
+        .lb-loading::after{content:'...';animation:blink 1s step-end infinite}
+        .lb-foot{border-top:1px solid var(--border);padding:9px 18px;font-size:.7rem;color:var(--text-muted);background:rgba(255,221,0,.04);display:none}
+        .lb-foot span{color:var(--accent-yellow);font-weight:700}
+        .lb-notice{padding:8px 18px 14px;font-size:.64rem;color:var(--text-muted);line-height:1.6;border-top:1px solid var(--border)}
     </style>
 </head>
 <body>
@@ -682,7 +684,7 @@
             <p class="card-desc">Dodges everything coming at you. Reflexes tested to the limit!</p>
             <div class="card-actions">
              <a class="btn btn-play" href="dodging arena.html" style="background:#ff44aa;">▶ PLAY</a>
-             <a class="btn btn-app" href="https://github.com/platypuspai/pixel-games/releases/download/v1.1.0/Dodging.arena_1_1.0.apk" style="color:#ff44aa; border-color:#ff44aa;" download>📱 APP</a>
+             <a class="btn btn-app" href="https://github.com/platypuspai/pixel-games/releases/download/v1.1.0/Dodging_arena_1_1.0.apk" style="color:#ff44aa; border-color:#ff44aa;" download>📱 APP</a>
             </div>
         </div>
     </div>
@@ -881,12 +883,8 @@
     document.getElementById('page-' + name).classList.add('active');
     btn.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (name === 'leaderboard') {
-        // lbOpen is defined later in the same script — hoisting via var zorgt ervoor dat dit werkt
-        if (typeof lbOpen === 'function') lbOpen();
-    } else {
-        if (typeof lbClose === 'function') lbClose();
-    }
+    if (name === 'leaderboard') { if (typeof lbOpen === 'function') lbOpen(); }
+    else { if (typeof lbClose === 'function') lbClose(); }
 }
 
     // Contact form — Formspree
@@ -932,7 +930,6 @@
       <button class="lb-change-btn" onclick="lbShowModal()">NAAM WIJZIGEN</button>
     </div>
     <div class="lb-grid">
-
       <div class="lb-board" style="border-top:2px solid var(--accent-orange)">
         <div class="lb-board-head">
           <span class="lb-live"></span>
@@ -942,7 +939,6 @@
         <div class="lb-board-body" id="lb-md-body"><div class="lb-loading">Verbinden</div></div>
         <div class="lb-foot" id="lb-md-foot"></div>
       </div>
-
       <div class="lb-board" style="border-top:2px solid var(--accent-green)">
         <div class="lb-board-head">
           <span class="lb-board-title" style="color:var(--accent-green)">MINI PLATFORMER</span>
@@ -952,7 +948,6 @@
         <div class="lb-foot" id="lb-pf-foot"></div>
         <div class="lb-notice">⚠ Scores worden lokaal opgeslagen — geen gedeeld online klassement voor dit spel.</div>
       </div>
-
       <div class="lb-board" style="border-top:2px solid var(--accent-cyan)">
         <div class="lb-board-head">
           <span class="lb-live"></span>
@@ -962,15 +957,13 @@
         <div class="lb-board-body" id="lb-lg-body"><div class="lb-loading">Verbinden</div></div>
         <div class="lb-foot" id="lb-lg-foot"></div>
       </div>
-
     </div>
   </div>
 </div>
 
 <script>
 // ════════════════════════════════════════════════════════
-//  LEADERBOARD — alle functies globaal zodat showPage ze
-//  altijd kan aanroepen ongeacht scriptvolgorde
+//  LEADERBOARD — globale functies
 // ════════════════════════════════════════════════════════
 var LB_KEY  = 'pg_player_name';
 var _mdOff  = null;
@@ -987,167 +980,143 @@ var FB_CFG  = {
   appId:'1:883506536944:web:921b342dff76154fcbbd35'
 };
 
-function lbGetName() { return localStorage.getItem(LB_KEY) || ''; }
-function lbEsc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function lbGetName(){ return localStorage.getItem(LB_KEY)||''; }
+function lbEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function lbMedal(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1); }
 function lbMedalCls(i){ return i===0?'g':i===1?'s':i===2?'b':''; }
 
-function lbRender(bodyId, footId, rows, me) {
-  var body = document.getElementById(bodyId);
-  var foot = document.getElementById(footId);
-  if (!body) return;
-  if (!rows || !rows.length) {
-    body.innerHTML = '<div class="lb-empty">Nog geen scores.<br>Wees de eerste!</div>';
-    if (foot) foot.style.display = 'none';
-    return;
+function lbRender(bodyId,footId,rows,me){
+  var body=document.getElementById(bodyId), foot=document.getElementById(footId);
+  if(!body) return;
+  if(!rows||!rows.length){
+    body.innerHTML='<div class="lb-empty">Nog geen scores.<br>Wees de eerste!</div>';
+    if(foot) foot.style.display='none'; return;
   }
-  var low = (me||'').toLowerCase();
-  var html = ''; var pos = -1;
-  for (var i = 0; i < rows.length; i++) {
-    var r = rows[i];
-    var isMe = low && r.name.toLowerCase() === low;
-    if (isMe) pos = i;
-    html += '<div class="lb-row'+(isMe?' me':'')+'">'+
+  var low=(me||'').toLowerCase(), html='', pos=-1;
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i], isMe=low&&r.name.toLowerCase()===low;
+    if(isMe) pos=i;
+    html+='<div class="lb-row'+(isMe?' me':'')+'">'+
       '<span class="lb-rank '+lbMedalCls(i)+'">'+lbMedal(i)+'</span>'+
       '<span class="lb-name-c'+(isMe?' me':'')+'">'+lbEsc(r.name)+'</span>'+
-      '<span class="lb-score-c">'+lbEsc(r.score)+'</span>'+
-    '</div>';
+      '<span class="lb-score-c">'+lbEsc(r.score)+'</span></div>';
   }
-  body.innerHTML = html;
-  if (foot) {
-    if (me && pos >= 0) {
-      foot.innerHTML = 'Jouw rang: <span>#'+(pos+1)+'</span> &nbsp;·&nbsp; '+lbEsc(rows[pos].score);
-      foot.style.display = '';
-    } else if (me) {
-      foot.innerHTML = 'Jij staat nog niet in dit klassement.';
-      foot.style.display = '';
-    } else {
-      foot.style.display = 'none';
-    }
+  body.innerHTML=html;
+  if(foot){
+    if(me&&pos>=0){ foot.innerHTML='Jouw rang: <span>#'+(pos+1)+'</span> &nbsp;·&nbsp; '+lbEsc(rows[pos].score); foot.style.display=''; }
+    else if(me){ foot.innerHTML='Jij staat nog niet in dit klassement.'; foot.style.display=''; }
+    else foot.style.display='none';
   }
 }
 
-// ── Money Digger — Realtime DB ───────────────────────────────────
-function lbInitMD() {
-  var body = document.getElementById('lb-md-body');
-  if (!body) return;
-  body.innerHTML = '<div class="lb-loading">Verbinden</div>';
-  function go() {
+// ── Money Digger — Realtime DB (compat) ─────────────────────────
+function lbInitMD(){
+  var body=document.getElementById('lb-md-body');
+  if(!body) return;
+  body.innerHTML='<div class="lb-loading">Verbinden</div>';
+  function go(){
     var app;
-    try { app = firebase.app('lb'); } catch(e) { app = firebase.initializeApp(FB_CFG,'lb'); }
-    var ref = app.database().ref('scores');
-    if (_mdOff) { _mdOff(); _mdOff = null; }
-    function onVal(snap) {
-      var byName = {};
-      snap.forEach(function(child) {
-        var rec = child.val();
-        if (!rec) return;
-        if (typeof rec === 'number') { byName['Onbekend'] = (byName['Onbekend']||0)+rec; return; }
-        var n = rec.name || child.key;
-        var c = rec.clicks || 0;
-        byName[n] = (byName[n]||0)+c;
+    try{ app=firebase.app('lb'); }catch(e){ app=firebase.initializeApp(FB_CFG,'lb'); }
+    var ref=app.database().ref('scores');
+    if(_mdOff){ _mdOff(); _mdOff=null; }
+    function onVal(snap){
+      var byName={};
+      snap.forEach(function(child){
+        var rec=child.val(); if(!rec) return;
+        if(typeof rec==='number'){ byName['Onbekend']=(byName['Onbekend']||0)+rec; return; }
+        var n=rec.name||child.key, c=rec.clicks||0;
+        byName[n]=(byName[n]||0)+c;
       });
-      var rows = Object.keys(byName)
-        .map(function(n){ return {name:n,score:byName[n].toLocaleString()+' clicks',val:byName[n]}; })
-        .sort(function(a,b){ return b.val-a.val; })
+      var rows=Object.keys(byName)
+        .map(function(n){ return {name:n,score:byName[n].toLocaleString()+' clicks',v:byName[n]}; })
+        .sort(function(a,b){ return b.v-a.v; })
         .map(function(r){ return {name:r.name,score:r.score}; });
-      _mdData = rows;
-      lbRender('lb-md-body','lb-md-foot',rows,lbGetName());
+      _mdData=rows; lbRender('lb-md-body','lb-md-foot',rows,lbGetName());
     }
-    ref.on('value', onVal, function(err){ body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>'; });
-    _mdOff = function(){ ref.off('value',onVal); };
+    ref.on('value',onVal,function(){ body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>'; });
+    _mdOff=function(){ ref.off('value',onVal); };
   }
-  if (typeof firebase !== 'undefined') { go(); }
-  else { var t=setInterval(function(){ if(typeof firebase!=='undefined'){clearInterval(t);go();} },100); }
+  if(typeof firebase!=='undefined'){ go(); }
+  else{ var t=setInterval(function(){ if(typeof firebase!=='undefined'){clearInterval(t);go();} },100); }
 }
 
 // ── Mini Platformer — localStorage ──────────────────────────────
-function lbLoadPF() {
-  var body = document.getElementById('lb-pf-body');
-  var foot = document.getElementById('lb-pf-foot');
-  if (!body) return;
+function lbLoadPF(){
+  var body=document.getElementById('lb-pf-body'), foot=document.getElementById('lb-pf-foot');
+  if(!body) return;
   function ts(ms){ var s=Math.floor(ms/1000),m=Math.floor(s/60),t=Math.floor((ms%1000)/100); return m>0?m+'m '+(s%60)+'.'+t+'s':s+'.'+t+'s'; }
-  var raw = localStorage.getItem('platformer_highscore');
-  var me = lbGetName();
-  if (raw===null) {
-    body.innerHTML='<div class="lb-empty">Nog geen score.<br>Speel eerst Mini Platformer!</div>';
-    if(foot) foot.style.display='none';
-    return;
-  }
+  var raw=localStorage.getItem('platformer_highscore'), me=lbGetName();
+  if(raw===null){ body.innerHTML='<div class="lb-empty">Nog geen score.<br>Speel eerst Mini Platformer!</div>'; if(foot) foot.style.display='none'; return; }
   lbRender('lb-pf-body','lb-pf-foot',[{name:me||'Jij',score:ts(parseInt(raw))}],me||'Jij');
 }
 
-// ── Lucky Guy — Firestore via dynamic import ─────────────────────
-function lbInitLG() {
-  var body = document.getElementById('lb-lg-body');
-  if (!body) return;
-  body.innerHTML = '<div class="lb-loading">Verbinden</div>';
-  if (_lgOff) { _lgOff(); _lgOff = null; }
-  Promise.all([
-    import('https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js'),
-    import('https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js')
-  ]).then(function(mods) {
-    var fbApp = mods[0]; var fs = mods[1];
-    var apps = fbApp.getApps(); var app = null;
-    for(var i=0;i<apps.length;i++){if(apps[i].name==='lb-mod'){app=apps[i];break;}}
-    if(!app) app = fbApp.initializeApp(FB_CFG,'lb-mod');
-    var db = fs.getFirestore(app);
-    var ref = fs.query(fs.collection(db,'globalScores'),fs.orderBy('level','desc'));
-    _lgOff = fs.onSnapshot(ref, function(snap) {
-      var rows = [];
-      snap.forEach(function(doc){ var d=doc.data(); rows.push({name:d.name||doc.id,score:'LVL '+(d.level||0)}); });
-      _lgData = rows;
-      lbRender('lb-lg-body','lb-lg-foot',rows,lbGetName());
-    }, function(){ body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>'; });
-  }).catch(function(err){ body.innerHTML='<div class="lb-empty">Kon Firebase niet laden.</div>'; console.error(err); });
+// ── Lucky Guy — Realtime DB (zelfde als Money Digger) ────────────
+function lbInitLG(){
+  var body=document.getElementById('lb-lg-body');
+  if(!body) return;
+  body.innerHTML='<div class="lb-loading">Verbinden</div>';
+  function go(){
+    var app;
+    try{ app=firebase.app('lb'); }catch(e){ app=firebase.initializeApp(FB_CFG,'lb'); }
+    var ref=app.database().ref('luckyGuyScores');
+    if(_lgOff){ _lgOff(); _lgOff=null; }
+    function onVal(snap){
+      var rows=[];
+      snap.forEach(function(child){
+        var d=child.val(); if(!d) return;
+        rows.push({name:d.name||child.key, score:'LVL '+(d.level||0), v:d.level||0});
+      });
+      rows.sort(function(a,b){ return b.v-a.v; });
+      rows=rows.map(function(r){ return {name:r.name,score:r.score}; });
+      _lgData=rows; lbRender('lb-lg-body','lb-lg-foot',rows,lbGetName());
+    }
+    ref.on('value',onVal,function(){ body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>'; });
+    _lgOff=function(){ ref.off('value',onVal); };
+  }
+  if(typeof firebase!=='undefined'){ go(); }
+  else{ var t=setInterval(function(){ if(typeof firebase!=='undefined'){clearInterval(t);go();} },100); }
 }
 
 // ── Open / Sluit ─────────────────────────────────────────────────
-function lbOpen() {
-  var bar = document.getElementById('lb-bar-name');
-  var n = lbGetName();
-  if (bar) bar.textContent = n || '—';
-  if (!n) lbShowModal();
-  lbInitMD();
-  lbLoadPF();
-  lbInitLG();
+function lbOpen(){
+  var n=lbGetName();
+  var bar=document.getElementById('lb-bar-name');
+  if(bar) bar.textContent=n||'—';
+  if(!n) lbShowModal();
+  lbInitMD(); lbLoadPF(); lbInitLG();
 }
-function lbClose() {
-  if (_mdOff) { _mdOff(); _mdOff = null; }
-  if (_lgOff) { _lgOff(); _lgOff = null; }
+function lbClose(){
+  if(_mdOff){ _mdOff(); _mdOff=null; }
+  if(_lgOff){ _lgOff(); _lgOff=null; }
 }
 
 // ── Naam modal ────────────────────────────────────────────────────
-function lbShowModal() {
-  var ov = document.getElementById('lb-overlay');
-  if (!ov) return;
+function lbShowModal(){
+  var ov=document.getElementById('lb-overlay'); if(!ov) return;
   ov.classList.remove('lb-hidden');
-  var inp = document.getElementById('lb-modal-inp');
-  if (inp) { inp.value = lbGetName(); setTimeout(function(){ inp.focus(); },50); }
+  var inp=document.getElementById('lb-modal-inp');
+  if(inp){ inp.value=lbGetName(); setTimeout(function(){ inp.focus(); },50); }
 }
-function lbHideModal() {
-  var ov = document.getElementById('lb-overlay');
-  if (ov) ov.classList.add('lb-hidden');
+function lbHideModal(){
+  var ov=document.getElementById('lb-overlay'); if(ov) ov.classList.add('lb-hidden');
 }
-function lbConfirmName() {
-  var inp = document.getElementById('lb-modal-inp');
-  var val = inp ? inp.value.trim() : '';
-  if (!val) { if(inp) inp.focus(); return; }
-  localStorage.setItem(LB_KEY, val);
-  var bar = document.getElementById('lb-bar-name');
-  if (bar) bar.textContent = val;
+function lbConfirmName(){
+  var inp=document.getElementById('lb-modal-inp');
+  var val=inp?inp.value.trim():''; if(!val){ if(inp) inp.focus(); return; }
+  localStorage.setItem(LB_KEY,val);
+  var bar=document.getElementById('lb-bar-name'); if(bar) bar.textContent=val;
   lbHideModal();
-  if (_mdData) lbRender('lb-md-body','lb-md-foot',_mdData,val);
+  if(_mdData) lbRender('lb-md-body','lb-md-foot',_mdData,val);
   lbLoadPF();
-  if (_lgData) lbRender('lb-lg-body','lb-lg-foot',_lgData,val);
+  if(_lgData) lbRender('lb-lg-body','lb-lg-foot',_lgData,val);
 }
 
-// Enter-toets in naam input
-document.addEventListener('DOMContentLoaded', function() {
-  var inp = document.getElementById('lb-modal-inp');
-  if (inp) inp.addEventListener('keydown', function(e){ if(e.key==='Enter') lbConfirmName(); });
-  var ov = document.getElementById('lb-overlay');
-  if (ov) ov.addEventListener('click', function(e){ if(e.target===ov && lbGetName()) lbHideModal(); });
+// Enter + klik buiten modal
+document.addEventListener('DOMContentLoaded',function(){
+  var inp=document.getElementById('lb-modal-inp');
+  if(inp) inp.addEventListener('keydown',function(e){ if(e.key==='Enter') lbConfirmName(); });
+  var ov=document.getElementById('lb-overlay');
+  if(ov) ov.addEventListener('click',function(e){ if(e.target===ov&&lbGetName()) lbHideModal(); });
 });
 </script>
 </body>
