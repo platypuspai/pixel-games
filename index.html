@@ -5,11 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixel-Games</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
-
-    <!-- Firebase compat SDK — Realtime Database (Money Digger + Lucky Guy leaderboard) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #0a0a0f;
@@ -459,7 +457,7 @@
         .animate-spin { animation: spin 4s linear infinite; transform-origin: center; }
         .animate-pulse { animation: pulse 2s ease-in-out infinite; }
 
-        /* ===== LEADERBOARD ===== */
+        /* LEADERBOARD */
         .lb-wrap{position:relative;z-index:10;max-width:960px;margin:50px auto 80px;padding:0 20px}
         .lb-wrap>h2{font-family:'Press Start 2P',monospace;font-size:.85rem;color:var(--accent-yellow);margin-bottom:6px}
         .lb-wrap>p{color:var(--text-muted);font-size:.78rem;margin-bottom:24px}
@@ -468,7 +466,7 @@
         .lb-name-bar-value{font-size:.88rem;font-weight:700;color:var(--accent-yellow);flex:1}
         .lb-change-btn{font-family:'Press Start 2P',monospace;font-size:.4rem;padding:7px 14px;background:transparent;color:var(--text-muted);border:1px solid var(--border);cursor:pointer;letter-spacing:.08em;transition:all .15s}
         .lb-change-btn:hover{border-color:var(--accent-yellow);color:var(--accent-yellow)}
-        .lb-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+        .lb-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
         .lb-overlay.lb-hidden{display:none}
         .lb-modal{background:var(--card);border:1px solid var(--border);border-top:3px solid var(--accent-yellow);padding:40px 36px;max-width:420px;width:90%}
         .lb-modal h3{font-family:'Press Start 2P',monospace;font-size:.62rem;color:var(--accent-yellow);margin-bottom:10px}
@@ -883,8 +881,8 @@
     document.getElementById('page-' + name).classList.add('active');
     btn.classList.add('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (name === 'leaderboard') { if (typeof lbOpen === 'function') lbOpen(); }
-    else { if (typeof lbClose === 'function') lbClose(); }
+    if (name === 'leaderboard') { if(window.lbOpen) window.lbOpen(); }
+    else { if(window.lbClose) window.lbClose(); }
 }
 
     // Contact form — Formspree
@@ -911,12 +909,12 @@
         });
     }
 </script>
-<!-- ===== LEADERBOARD PAGE ===== -->
+<!-- LEADERBOARD PAGE -->
 <div id="page-leaderboard" class="page">
   <div class="lb-overlay lb-hidden" id="lb-overlay">
     <div class="lb-modal">
       <h3>// KIES JE NAAM</h3>
-      <p>Deze naam wordt gebruikt om jezelf te herkennen in de ranglijsten. Je kan hem altijd aanpassen.</p>
+      <p>Deze naam wordt gebruikt om jezelf te herkennen in de ranglijsten.</p>
       <input id="lb-modal-inp" type="text" maxlength="18" placeholder="Jouw spelernaam..." autocomplete="off">
       <button class="lb-modal-btn" onclick="lbConfirmName()">► BEVESTIG NAAM</button>
     </div>
@@ -946,7 +944,7 @@
         </div>
         <div class="lb-board-body" id="lb-pf-body"><div class="lb-loading">Laden</div></div>
         <div class="lb-foot" id="lb-pf-foot"></div>
-        <div class="lb-notice">⚠ Scores worden lokaal opgeslagen — geen gedeeld online klassement voor dit spel.</div>
+        <div class="lb-notice">⚠ Scores worden lokaal opgeslagen per browser.</div>
       </div>
       <div class="lb-board" style="border-top:2px solid var(--accent-cyan)">
         <div class="lb-board-head">
@@ -962,162 +960,110 @@
 </div>
 
 <script>
-// ════════════════════════════════════════════════════════
-//  LEADERBOARD — globale functies
-// ════════════════════════════════════════════════════════
-var LB_KEY  = 'pg_player_name';
-var _mdOff  = null;
-var _lgOff  = null;
-var _mdData = null;
-var _lgData = null;
-var FB_CFG  = {
-  apiKey:'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',
-  authDomain:'money-digger-9b05e.firebaseapp.com',
-  databaseURL:'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app',
-  projectId:'money-digger-9b05e',
-  storageBucket:'money-digger-9b05e.firebasestorage.app',
-  messagingSenderId:'883506536944',
-  appId:'1:883506536944:web:921b342dff76154fcbbd35'
-};
+// ── Leaderboard — staat HELEMAAL ONDERAAN zodat alle DOM-elementen al bestaan ──
+var LB_KEY='pg_player_name', _mdOff=null, _lgOff=null, _mdData=null, _lgData=null;
+var FB_CFG={apiKey:'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',authDomain:'money-digger-9b05e.firebaseapp.com',databaseURL:'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app',projectId:'money-digger-9b05e',storageBucket:'money-digger-9b05e.firebasestorage.app',messagingSenderId:'883506536944',appId:'1:883506536944:web:921b342dff76154fcbbd35'};
 
-function lbGetName(){ return localStorage.getItem(LB_KEY)||''; }
-function lbEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function lbMedal(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1); }
-function lbMedalCls(i){ return i===0?'g':i===1?'s':i===2?'b':''; }
+function lbGetName(){return localStorage.getItem(LB_KEY)||'';}
+function lbEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function lbMedal(i){return i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1);}
+function lbMedalCls(i){return i===0?'g':i===1?'s':i===2?'b':'';}
 
 function lbRender(bodyId,footId,rows,me){
-  var body=document.getElementById(bodyId), foot=document.getElementById(footId);
-  if(!body) return;
-  if(!rows||!rows.length){
-    body.innerHTML='<div class="lb-empty">Nog geen scores.<br>Wees de eerste!</div>';
-    if(foot) foot.style.display='none'; return;
-  }
-  var low=(me||'').toLowerCase(), html='', pos=-1;
+  var body=document.getElementById(bodyId),foot=document.getElementById(footId);
+  if(!body)return;
+  if(!rows||!rows.length){body.innerHTML='<div class="lb-empty">Nog geen scores.</div>';if(foot)foot.style.display='none';return;}
+  var low=(me||'').toLowerCase(),html='',pos=-1;
   for(var i=0;i<rows.length;i++){
-    var r=rows[i], isMe=low&&r.name.toLowerCase()===low;
-    if(isMe) pos=i;
-    html+='<div class="lb-row'+(isMe?' me':'')+'">'+
-      '<span class="lb-rank '+lbMedalCls(i)+'">'+lbMedal(i)+'</span>'+
-      '<span class="lb-name-c'+(isMe?' me':'')+'">'+lbEsc(r.name)+'</span>'+
-      '<span class="lb-score-c">'+lbEsc(r.score)+'</span></div>';
+    var r=rows[i],isMe=low&&r.name.toLowerCase()===low;
+    if(isMe)pos=i;
+    html+='<div class="lb-row'+(isMe?' me':'')+'"><span class="lb-rank '+lbMedalCls(i)+'">'+lbMedal(i)+'</span><span class="lb-name-c'+(isMe?' me':'')+'">'+lbEsc(r.name)+'</span><span class="lb-score-c">'+lbEsc(r.score)+'</span></div>';
   }
   body.innerHTML=html;
   if(foot){
-    if(me&&pos>=0){ foot.innerHTML='Jouw rang: <span>#'+(pos+1)+'</span> &nbsp;·&nbsp; '+lbEsc(rows[pos].score); foot.style.display=''; }
-    else if(me){ foot.innerHTML='Jij staat nog niet in dit klassement.'; foot.style.display=''; }
+    if(me&&pos>=0){foot.innerHTML='Jouw rang: <span>#'+(pos+1)+'</span> · '+lbEsc(rows[pos].score);foot.style.display='';}
+    else if(me){foot.innerHTML='Jij staat nog niet in dit klassement.';foot.style.display='';}
     else foot.style.display='none';
   }
 }
 
-// ── Money Digger — Realtime DB (compat) ─────────────────────────
-function lbInitMD(){
-  var body=document.getElementById('lb-md-body');
-  if(!body) return;
-  body.innerHTML='<div class="lb-loading">Verbinden</div>';
-  function go(){
-    var app;
-    try{ app=firebase.app('lb'); }catch(e){ app=firebase.initializeApp(FB_CFG,'lb'); }
-    var ref=app.database().ref('scores');
-    if(_mdOff){ _mdOff(); _mdOff=null; }
-    function onVal(snap){
-      var byName={};
-      snap.forEach(function(child){
-        var rec=child.val(); if(!rec) return;
-        if(typeof rec==='number'){ byName['Onbekend']=(byName['Onbekend']||0)+rec; return; }
-        var n=rec.name||child.key, c=rec.clicks||0;
-        byName[n]=(byName[n]||0)+c;
-      });
-      var rows=Object.keys(byName)
-        .map(function(n){ return {name:n,score:byName[n].toLocaleString()+' clicks',v:byName[n]}; })
-        .sort(function(a,b){ return b.v-a.v; })
-        .map(function(r){ return {name:r.name,score:r.score}; });
-      _mdData=rows; lbRender('lb-md-body','lb-md-foot',rows,lbGetName());
-    }
-    ref.on('value',onVal,function(){ body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>'; });
-    _mdOff=function(){ ref.off('value',onVal); };
-  }
-  if(typeof firebase!=='undefined'){ go(); }
-  else{ var t=setInterval(function(){ if(typeof firebase!=='undefined'){clearInterval(t);go();} },100); }
+function lbGetApp(){
+  try{return firebase.app('lb');}catch(e){return firebase.initializeApp(FB_CFG,'lb');}
 }
 
-// ── Mini Platformer — localStorage ──────────────────────────────
+function lbInitMD(){
+  var body=document.getElementById('lb-md-body');
+  if(!body)return;
+  body.innerHTML='<div class="lb-loading">Verbinden</div>';
+  if(_mdOff){_mdOff();_mdOff=null;}
+  var ref=lbGetApp().database().ref('scores');
+  function onVal(snap){
+    var byName={};
+    snap.forEach(function(child){var rec=child.val();if(!rec)return;if(typeof rec==='number'){byName['Onbekend']=(byName['Onbekend']||0)+rec;return;}var n=rec.name||child.key,c=rec.clicks||0;byName[n]=(byName[n]||0)+c;});
+    var rows=Object.keys(byName).map(function(n){return{name:n,score:byName[n].toLocaleString()+' clicks',v:byName[n]};}).sort(function(a,b){return b.v-a.v;}).map(function(r){return{name:r.name,score:r.score};});
+    _mdData=rows;lbRender('lb-md-body','lb-md-foot',rows,lbGetName());
+  }
+  ref.on('value',onVal,function(){body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>';});
+  _mdOff=function(){ref.off('value',onVal);};
+}
+
 function lbLoadPF(){
-  var body=document.getElementById('lb-pf-body'), foot=document.getElementById('lb-pf-foot');
-  if(!body) return;
-  function ts(ms){ var s=Math.floor(ms/1000),m=Math.floor(s/60),t=Math.floor((ms%1000)/100); return m>0?m+'m '+(s%60)+'.'+t+'s':s+'.'+t+'s'; }
-  var raw=localStorage.getItem('platformer_highscore'), me=lbGetName();
-  if(raw===null){ body.innerHTML='<div class="lb-empty">Nog geen score.<br>Speel eerst Mini Platformer!</div>'; if(foot) foot.style.display='none'; return; }
+  var body=document.getElementById('lb-pf-body'),foot=document.getElementById('lb-pf-foot');
+  if(!body)return;
+  function ts(ms){var s=Math.floor(ms/1000),m=Math.floor(s/60),t=Math.floor((ms%1000)/100);return m>0?m+'m '+(s%60)+'.'+t+'s':s+'.'+t+'s';}
+  var raw=localStorage.getItem('platformer_highscore'),me=lbGetName();
+  if(raw===null){body.innerHTML='<div class="lb-empty">Nog geen score.<br>Speel eerst Mini Platformer!</div>';if(foot)foot.style.display='none';return;}
   lbRender('lb-pf-body','lb-pf-foot',[{name:me||'Jij',score:ts(parseInt(raw))}],me||'Jij');
 }
 
-// ── Lucky Guy — Realtime DB (zelfde als Money Digger) ────────────
 function lbInitLG(){
   var body=document.getElementById('lb-lg-body');
-  if(!body) return;
+  if(!body)return;
   body.innerHTML='<div class="lb-loading">Verbinden</div>';
-  function go(){
-    var app;
-    try{ app=firebase.app('lb'); }catch(e){ app=firebase.initializeApp(FB_CFG,'lb'); }
-    var ref=app.database().ref('luckyGuyScores');
-    if(_lgOff){ _lgOff(); _lgOff=null; }
-    function onVal(snap){
-      var rows=[];
-      snap.forEach(function(child){
-        var d=child.val(); if(!d) return;
-        rows.push({name:d.name||child.key, score:'LVL '+(d.level||0), v:d.level||0});
-      });
-      rows.sort(function(a,b){ return b.v-a.v; });
-      rows=rows.map(function(r){ return {name:r.name,score:r.score}; });
-      _lgData=rows; lbRender('lb-lg-body','lb-lg-foot',rows,lbGetName());
-    }
-    ref.on('value',onVal,function(){ body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>'; });
-    _lgOff=function(){ ref.off('value',onVal); };
+  if(_lgOff){_lgOff();_lgOff=null;}
+  var ref=lbGetApp().database().ref('luckyGuyScores');
+  function onVal(snap){
+    var rows=[];
+    snap.forEach(function(child){var d=child.val();if(!d)return;rows.push({name:d.name||child.key,score:'LVL '+(d.level||0),v:d.level||0});});
+    rows.sort(function(a,b){return b.v-a.v;});
+    rows=rows.map(function(r){return{name:r.name,score:r.score};});
+    _lgData=rows;lbRender('lb-lg-body','lb-lg-foot',rows,lbGetName());
   }
-  if(typeof firebase!=='undefined'){ go(); }
-  else{ var t=setInterval(function(){ if(typeof firebase!=='undefined'){clearInterval(t);go();} },100); }
+  ref.on('value',onVal,function(){body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>';});
+  _lgOff=function(){ref.off('value',onVal);};
 }
 
-// ── Open / Sluit ─────────────────────────────────────────────────
 function lbOpen(){
   var n=lbGetName();
-  var bar=document.getElementById('lb-bar-name');
-  if(bar) bar.textContent=n||'—';
-  if(!n) lbShowModal();
-  lbInitMD(); lbLoadPF(); lbInitLG();
+  document.getElementById('lb-bar-name').textContent=n||'—';
+  if(!n)lbShowModal();
+  lbInitMD();lbLoadPF();lbInitLG();
 }
+window.lbOpen=lbOpen;
 function lbClose(){
-  if(_mdOff){ _mdOff(); _mdOff=null; }
-  if(_lgOff){ _lgOff(); _lgOff=null; }
+  if(_mdOff){_mdOff();_mdOff=null;}
+  if(_lgOff){_lgOff();_lgOff=null;}
 }
-
-// ── Naam modal ────────────────────────────────────────────────────
+window.lbClose=lbClose;
 function lbShowModal(){
-  var ov=document.getElementById('lb-overlay'); if(!ov) return;
+  var ov=document.getElementById('lb-overlay');if(!ov)return;
   ov.classList.remove('lb-hidden');
   var inp=document.getElementById('lb-modal-inp');
-  if(inp){ inp.value=lbGetName(); setTimeout(function(){ inp.focus(); },50); }
+  if(inp){inp.value=lbGetName();setTimeout(function(){inp.focus();},50);}
 }
-function lbHideModal(){
-  var ov=document.getElementById('lb-overlay'); if(ov) ov.classList.add('lb-hidden');
-}
+function lbHideModal(){var ov=document.getElementById('lb-overlay');if(ov)ov.classList.add('lb-hidden');}
 function lbConfirmName(){
-  var inp=document.getElementById('lb-modal-inp');
-  var val=inp?inp.value.trim():''; if(!val){ if(inp) inp.focus(); return; }
+  var inp=document.getElementById('lb-modal-inp'),val=inp?inp.value.trim():'';
+  if(!val){if(inp)inp.focus();return;}
   localStorage.setItem(LB_KEY,val);
-  var bar=document.getElementById('lb-bar-name'); if(bar) bar.textContent=val;
+  document.getElementById('lb-bar-name').textContent=val;
   lbHideModal();
-  if(_mdData) lbRender('lb-md-body','lb-md-foot',_mdData,val);
+  if(_mdData)lbRender('lb-md-body','lb-md-foot',_mdData,val);
   lbLoadPF();
-  if(_lgData) lbRender('lb-lg-body','lb-lg-foot',_lgData,val);
+  if(_lgData)lbRender('lb-lg-body','lb-lg-foot',_lgData,val);
 }
-
-// Enter + klik buiten modal
-document.addEventListener('DOMContentLoaded',function(){
-  var inp=document.getElementById('lb-modal-inp');
-  if(inp) inp.addEventListener('keydown',function(e){ if(e.key==='Enter') lbConfirmName(); });
-  var ov=document.getElementById('lb-overlay');
-  if(ov) ov.addEventListener('click',function(e){ if(e.target===ov&&lbGetName()) lbHideModal(); });
-});
+document.getElementById('lb-modal-inp').addEventListener('keydown',function(e){if(e.key==='Enter')lbConfirmName();});
+document.getElementById('lb-overlay').addEventListener('click',function(e){if(e.target===this&&lbGetName())lbHideModal();});
 </script>
 </body>
 </html>
