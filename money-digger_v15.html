@@ -595,7 +595,7 @@ function spawnBill(){
   setTimeout(()=>el.remove(), 850);
 }
 
-// naam komt van leaderboard.html
+// naam-input verwijderd
 
 // ═══════════════════════════════
 // ACHIEVEMENTS (SP only)
@@ -1412,8 +1412,9 @@ try {
         const clicks= rec.clicks|| 0;
         if(did === deviceId){
           myClicks = clicks;
-          myName   = rec.name || myName; 
-          document.getElementById('ni').value = myName;
+          myName   = rec.name || myName;
+          safeSetLS('pg_player_name', myName);
+          safeSetLS('md6_n', myName);
         }
         scores[name] = (scores[name]||0) + clicks;
       });
@@ -1438,8 +1439,6 @@ function startGame(mode){
   setTimeout(()=>{ menu.style.display='none'; }, 500);
 
   if(mode === 'sp'){
-    document.getElementById('sb').style.display   = 'none';
-    document.getElementById('nw').style.display   = 'none';
     document.getElementById('online').textContent = '● Singleplayer';
     totalBills   = parseInt(safeGetLS('md6_sp_bills', '0')) || 0;
     displayBills = totalBills;
