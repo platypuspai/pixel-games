@@ -373,12 +373,12 @@
         <!-- Mini Platformer -->
         <div class="board" style="border-top: 2px solid var(--accent-green);">
             <div class="board-head">
+                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-green)">MINI PLATFORMER</span>
                 <span class="board-meta">beste tijd</span>
             </div>
             <div class="board-body" id="pf-body"><div class="lb-loading">Laden</div></div>
             <div class="board-foot" id="pf-foot"></div>
-            <div class="board-notice">⚠ Scores worden lokaal opgeslagen per browser.</div>
         </div>
 
         <!-- Lucky Guy -->
@@ -514,7 +514,7 @@ async function confirmName() {
 
         document.getElementById('modal').classList.add('hidden');
         if (window._mdData) render('md-body', 'md-foot', window._mdData, val);
-        loadPF();
+        if (window._pfData) render('pf-body', 'pf-foot', window._pfData, val);
         if (window._lgData) render('lg-body', 'lg-foot', window._lgData, val);
 
     } catch(e) {
@@ -621,22 +621,32 @@ let mdOff = null;
     mdOff = () => ref.off('value', onVal);
 })();
 
-// Mini Platformer (lokaal)
-function loadPF() {
-    function ts(ms) {
-        const s = Math.floor(ms/1000), m = Math.floor(s/60), t = Math.floor((ms%1000)/100);
-        return m > 0 ? m+'m '+(s%60)+'.'+t+'s' : s+'.'+t+'s';
-    }
-    const raw = localStorage.getItem('platformer_highscore');
-    const me = getName();
-    if (raw === null) {
-        document.getElementById('pf-body').innerHTML = '<div class="lb-empty">Nog geen score.<br>Speel eerst Mini Platformer!</div>';
-        document.getElementById('pf-foot').style.display = 'none';
-        return;
-    }
-    render('pf-body', 'pf-foot', [{ name: me || 'Jij', score: ts(parseInt(raw)) }], me || 'Jij');
+// Mini Platformer (Firebase)
+function ts(ms) {
+    const s = Math.floor(ms/1000), m = Math.floor(s/60), t = Math.floor((ms%1000)/100);
+    return m > 0 ? m+'m '+(s%60)+'.'+t+'s' : s+'.'+t+'s';
 }
-loadPF();
+let pfOff = null;
+(function loadPF() {
+    const body = document.getElementById('pf-body');
+    body.innerHTML = '<div class="lb-loading">Verbinden</div>';
+    if (pfOff) { pfOff(); pfOff = null; }
+    const ref = fbApp.database().ref('platformerScores');
+    function onVal(snap) {
+        const rows = [];
+        snap.forEach(child => {
+            const d = child.val();
+            if (!d || !d.name || d.time == null) return;
+            rows.push({ name: d.name, score: ts(d.time), v: d.time });
+        });
+        rows.sort((a, b) => a.v - b.v); // laagste tijd = beste
+        const cleaned = rows.map(r => ({ name: r.name, score: r.score }));
+        window._pfData = cleaned;
+        render('pf-body', 'pf-foot', cleaned, getName());
+    }
+    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Verbinding mislukt.</div>'; });
+    pfOff = () => ref.off('value', onVal);
+})();
 
 // Lucky Guy
 let lgOff = null;

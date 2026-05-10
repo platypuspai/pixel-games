@@ -61,6 +61,9 @@ function initFirebase() {
 
     myFbRef = fbPlayersRef.child(myPlayerId);
     myFbRef.onDisconnect().remove();
+
+    // ── Highscore leaderboard ──
+    window._pfDb = db;
     const myOnlineRef = onlineRef.child(myPlayerId);
     myOnlineRef.set(true);
     myOnlineRef.onDisconnect().remove();
@@ -241,6 +244,21 @@ function nextLevel() {
       if(highscore === null || timerCurrent < highscore) {
         highscore = timerCurrent;
         localStorage.setItem("platformer_highscore", highscore);
+        // Sla ook op in Firebase leaderboard
+        const pfName = localStorage.getItem('pg_player_name') || 'Speler';
+        if(window._pfDb) {
+          const pfRef = window._pfDb.ref('platformerScores');
+          // Alleen opslaan als deze tijd beter is dan de huidige Firebase record
+          pfRef.orderByChild('name').equalTo(pfName).once('value').then(snap => {
+            let existingKey = null, existingTime = Infinity;
+            snap.forEach(child => { existingKey = child.key; existingTime = child.val().time || Infinity; });
+            if(timerCurrent < existingTime) {
+              const entry = { name: pfName, time: timerCurrent };
+              if(existingKey) pfRef.child(existingKey).set(entry);
+              else pfRef.push(entry);
+            }
+          }).catch(()=>{});
+        }
       }
     }
   } else if(currentLevel === 1 && !timerRunning) {
