@@ -526,7 +526,7 @@
     </nav>
 </header>
 
-<div id="page-home" class="page active">
+<div id="page-home" class="page active" style="display:block;">
 <main>
 
     <div class="game-card" style="--card-accent: #00ff88;">
@@ -777,7 +777,7 @@
     </div>
 
 </main>
-</div><div id="page-contact" class="page">
+</div><div id="page-contact" class="page" style="display:none;">
     <div class="contact-wrap">
         <h2>✉ CONTACT US</h2>
         <p>Questions, feedback or just want to say hi? Send us a message — we read everything!</p>
@@ -804,7 +804,7 @@
     </div>
 </div>
 
-<div id="page-info" class="page">
+<div id="page-info" class="page" style="display:none;">
     <div class="info-wrap">
         <h2>ℹ INFO</h2>
         <div class="info-block">
@@ -838,7 +838,7 @@
 </div>
 
 <!-- LEADERBOARD PAGE -->
-<div id="page-leaderboard" class="page">
+<div id="page-leaderboard" class="page" style="display:none; position:relative; z-index:10;">
   <div class="lb-overlay lb-hidden" id="lb-overlay" style="display:none;">
     <div class="lb-modal">
       <h3>// KIES JE NAAM</h3>
@@ -926,15 +926,31 @@
 
     // Page navigation
    function showPage(name, btn) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('page-' + name).classList.add('active');
-    btn.classList.add('active');
-    // Verberg de footer op alle pagina's behalve home
-    document.querySelector('footer').style.display = (name === 'home') ? '' : 'none';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (name === 'leaderboard') { if(window.lbOpen) window.lbOpen(); }
-    else { if(window.lbClose) window.lbClose(); }
+    try {
+        // Verberg alle pagina's
+        document.querySelectorAll('.page').forEach(function(p) {
+            p.classList.remove('active');
+            p.style.display = 'none';
+        });
+        document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
+        
+        // Toon de gevraagde pagina
+        var target = document.getElementById('page-' + name);
+        if (!target) { console.error('Page niet gevonden: page-' + name); return; }
+        target.classList.add('active');
+        target.style.display = 'block';
+        if (btn) btn.classList.add('active');
+        
+        // Footer alleen bij home
+        var footer = document.querySelector('footer');
+        if (footer) footer.style.display = (name === 'home') ? '' : 'none';
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (name === 'leaderboard') { if (window.lbOpen) window.lbOpen(); }
+        else { if (window.lbClose) window.lbClose(); }
+    } catch(err) {
+        console.error('showPage fout:', err);
+    }
 }
 
     // Contact form — Formspree
