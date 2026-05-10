@@ -839,7 +839,7 @@
 
 <!-- LEADERBOARD PAGE -->
 <div id="page-leaderboard" class="page">
-  <div class="lb-overlay lb-hidden" id="lb-overlay">
+  <div class="lb-overlay lb-hidden" id="lb-overlay" style="display:none;">
     <div class="lb-modal">
       <h3>// KIES JE NAAM</h3>
       <p>Deze naam wordt gebruikt om jezelf te herkennen in de ranglijsten.</p>
@@ -1051,10 +1051,16 @@ window.lbClose=lbClose;
 function lbShowModal(){
   var ov=document.getElementById('lb-overlay');if(!ov)return;
   ov.classList.remove('lb-hidden');
+  ov.style.display='flex';
   var inp=document.getElementById('lb-modal-inp');
   if(inp){inp.value=lbGetName();setTimeout(function(){inp.focus();},50);}
 }
-function lbHideModal(){var ov=document.getElementById('lb-overlay');if(ov)ov.classList.add('lb-hidden');}
+function lbHideModal(){
+  var ov=document.getElementById('lb-overlay');
+  if(!ov)return;
+  ov.classList.add('lb-hidden');
+  ov.style.display='none';
+}
 function lbConfirmName(){
   var inp=document.getElementById('lb-modal-inp'),val=inp?inp.value.trim():'';
   if(!val){if(inp)inp.focus();return;}
@@ -1065,8 +1071,11 @@ function lbConfirmName(){
   lbLoadPF();
   if(_lgData)lbRender('lb-lg-body','lb-lg-foot',_lgData,val);
 }
-document.getElementById('lb-modal-inp').addEventListener('keydown',function(e){if(e.key==='Enter')lbConfirmName();});
-document.getElementById('lb-overlay').addEventListener('click',function(e){if(e.target===this&&lbGetName())lbHideModal();});
+// Veilig event listeners toevoegen - elementen bestaan zeker op dit punt
+var _lbInp=document.getElementById('lb-modal-inp');
+var _lbOv=document.getElementById('lb-overlay');
+if(_lbInp)_lbInp.addEventListener('keydown',function(e){if(e.key==='Enter')lbConfirmName();});
+if(_lbOv)_lbOv.addEventListener('click',function(e){if(e.target===this&&lbGetName())lbHideModal();});
 </script>
 </body>
 </html>
