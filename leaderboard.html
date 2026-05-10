@@ -415,18 +415,119 @@ function showModal() {
     inp.value = getName();
     setTimeout(() => inp.focus(), 50);
 }
-function confirmName() {
+// ── Error message helper ──
+function showNameError(msg) {
+    let el = document.getElementById('name-error');
+    if (!el) {
+        el = document.createElement('p');
+        el.id = 'name-error';
+        el.style.cssText = 'color:#ff4444;font-size:0.75rem;margin-bottom:12px;min-height:1em;';
+        const btn = document.querySelector('.modal-btn');
+        btn.parentNode.insertBefore(el, btn);
+    }
+    el.textContent = msg;
+}
+function clearNameError() {
+    const el = document.getElementById('name-error');
+    if (el) el.textContent = '';
+}
+
+// ── Naam opslaan en scores bijwerken als naam verandert ──
+async function confirmName() {
     const val = document.getElementById('name-input').value.trim();
     if (!val) { document.getElementById('name-input').focus(); return; }
-    localStorage.setItem(LB_KEY, val);
-    document.getElementById('bar-name').textContent = val;
-    document.getElementById('modal').classList.add('hidden');
-    // Re-render met nieuwe naam
-    if (window._mdData) render('md-body', 'md-foot', window._mdData, val);
-    loadPF();
-    if (window._lgData) render('lg-body', 'lg-foot', window._lgData, val);
+    clearNameError();
+
+    const oldName = getName();
+    const valLow = val.toLowerCase();
+
+    // Zelfde naam = geen actie nodig
+    if (oldName && oldName.toLowerCase() === valLow) {
+        document.getElementById('modal').classList.add('hidden');
+        return;
+    }
+
+    // Controleer of naam al in gebruik is in Money Digger of Lucky Guy
+    const btn = document.querySelector('.modal-btn');
+    btn.textContent = '⏳ Controleren...';
+    btn.disabled = true;
+
+    try {
+        const db = fbApp.database();
+        const [mdSnap, lgSnap] = await Promise.all([
+            db.ref('scores').once('value'),
+            db.ref('luckyGuyScores').once('value')
+        ]);
+
+        // Verzamel alle namen (behalve die van jijzelf op basis van deviceId)
+        const takenNames = new Set();
+        mdSnap.forEach(child => {
+            const rec = child.val();
+            if (rec && rec.name) takenNames.add(rec.name.toLowerCase());
+        });
+        lgSnap.forEach(child => {
+            const rec = child.val();
+            if (rec && rec.name) takenNames.add(rec.name.toLowerCase());
+        });
+
+        // Verwijder eigen oude naam uit de check
+        if (oldName) takenNames.delete(oldName.toLowerCase());
+
+        if (takenNames.has(valLow)) {
+            showNameError('Name already taken. Choose another one.');
+            btn.textContent = '► BEVESTIG NAAM';
+            btn.disabled = false;
+            return;
+        }
+
+        // Naam is vrij — sla op
+        localStorage.setItem(LB_KEY, val);
+        document.getElementById('bar-name').textContent = val;
+
+        // Update ook Lucky Guy save (naam in localStorage)
+        if (oldName) {
+            const lgSave = localStorage.getItem('luckyGuySaveData');
+            if (lgSave) {
+                try {
+                    const d = JSON.parse(lgSave);
+                    if (d.name && d.name.toLowerCase() === oldName.toLowerCase()) {
+                        d.name = val;
+                        localStorage.setItem('luckyGuySaveData', JSON.stringify(d));
+                    }
+                } catch(e) {}
+            }
+            // Update Firebase Lucky Guy naam
+            lgSnap.forEach(child => {
+                const rec = child.val();
+                if (rec && rec.name && rec.name.toLowerCase() === oldName.toLowerCase()) {
+                    db.ref('luckyGuyScores/' + child.key + '/name').set(val).catch(()=>{});
+                }
+            });
+            // Update Firebase Money Digger naam
+            mdSnap.forEach(child => {
+                const rec = child.val();
+                if (rec && rec.name && rec.name.toLowerCase() === oldName.toLowerCase()) {
+                    db.ref('scores/' + child.key + '/name').set(val).catch(()=>{});
+                }
+            });
+        }
+
+        document.getElementById('modal').classList.add('hidden');
+        if (window._mdData) render('md-body', 'md-foot', window._mdData, val);
+        loadPF();
+        if (window._lgData) render('lg-body', 'lg-foot', window._lgData, val);
+
+    } catch(e) {
+        showNameError('Connection error. Try again.');
+        console.error(e);
+    }
+
+    btn.textContent = '► BEVESTIG NAAM';
+    btn.disabled = false;
 }
+
 document.getElementById('name-input').addEventListener('keydown', e => { if (e.key === 'Enter') confirmName(); });
+document.getElementById('name-input').addEventListener('input', () => clearNameError());
 document.getElementById('modal').addEventListener('click', e => { if (e.target === e.currentTarget && getName()) e.currentTarget.classList.add('hidden'); });
 
 // Init naam
