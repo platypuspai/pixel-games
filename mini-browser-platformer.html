@@ -9,7 +9,9 @@ body { overflow: hidden; background: #111; font-family: monospace; display:flex;
 #mp-bar { width: 200px; height: 22px; background: #222; display: flex; align-items: center; padding: 0 4px; gap: 4px; }
 #mp-status { font-size: 9px; color: #6f6; flex: 1; white-space: nowrap; overflow: hidden; font-weight: bold; }
 #fs-btn, #home-btn, #restart-btn { background: #333; border: 1px solid #555; color: #aaa; font-size: 9px; font-family: monospace; cursor: pointer; padding: 1px 5px; line-height: 1; border-radius: 2px; }
+#reset-btn { background: #333; border: 1px solid #a44; color: #f88; font-size: 9px; font-family: monospace; cursor: pointer; padding: 1px 5px; line-height: 1; border-radius: 2px; }
 #fs-btn:hover, #home-btn:hover, #restart-btn:hover { background: #444; color: #fff; }
+#reset-btn:hover { background: #441111; color: #faa; border-color: #f44; }
 #home-btn { color: #8af; border-color: #46a; }
 #home-btn:hover { background: #223344; color: #adf; }
 #restart-btn { color: #fa8; border-color: #a64; }
@@ -23,6 +25,7 @@ canvas { background: white; display: block; }
 <div id="mp-bar">
   <button id="home-btn" title="Home">🏠</button>
   <button id="restart-btn" title="Restart">↺</button>
+  <button id="reset-btn" title="Reset highscore">✕best</button>
   <span id="mp-status">connecting...</span>
   <button id="fs-btn" title="Fullscreen">⛶</button>
 </div>
@@ -345,6 +348,20 @@ document.getElementById("restart-btn").addEventListener("click", () => {
   timerRunning = false;
   timerCurrent = 0;
   loadLevel();
+});
+
+// Reset highscore button
+document.getElementById("reset-btn").addEventListener("click", () => {
+  if (!confirm("Reset your highscore?")) return;
+  highscore = null;
+  localStorage.removeItem("platformer_highscore");
+  // Also remove from Firebase
+  const pfName = localStorage.getItem('pg_player_name') || null;
+  if (pfName && window._pfDb) {
+    window._pfDb.ref('platformerScores').orderByChild('name').equalTo(pfName).once('value').then(snap => {
+      snap.forEach(child => child.ref.remove());
+    }).catch(()=>{});
+  }
 });
 
 fsBtn.addEventListener("click", () => {
