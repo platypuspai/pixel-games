@@ -141,9 +141,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 <canvas id="c"></canvas>
 <div id="ui">
   <div id="hud"><div id="alt">0.000</div><div id="unit">millimeter</div><div id="nxt">Loading...</div></div>
-  
   <div id="bctr"><div id="bnum">0</div><div id="blbl">stacked banknotes</div></div>
-  
   <div id="online">● connecting...</div>
   <div id="msb"><div id="mse"></div><div id="msn"></div><div id="mss"></div></div>
   <!-- SP buttons: Achievements + Mini Games -->
@@ -582,10 +580,7 @@ function updateHUD(){
   }
 }
 
-</span><span class="sv">${fmtN(clicks)}</span>`;
-    list.appendChild(row);
-  }
-}
+function updateScoreboard(){ /* verwijderd - leaderboard staat op leaderboard.html */ }
 
 function spawnBill(){
   const btn = document.getElementById('cbtn');
@@ -598,7 +593,7 @@ function spawnBill(){
   setTimeout(()=>el.remove(), 850);
 }
 
-// Naam komt van leaderboard (pg_player_name) } catch(e){}
+// naam-input verwijderd - naam komt van leaderboard.html } catch(e){}
 });
 
 // ═══════════════════════════════
@@ -1421,6 +1416,7 @@ try {
         }
         scores[name] = (scores[name]||0) + clicks;
       });
+      updateScoreboard();
     });
   } else {
     throw new Error("Firebase kon niet laden");
@@ -1456,6 +1452,7 @@ function startGame(mode){
     initFirebase();
   }
   loop();
+  updateScoreboard();
 }
 
 document.getElementById('btn-sp').addEventListener('click', ()=> startGame('sp'));
@@ -1471,6 +1468,7 @@ document.getElementById('cbtn').addEventListener('click', ()=>{
     // Save singleplayer progress locally
     safeSetLS('md6_sp_bills', totalBills);
     scores[myName] = myClicks;
+    updateScoreboard();
     recentClickBuf.push(Date.now());
     checkAchievements();
     checkMinigameUnlocks();
@@ -1489,6 +1487,7 @@ document.getElementById('cbtn').addEventListener('click', ()=>{
       });
     } else {
       scores[myName] = myClicks;
+      updateScoreboard();
     }
   } catch(e) {}
 });
@@ -1516,6 +1515,8 @@ function loop(){
   drawSky(0); drawGround(0);
   requestAnimationFrame(menuBg);
 })();
+
+updateScoreboard();
 </script>
 </body>
 </html>
