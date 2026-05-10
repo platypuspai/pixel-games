@@ -26,10 +26,10 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 #home-btn:hover{border-color:rgba(99,102,241,.5);color:#fff}
 
 /* Scoreboard */
-
-
-
-
+#sb{position:absolute;top:56px;right:14px;background:rgba(0,0,0,.5);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:7px 10px;min-width:110px}
+#sb h3{font-size:.46rem;font-weight:500;color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;margin-bottom:5px}
+.sr{display:flex;justify-content:space-between;gap:8px;font-size:.52rem;color:rgba(255,255,255,.5);padding:1px 0}
+.sr.me{color:#22c55e}
 .sn{max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sv{font-family:'DM Mono',monospace;font-size:.48rem}
 
@@ -45,9 +45,9 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 
 /* Online / name — bottom-left */
 #online{position:absolute;bottom:20px;left:14px;font-size:.52rem;color:rgba(255,255,255,.3)}
-
-
-
+#nw{position:absolute;bottom:44px;left:14px;display:flex;align-items:center;gap:4px}
+#nl{font-size:.46rem;color:rgba(255,255,255,.22)}
+#ni{font-family:'DM Sans',sans-serif;font-size:.5rem;padding:2px 6px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.08);border-radius:4px;width:80px;pointer-events:all}
 
 /* Milestone popup */
 #msb{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;opacity:0;transition:opacity .5s;pointer-events:none;background:rgba(0,0,0,.6);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:18px 24px}
@@ -166,7 +166,9 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 <button id="cbtn">💵</button>
 <div id="ui">
   <div id="hud"><div id="alt">0.000</div><div id="unit">millimeter</div><div id="nxt">Loading...</div></div>
+  
   <div id="bctr"><div id="bnum">0</div><div id="blbl">stacked banknotes</div></div>
+  
   <div id="online">● connecting...</div>
   <div id="msb"><div id="mse"></div><div id="msn"></div><div id="mss"></div></div>
   <button id="home-btn" onclick="window.location.href='index.html'">🏠 Home</button>
@@ -606,7 +608,7 @@ function updateHUD(){
   }
 }
 
-function updateScoreboard(){ /* verwijderd - leaderboard staat op leaderboard.html */ }
+function updateScoreboard(){} // leaderboard staat op leaderboard.html
 
 function spawnBill(){
   const wrap = document.getElementById('game-wrap');
@@ -621,8 +623,7 @@ function spawnBill(){
   setTimeout(()=>el.remove(), 850);
 }
 
-// naam-input verwijderd - naam komt van leaderboard.html } catch(e){}
-});
+// naam komt van leaderboard.html
 
 // ═══════════════════════════════
 // ACHIEVEMENTS (SP only)
