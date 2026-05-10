@@ -145,6 +145,11 @@
         .result-box { margin-top: 25px; min-height: 40px; font-weight: bold; font-size: 1.1rem; text-shadow: 0 0 5px rgba(255,255,255,0.2); }
 
 
+        .global-badge { font-size: 0.6rem; color: var(--success); margin-bottom: 20px; letter-spacing: 0.1em; }
+
+        .score-list { list-style: none; padding: 0; margin: 0; text-align: left; width: 100%; }
+        .score-list li { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed var(--border); font-size: 0.9rem; }
+        .score-list li span:last-child { color: var(--accent); font-weight: bold; }
 
         .back-btn { margin-top: 40px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); text-decoration: none; padding: 10px 20px; font-family: 'Press Start 2P', monospace; font-size: 0.6rem; transition: 0.3s; }
         .back-btn:hover { color: #fff; border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
@@ -161,11 +166,10 @@
 
     <div class="game-container">
         <div class="play-area" id="start-ui">
-            <h2 style="font-family: 'Press Start 2P'; font-size: 1.2rem; color: var(--accent); margin-bottom: 20px;">WHO ARE YOU?</h2>
-            <p class="info-text">Enter your name to start.</p>
-            <input type="text" id="player-name-input" placeholder="YOUR NAME" maxlength="15">
-            <button onclick="startGame()">START GAME</button>
-            <div id="save-status"></div>
+            <h2 style="font-family: 'Press Start 2P'; font-size: 1.2rem; color: var(--accent); margin-bottom: 20px;">LUCKY GUY</h2>
+            <p class="info-text">Spelen als: <strong id="display-name" style="color:var(--accent)">—</strong></p>
+            <p class="info-text" id="save-status" style="font-size:0.75rem; margin-top:6px; opacity:0.6;"></p>
+            <button onclick="startGame()" style="margin-top:20px;">START GAME</button>
         </div>
 
         <div class="play-area" id="game-ui" style="display: none;">
@@ -223,42 +227,24 @@
         const spinBtn = document.getElementById('spin-btn');
         const canvas = document.getElementById('wheel-canvas');
         const ctx = canvas.getContext('2d');
-        const nameInputEl = document.getElementById('player-name-input');
         const saveStatusEl = document.getElementById('save-status');
+        const displayNameEl = document.getElementById('display-name');
 
         canvas.style.transform = `rotate(${window.currentRotation}deg)`;
 
-        // Gebruik de gedeelde naam van het leaderboard (pg_player_name), val terug op lokale save
+        // Naam van leaderboard pagina
         const sharedName = localStorage.getItem('pg_player_name') || '';
-        if (sharedName) {
-            nameInputEl.value = sharedName;
-        } else if (personalSave && personalSave.name) {
-            nameInputEl.value = personalSave.name;
-        }
-        if (personalSave && personalSave.name === (sharedName || personalSave.name)) {
-            saveStatusEl.innerText = `Saved level: ${personalSave.level}`;
-        }
-
-        nameInputEl.addEventListener('input', () => {
-            const v = nameInputEl.value.trim();
-            if (personalSave && v !== personalSave.name) {
-                saveStatusEl.innerText = "New player: Starting at Level 1";
-                saveStatusEl.style.color = "var(--text-muted)";
-            } else if (personalSave && v === personalSave.name) {
-                saveStatusEl.innerText = `Saved level: ${personalSave.level}`;
-                saveStatusEl.style.color = "var(--success)";
-            } else {
-                saveStatusEl.innerText = "";
+        const finalName = sharedName || (personalSave && personalSave.name) || 'Speler';
+        if (displayNameEl) displayNameEl.textContent = finalName;
+        if (saveStatusEl) {
+            if (!sharedName) {
+                saveStatusEl.innerText = 'Stel je naam in via Leaderboard!';
+            } else if (personalSave && personalSave.name === finalName) {
+                saveStatusEl.innerText = 'Opgeslagen op level ' + personalSave.level;
             }
-        });
+        }
 
         window.startGame = function() {
-            const nameInput = nameInputEl.value.trim();
-            const finalName = nameInput !== "" ? nameInput : "ANONYMOUS";
-            
-            // Sla de naam ook op als gedeelde leaderboard-naam
-            localStorage.setItem('pg_player_name', finalName);
-
             if (personalSave && personalSave.name === finalName) {
                 window.currentPlayerName = finalName;
                 window.currentLevel = personalSave.level;
@@ -266,12 +252,9 @@
                 window.currentPlayerName = finalName;
                 window.currentLevel = 1;
             }
-            
-            savePersonalProgress(); 
-
+            savePersonalProgress();
             startUI.style.display = 'none';
             gameUI.style.display = 'flex';
-            
             updateUI();
         };
 
