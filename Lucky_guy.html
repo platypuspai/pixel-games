@@ -59,7 +59,7 @@
             width: 100%;
         }
 
-        .play-area, .leaderboard {
+        .play-area {
             background: var(--card);
             border: 1px solid var(--border);
             padding: 30px;
@@ -144,12 +144,7 @@
 
         .result-box { margin-top: 25px; min-height: 40px; font-weight: bold; font-size: 1.1rem; text-shadow: 0 0 5px rgba(255,255,255,0.2); }
 
-        .leaderboard h2 { font-family: 'Press Start 2P', monospace; font-size: 1.2rem; margin-bottom: 10px; color: var(--accent); }
-        .global-badge { font-size: 0.6rem; color: var(--success); margin-bottom: 20px; letter-spacing: 0.1em; }
 
-        .score-list { list-style: none; padding: 0; margin: 0; text-align: left; width: 100%; }
-        .score-list li { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed var(--border); font-size: 0.9rem; }
-        .score-list li span:last-child { color: var(--accent); font-weight: bold; }
 
         .back-btn { margin-top: 40px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); text-decoration: none; padding: 10px 20px; font-family: 'Press Start 2P', monospace; font-size: 0.6rem; transition: 0.3s; }
         .back-btn:hover { color: #fff; border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
@@ -189,13 +184,7 @@
             <div class="result-box" id="result-message"></div>
         </div>
 
-        <div class="leaderboard">
-            <h2>TOP 10 LUCKIEST</h2>
-            <div class="global-badge">🌍 GLOBAL SERVERS ACTIVE</div>
-            <ul class="score-list" id="leaderboard-list">
-                <li style="color: var(--text-muted);">Connecting to database...</li>
-            </ul>
-        </div>
+
     </div>
 
     <a href="index.html" class="back-btn">◀ BACK TO HOME</a>
@@ -239,16 +228,23 @@
 
         canvas.style.transform = `rotate(${window.currentRotation}deg)`;
 
-        if (personalSave && personalSave.name) {
+        // Gebruik de gedeelde naam van het leaderboard (pg_player_name), val terug op lokale save
+        const sharedName = localStorage.getItem('pg_player_name') || '';
+        if (sharedName) {
+            nameInputEl.value = sharedName;
+        } else if (personalSave && personalSave.name) {
             nameInputEl.value = personalSave.name;
+        }
+        if (personalSave && personalSave.name === (sharedName || personalSave.name)) {
             saveStatusEl.innerText = `Saved level: ${personalSave.level}`;
         }
 
         nameInputEl.addEventListener('input', () => {
-            if (personalSave && nameInputEl.value.trim() !== personalSave.name) {
+            const v = nameInputEl.value.trim();
+            if (personalSave && v !== personalSave.name) {
                 saveStatusEl.innerText = "New player: Starting at Level 1";
                 saveStatusEl.style.color = "var(--text-muted)";
-            } else if (personalSave && nameInputEl.value.trim() === personalSave.name) {
+            } else if (personalSave && v === personalSave.name) {
                 saveStatusEl.innerText = `Saved level: ${personalSave.level}`;
                 saveStatusEl.style.color = "var(--success)";
             } else {
@@ -260,6 +256,9 @@
             const nameInput = nameInputEl.value.trim();
             const finalName = nameInput !== "" ? nameInput : "ANONYMOUS";
             
+            // Sla de naam ook op als gedeelde leaderboard-naam
+            localStorage.setItem('pg_player_name', finalName);
+
             if (personalSave && personalSave.name === finalName) {
                 window.currentPlayerName = finalName;
                 window.currentLevel = personalSave.level;
@@ -421,37 +420,11 @@
                 if (!existing || levelReached > (existing.level || 0)) {
                     await playerRef.set({ name: window.currentPlayerName, level: levelReached });
                 }
-                fetchAndRenderLeaderboard();
             } catch (e) {
                 console.error("Error saving score: ", e);
             }
         }
 
-        async function fetchAndRenderLeaderboard() {
-            const list = document.getElementById('leaderboard-list');
-            try {
-                const snap = await db.orderByChild('level').limitToLast(10).once('value');
-                list.innerHTML = '';
-                if (!snap.val()) {
-                    list.innerHTML = '<li style="color: var(--text-muted);">No global scores yet. Be the first!</li>';
-                    return;
-                }
-                // Sorteer van hoog naar laag
-                const rows = [];
-                snap.forEach(child => { rows.push(child.val()); });
-                rows.sort((a, b) => b.level - a.level);
-                rows.forEach((score, i) => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<span>${i + 1}. ${score.name}</span> <span>LVL ${score.level}</span>`;
-                    list.appendChild(li);
-                });
-            } catch (e) {
-                console.error("Error fetching scores: ", e);
-                list.innerHTML = '<li style="color: var(--error);">Could not connect to global servers.</li>';
-            }
-        }
-
-        fetchAndRenderLeaderboard();
     </script>
 </body>
 </html>
