@@ -332,27 +332,27 @@
 <div class="stars" id="stars"></div>
 
 <header>
-    <a class="back-link" href="index.html">◀ TERUG</a>
+    <a class="back-link" href="index.html">◀ BACK</a>
     <h1>🏆 LEADERBOARD</h1>
-    <p class="subtitle">Live ranglijsten &nbsp;·&nbsp; alle Pixel-Games &nbsp;·&nbsp; <span>_</span></p>
+    <p class="subtitle">Live rankings &nbsp;·&nbsp; all Pixel-Games &nbsp;·&nbsp; <span>_</span></p>
 </header>
 
 <div class="wrap">
 
     <!-- Naam balk -->
     <div class="name-bar">
-        <span class="name-bar-label">// SPELER</span>
+        <span class="name-bar-label">// PLAYER</span>
         <span class="name-bar-value" id="bar-name">—</span>
-        <button class="change-btn" onclick="showModal()">NAAM WIJZIGEN</button>
+        <button class="change-btn" onclick="showModal()">CHANGE NAME</button>
     </div>
 
     <!-- Naam modal -->
     <div class="modal-overlay hidden" id="modal">
         <div class="modal">
-            <h3>// KIES JE NAAM</h3>
-            <p>Deze naam wordt gebruikt om jezelf te herkennen in alle ranglijsten.</p>
-            <input id="name-input" type="text" maxlength="18" placeholder="Jouw spelernaam..." autocomplete="off">
-            <button class="modal-btn" onclick="confirmName()">► BEVESTIG NAAM</button>
+            <h3>// CHOOSE YOUR NAME</h3>
+            <p>This name is used to identify you across all leaderboards.</p>
+            <input id="name-input" type="text" maxlength="18" placeholder="Your player name..." autocomplete="off">
+            <button class="modal-btn" onclick="confirmName()">► CONFIRM NAME</button>
         </div>
     </div>
 
@@ -366,7 +366,7 @@
                 <span class="board-title" style="color:var(--accent-orange)">MONEY DIGGER</span>
                 <span class="board-meta">clicks</span>
             </div>
-            <div class="board-body" id="md-body"><div class="lb-loading">Verbinden</div></div>
+            <div class="board-body" id="md-body"><div class="lb-loading">Connecting</div></div>
             <div class="board-foot" id="md-foot"></div>
         </div>
 
@@ -375,7 +375,7 @@
             <div class="board-head">
                 <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-green)">MINI PLATFORMER</span>
-                <span class="board-meta">beste tijd</span>
+                <span class="board-meta">best time</span>
             </div>
             <div class="board-body" id="pf-body"><div class="lb-loading">Laden</div></div>
             <div class="board-foot" id="pf-foot"></div>
@@ -386,9 +386,9 @@
             <div class="board-head">
                 <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-cyan)">LUCKY GUY</span>
-                <span class="board-meta">hoogste level</span>
+                <span class="board-meta">highest level</span>
             </div>
-            <div class="board-body" id="lg-body"><div class="lb-loading">Verbinden</div></div>
+            <div class="board-body" id="lg-body"><div class="lb-loading">Connecting</div></div>
             <div class="board-foot" id="lg-foot"></div>
         </div>
 
@@ -406,8 +406,21 @@ for (let i = 0; i < 80; i++) {
     starsEl.appendChild(s);
 }
 
-// ── Naam ──
+// ── Naam & Device ID ──
 const LB_KEY = 'pg_player_name';
+const DEV_KEY = 'pg_device_id';
+
+// Unieke device ID — blijft altijd hetzelfde op dit apparaat/browser
+function getDeviceId() {
+    let id = localStorage.getItem(DEV_KEY);
+    if (!id) {
+        id = 'lb-' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+        localStorage.setItem(DEV_KEY, id);
+    }
+    return id;
+}
+const MY_DEVICE_ID = getDeviceId();
+
 function getName() { return localStorage.getItem(LB_KEY) || ''; }
 function showModal() {
     document.getElementById('modal').classList.remove('hidden');
@@ -415,6 +428,7 @@ function showModal() {
     inp.value = getName();
     setTimeout(() => inp.focus(), 50);
 }
+
 // ── Error message helper ──
 function showNameError(msg) {
     let el = document.getElementById('name-error');
@@ -447,45 +461,42 @@ async function confirmName() {
         return;
     }
 
-    // Controleer of naam al in gebruik is in Money Digger of Lucky Guy
     const btn = document.querySelector('.modal-btn');
-    btn.textContent = '⏳ Controleren...';
+    btn.textContent = '⏳ Checking...';
     btn.disabled = true;
 
     try {
+
         const db = fbApp.database();
-        const [mdSnap, lgSnap] = await Promise.all([
-            db.ref('scores').once('value'),
-            db.ref('luckyGuyScores').once('value')
-        ]);
 
-        // Verzamel alle namen (behalve die van jijzelf op basis van deviceId)
-        const takenNames = new Set();
-        mdSnap.forEach(child => {
-            const rec = child.val();
-            if (rec && rec.name) takenNames.add(rec.name.toLowerCase());
-        });
-        lgSnap.forEach(child => {
-            const rec = child.val();
-            if (rec && rec.name) takenNames.add(rec.name.toLowerCase());
-        });
+        // Check name ownership — only nameOwners is the source of truth
+        const nameSnap = await db.ref('nameOwners').once('value');
+        const owners = nameSnap.val() || {};
 
-        // Verwijder eigen oude naam uit de check
-        if (oldName) takenNames.delete(oldName.toLowerCase());
-
-        if (takenNames.has(valLow)) {
-            showNameError('Name already taken. Choose another one.');
-            btn.textContent = '► BEVESTIG NAAM';
+        // Is this name taken by someone else?
+        const conflict = Object.entries(owners).find(([devId, v]) =>
+            devId !== MY_DEVICE_ID && v.name && v.name.toLowerCase() === valLow
+        );
+        if (conflict) {
+            showNameError('Name already taken. Choose a different name.');
+            btn.textContent = '► CONFIRM NAME';
             btn.disabled = false;
             return;
         }
 
-        // Naam is vrij — sla op
+        // Name is free — register ownership and save locally
+        await db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: val });
         localStorage.setItem(LB_KEY, val);
         document.getElementById('bar-name').textContent = val;
 
-        // Update ook Lucky Guy save (naam in localStorage)
-        if (oldName) {
+        // Update scores in Firebase with new name (only if name changed)
+        if (oldName && oldName.toLowerCase() !== valLow) {
+            const [mdSnap, lgSnap, pfSnap] = await Promise.all([
+                db.ref('scores').once('value'),
+                db.ref('luckyGuyScores').once('value'),
+                db.ref('platformerScores').once('value'),
+            ]);
+            // Update Lucky Guy localStorage save
             const lgSave = localStorage.getItem('luckyGuySaveData');
             if (lgSave) {
                 try {
@@ -496,19 +507,20 @@ async function confirmName() {
                     }
                 } catch(e) {}
             }
-            // Update Firebase Lucky Guy naam
-            lgSnap.forEach(child => {
-                const rec = child.val();
-                if (rec && rec.name && rec.name.toLowerCase() === oldName.toLowerCase()) {
-                    db.ref('luckyGuyScores/' + child.key + '/name').set(val).catch(()=>{});
-                }
-            });
-            // Update Firebase Money Digger naam
             mdSnap.forEach(child => {
                 const rec = child.val();
-                if (rec && rec.name && rec.name.toLowerCase() === oldName.toLowerCase()) {
+                if (rec && rec.name && rec.name.toLowerCase() === oldName.toLowerCase())
                     db.ref('scores/' + child.key + '/name').set(val).catch(()=>{});
-                }
+            });
+            lgSnap.forEach(child => {
+                const rec = child.val();
+                if (rec && rec.name && rec.name.toLowerCase() === oldName.toLowerCase())
+                    db.ref('luckyGuyScores/' + child.key + '/name').set(val).catch(()=>{});
+            });
+            pfSnap.forEach(child => {
+                const rec = child.val();
+                if (rec && rec.name && rec.name.toLowerCase() === oldName.toLowerCase())
+                    db.ref('platformerScores/' + child.key + '/name').set(val).catch(()=>{});
             });
         }
 
@@ -518,11 +530,11 @@ async function confirmName() {
         if (window._lgData) render('lg-body', 'lg-foot', window._lgData, val);
 
     } catch(e) {
-        showNameError('Connection error. Try again.');
+        showNameError('Connection error. Please try again.');
         console.error(e);
     }
 
-    btn.textContent = '► BEVESTIG NAAM';
+    btn.textContent = '► CONFIRM NAME';
     btn.disabled = false;
 }
 
@@ -530,10 +542,33 @@ document.getElementById('name-input').addEventListener('keydown', e => { if (e.k
 document.getElementById('name-input').addEventListener('input', () => clearNameError());
 document.getElementById('modal').addEventListener('click', e => { if (e.target === e.currentTarget && getName()) e.currentTarget.classList.add('hidden'); });
 
-// Init naam
+// Init naam — registreer automatisch als naam al bestaat maar nog niet geregistreerd is
 const initName = getName();
 document.getElementById('bar-name').textContent = initName || '—';
-if (!initName) showModal();
+if (!initName) {
+    showModal();
+} else {
+    // Zorg dat deze naam geregistreerd staat op dit device
+    // (doet niks als al correct geregistreerd)
+    setTimeout(() => {
+        const db = fbApp.database();
+        db.ref('nameOwners/' + MY_DEVICE_ID).once('value').then(snap => {
+            const existing = snap.val();
+            if (!existing || existing.name.toLowerCase() !== initName.toLowerCase()) {
+                // Controleer eerst of niemand anders deze naam heeft
+                db.ref('nameOwners').once('value').then(allSnap => {
+                    const owners = allSnap.val() || {};
+                    const conflict = Object.entries(owners).find(([id, v]) =>
+                        id !== MY_DEVICE_ID && v.name && v.name.toLowerCase() === initName.toLowerCase()
+                    );
+                    if (!conflict) {
+                        db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: initName });
+                    }
+                });
+            }
+        });
+    }, 2000); // wacht tot Firebase geladen is
+}
 
 // ── Helpers ──
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -545,7 +580,7 @@ function render(bodyId, footId, rows, me) {
     const foot = document.getElementById(footId);
     if (!body) return;
     if (!rows || !rows.length) {
-        body.innerHTML = '<div class="lb-empty">Nog geen scores.</div>';
+        body.innerHTML = '<div class="lb-empty">No scores yet.</div>';
         if (foot) foot.style.display = 'none';
         return;
     }
@@ -567,7 +602,7 @@ function render(bodyId, footId, rows, me) {
             foot.innerHTML = `Jouw rang: <span>#${pos+1}</span> · ${esc(rows[pos].score)}`;
             foot.style.display = '';
         } else if (me) {
-            foot.innerHTML = 'Jij staat nog niet in dit klassement.';
+            foot.innerHTML = 'You are not in this ranking yet.';
             foot.style.display = '';
         } else {
             foot.style.display = 'none';
@@ -597,18 +632,17 @@ try {
 let mdOff = null;
 (function loadMD() {
     const body = document.getElementById('md-body');
-    body.innerHTML = '<div class="lb-loading">Verbinden</div>';
+    body.innerHTML = '<div class="lb-loading">Connecting</div>';
     if (mdOff) { mdOff(); mdOff = null; }
     const ref = fbApp.database().ref('scores');
     function onVal(snap) {
-        const byName = {};
+        const byName = {}; // name -> max clicks
         snap.forEach(child => {
             const rec = child.val();
-            if (!rec) return;
-            if (typeof rec === 'number') { byName['Onbekend'] = (byName['Onbekend']||0) + rec; return; }
-            const n = rec.name || child.key;
-            const c = rec.clicks || 0;
-            byName[n] = (byName[n]||0) + c;
+            if (!rec || typeof rec !== 'object' || !rec.name) return;
+            const n = rec.name;
+            const cl = rec.clicks || 0;
+            if (!byName[n] || cl > byName[n]) byName[n] = cl;
         });
         const rows = Object.keys(byName)
             .map(n => ({ name: n, score: byName[n].toLocaleString() + ' clicks', v: byName[n] }))
@@ -617,7 +651,7 @@ let mdOff = null;
         window._mdData = rows;
         render('md-body', 'md-foot', rows, getName());
     }
-    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Verbinding mislukt.</div>'; });
+    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
     mdOff = () => ref.off('value', onVal);
 })();
 
@@ -629,22 +663,24 @@ function ts(ms) {
 let pfOff = null;
 (function loadPF() {
     const body = document.getElementById('pf-body');
-    body.innerHTML = '<div class="lb-loading">Verbinden</div>';
+    body.innerHTML = '<div class="lb-loading">Connecting</div>';
     if (pfOff) { pfOff(); pfOff = null; }
     const ref = fbApp.database().ref('platformerScores');
     function onVal(snap) {
-        const rows = [];
+        const byName = {}; // name -> best (lowest) time
         snap.forEach(child => {
             const d = child.val();
             if (!d || !d.name || d.time == null) return;
-            rows.push({ name: d.name, score: ts(d.time), v: d.time });
+            if (!byName[d.name] || d.time < byName[d.name]) byName[d.name] = d.time;
         });
-        rows.sort((a, b) => a.v - b.v); // laagste tijd = beste
+        const rows = Object.entries(byName)
+            .map(([name, time]) => ({ name, score: ts(time), v: time }))
+            .sort((a, b) => a.v - b.v); // lowest time = best
         const cleaned = rows.map(r => ({ name: r.name, score: r.score }));
         window._pfData = cleaned;
         render('pf-body', 'pf-foot', cleaned, getName());
     }
-    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Verbinding mislukt.</div>'; });
+    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
     pfOff = () => ref.off('value', onVal);
 })();
 
@@ -652,7 +688,7 @@ let pfOff = null;
 let lgOff = null;
 (function loadLG() {
     const body = document.getElementById('lg-body');
-    body.innerHTML = '<div class="lb-loading">Verbinden</div>';
+    body.innerHTML = '<div class="lb-loading">Connecting</div>';
     if (lgOff) { lgOff(); lgOff = null; }
     const ref = fbApp.database().ref('luckyGuyScores');
     function onVal(snap) {
@@ -660,14 +696,14 @@ let lgOff = null;
         snap.forEach(child => {
             const d = child.val();
             if (!d) return;
-            rows.push({ name: d.name || child.key, score: 'LVL ' + (d.level||0), v: d.level||0 });
+            rows.push({ name: d.name || child.key, score: 'Level ' + (d.level||0), v: d.level||0 });
         });
         rows.sort((a,b) => b.v - a.v);
         const cleaned = rows.map(r => ({ name: r.name, score: r.score }));
         window._lgData = cleaned;
         render('lg-body', 'lg-foot', cleaned, getName());
     }
-    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Verbinding mislukt.</div>'; });
+    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
     lgOff = () => ref.off('value', onVal);
 })();
 </script>
