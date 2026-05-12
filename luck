@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucky Guy & Global Shuffler</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f; --surface: #12121a; --card: #1a1a28;
+            --border: #2a2a42; --accent: #00e5ff; --accent-pink: #ff44aa;
+            --text: #e8e8ff; --text-muted: #7777aa; --success: #00ff88;
+        }
+
+        body {
+            font-family: 'Inconsolata', monospace; background: var(--bg);
+            color: var(--text); margin: 0; display: flex; flex-direction: column;
+            align-items: center; min-height: 100vh; padding: 20px;
+        }
+
+        h1 { font-family: 'Press Start 2P', monospace; color: var(--accent); font-size: 1.5rem; text-shadow: 0 0 10px rgba(0, 229, 255, 0.5); text-align: center; margin-bottom: 30px; }
+
+        .game-container {
+            display: flex; gap: 30px; flex-wrap: wrap; justify-content: center;
+            max-width: 1000px; width: 100%;
+        }
+
+        .play-area, .leaderboard {
+            background: var(--card); border: 1px solid var(--border); padding: 30px;
+            border-top: 3px solid var(--accent); flex: 1; min-width: 320px; max-width: 450px;
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        h2 { font-family: 'Press Start 2P'; font-size: 1rem; color: var(--accent); margin-bottom: 20px; }
+        
+        .info-text { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 15px; }
+
+        input {
+            width: 80%; background: var(--surface); border: 2px solid var(--border);
+            color: var(--accent); font-family: 'Press Start 2P', monospace; font-size: 1rem;
+            padding: 15px; text-align: center; margin-bottom: 20px; outline: none;
+        }
+
+        button {
+            font-family: 'Press Start 2P', monospace; font-size: 0.8rem; padding: 15px;
+            background: var(--accent); color: #000; border: none; cursor: pointer;
+            width: 80%; box-shadow: 0 4px 0 #0099aa; transition: 0.1s; margin-bottom: 10px;
+        }
+        button:active { transform: translateY(4px); box-shadow: 0 0 0 #0099aa; }
+        button:disabled { background: var(--border); box-shadow: none; cursor: not-allowed; }
+
+        /* Wiel Specifiek */
+        .wheel-canvas { width: 250px; height: 250px; border-radius: 50%; filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.2)); margin-bottom: 20px; }
+        .pointer { width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 25px solid #fff; margin-bottom: -15px; z-index: 10; }
+
+        /* Shuffler Specifiek */
+        .deck-box {
+            background: var(--surface); padding: 15px; border-radius: 8px; margin-bottom: 15px;
+            font-family: 'Press Start 2P', monospace; font-size: 0.6rem; line-height: 1.8;
+            width: 90%; min-height: 60px; text-align: left;
+        }
+
+        .achievement-list {
+            width: 100%; text-align: left; font-size: 0.8rem; background: rgba(0,0,0,0.2);
+            padding: 15px; border-radius: 5px; box-sizing: border-box;
+        }
+        .achievement-list div { display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dashed var(--border); padding-bottom: 4px; }
+        .stat-val { color: var(--success); font-weight: bold; }
+
+        /* Leaderboard */
+        .score-list { list-style: none; padding: 0; margin: 0; width: 100%; text-align: left; }
+        .score-list li { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 0.9rem; }
+        .score-list li span:last-child { color: var(--accent); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>LUCKY HUB <span style="font-size: 0.6rem; background: #ff44aa; color: #fff; padding: 3px 6px; border-radius: 4px;">GLOBAL</span></h1>
+
+    <div class="play-area" id="start-ui" style="max-width: 400px; margin: 0 auto;">
+        <h2>WHO ARE YOU?</h2>
+        <input type="text" id="player-name-input" placeholder="YOUR NAME" maxlength="15">
+        <button id="start-btn">START PLAYING</button>
+    </div>
+
+    <div class="game-container" id="game-ui" style="display: none;">
+        
+        <div class="play-area">
+            <h2 style="color: var(--accent);">LUCKY GUY</h2>
+            <div id="level-text" style="font-family: 'Press Start 2P'; font-size: 1.2rem; margin-bottom: 10px;">LEVEL 1</div>
+            
+            <div class="pointer"></div>
+            <canvas id="wheel-canvas" width="600" height="600" class="wheel-canvas"></canvas>
+            
+            <input type="number" id="guess-input" placeholder="Your Number">
+            <button id="spin-btn">SPIN WHEEL</button>
+            <div id="result-message" style="margin-top: 15px; font-weight: bold; min-height: 20px;"></div>
+        </div>
+
+        <div class="play-area">
+            <h2 style="color: var(--accent-pink);">GLOBAL SHUFFLER</h2>
+            <p class="info-text">Team up worldwide to hit rare stats!</p>
+            
+            <div class="deck-box" id="deck-display">
+                Press shuffle to draw cards...
+            </div>
+
+            <button id="shuffle-btn" style="background: var(--accent-pink);">SHUFFLE DECKS</button>
+            
+            <h3 style="font-size: 0.7rem; color: var(--text-muted); margin-top: 20px;">🌍 WORLDWIDE ACHIEVEMENTS:</h3>
+            <div class="achievement-list">
+                <div><span>🃏 Exact Match:</span> <span class="stat-val" id="stat-match">0</span></div>
+                <div><span>👑 Royal Flush:</span> <span class="stat-val" id="stat-royal">0</span></div>
+                <div><span>🔥 Poker Flush:</span> <span class="stat-val" id="stat-flush">0</span></div>
+                <div><span>🎲 Yahtzee (5 a-kind):</span> <span class="stat-val" id="stat-yahtzee">0</span></div>
+                <div><span>🪙 Coin Flips (Heads):</span> <span class="stat-val" id="stat-heads">0</span></div>
+            </div>
+        </div>
+
+        <div class="leaderboard" style="min-width: 100%;">
+            <h2>TOP 10 LUCKIEST</h2>
+            <ul class="score-list" id="leaderboard-list">
+                <li style="color: var(--text-muted);">Loading global servers...</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, getDoc, query, orderBy, limit, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+        // Jouw bestaande Firebase configuratie
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+            authDomain: "money-digger-9b05e.firebaseapp.com",
+            projectId: "money-digger-9b05e",
+            storageBucket: "money-digger-9b05e.firebasestorage.app",
+            messagingSenderId: "883506536944",
+            appId: "1:883506536944:web:921b342dff76154fcbbd35"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- START GAME LOGICA ---
+        let playerName = "ANONYMOUS";
+        let currentLevel = 1;
+        let isSpinning = false;
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            const val = document.getElementById('player-name-input').value.trim();
+            if (val !== "") playerName = val;
+            
+            document.getElementById('start-ui').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'flex';
+            
+            drawWheel();
+            fetchAndRenderLeaderboard();
+        });
+
+        // --- LUCKY GUY (WIEL) LOGICA ---
+        const canvas = document.getElementById('wheel-canvas');
+        const ctx = canvas.getContext('2d');
+        const colors = ['#00e5ff', '#ff44aa', '#00ff88', '#ffdd00', '#ff8844', '#b344ff'];
+
+        function drawWheel() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2 - 10; 
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const sliceAngle = (2 * Math.PI) / currentLevel;
+
+            for (let i = 0; i < currentLevel; i++) {
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, i * sliceAngle, (i + 1) * sliceAngle);
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "#12121a"; ctx.stroke();
+                
+                if (currentLevel <= 80) {
+                    ctx.save(); ctx.translate(centerX, centerY);
+                    ctx.rotate(i * sliceAngle + sliceAngle / 2);
+                    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+                    ctx.fillStyle = "#000"; ctx.font = `bold ${Math.max(12, 35 - (currentLevel / 2))}px Arial`;
+                    ctx.fillText(i + 1, radius - 20, 0); ctx.restore();
+                }
+            }
+        }
+
+        document.getElementById('spin-btn').addEventListener('click', () => {
+            if (isSpinning) return;
+            const guess = parseInt(document.getElementById('guess-input').value);
+            if (isNaN(guess) || guess < 1 || guess > currentLevel) {
+                document.getElementById('result-message').innerText = 'Enter a valid number!';
+                return;
+            }
+
+            isSpinning = true;
+            document.getElementById('spin-btn').disabled = true;
+            document.getElementById('result-message').innerText = 'Spinning...';
+            
+            const winningNumber = Math.floor(Math.random() * currentLevel) + 1;
+            
+            // Simpele rotatie animatie
+            let rotation = (Math.random() * 360) + 1440; 
+            canvas.style.transition = `transform 3s cubic-bezier(0.15, 0.85, 0.1, 1)`;
+            canvas.style.transform = `rotate(${rotation}deg)`;
+
+            setTimeout(() => {
+                if (guess === winningNumber) {
+                    document.getElementById('result-message').style.color = 'var(--success)';
+                    document.getElementById('result-message').innerText = `BINGO! It was ${winningNumber}.`;
+                    saveScoreToFirebase(currentLevel);
+                    setTimeout(() => {
+                        currentLevel++;
+                        document.getElementById('level-text').innerText = "LEVEL " + currentLevel;
+                        canvas.style.transition = 'none'; canvas.style.transform = 'rotate(0deg)';
+                        drawWheel(); isSpinning = false; document.getElementById('spin-btn').disabled = false;
+                    }, 1500);
+                } else {
+                    document.getElementById('result-message').style.color = 'var(--error)';
+                    document.getElementById('result-message').innerText = `WRONG! It was ${winningNumber}.`;
+                    setTimeout(() => {
+                        canvas.style.transition = 'none'; canvas.style.transform = 'rotate(0deg)';
+                        isSpinning = false; document.getElementById('spin-btn').disabled = false;
+                    }, 1500);
+                }
+            }, 3000);
+        });
+
+        // --- GLOBAL SHUFFLER LOGICA ---
+        const suits = ['♠', '♥', '♦', '♣'];
+        const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+        function drawRandomHand() {
+            let hand = [];
+            for(let i=0; i<5; i++) {
+                hand.push({
+                    rank: ranks[Math.floor(Math.random() * ranks.length)],
+                    suit: suits[Math.floor(Math.random() * suits.length)]
+                });
+            }
+            return hand;
+        }
+
+        function formatHand(hand) {
+            return hand.map(c => `<span style="color:${c.suit==='♥'||c.suit==='♦'?'#ff44aa':'#00e5ff'}">${c.rank}${c.suit}</span>`).join(' ');
+        }
+
+        document.getElementById('shuffle-btn').addEventListener('click', async () => {
+            const handA = drawRandomHand();
+            const handB = drawRandomHand();
+            const coin = Math.random() > 0.5 ? 'Heads' : 'Tails';
+
+            // Teken de kaarten op het scherm
+            document.getElementById('deck-display').innerHTML = `
+                <div>Deck A: ${formatHand(handA)}</div>
+                <div style="margin-top: 5px;">Deck B: ${formatHand(handB)}</div>
+                <div style="margin-top: 5px; color: #888;">🪙 Coin Flip: ${coin}</div>
+            `;
+
+            // Bereken de Achievements voor Deck A
+            let updates = {};
+            const ranksA = handA.map(c => c.rank);
+            const suitsA = handA.map(c => c.suit);
+            
+            const isFlush = new Set(suitsA).size === 1;
+            const isYahtzee = new Set(ranksA).size === 1;
+            const hasRoyalRanks = ['10', 'J', 'Q', 'K', 'A'].every(r => ranksA.includes(r));
+            
+            // Check Match
+            if(JSON.stringify(handA) === JSON.stringify(handB)) updates.match = increment(1);
+            
+            // Check Kaarten
+            if(isFlush && hasRoyalRanks) updates.royal = increment(1);
+            else if(isFlush) updates.flush = increment(1);
+            
+            if(isYahtzee) updates.yahtzee = increment(1);
+            
+            // Check Munt
+            if(coin === 'Heads') updates.heads = increment(1);
+
+            // STUUR NAAR FIREBASE (Firebase maakt dit mapje ZELF aan als het nog niet bestaat!)
+            if(Object.keys(updates).length > 0) {
+                const statsRef = doc(db, "globalStats", "achievements");
+                await setDoc(statsRef, updates, { merge: true });
+            }
+        });
+
+        // LUISTER LIVE NAAR DE DATABASE (Achievements)
+        onSnapshot(doc(db, "globalStats", "achievements"), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById('stat-match').innerText = data.match || 0;
+                document.getElementById('stat-royal').innerText = data.royal || 0;
+                document.getElementById('stat-flush').innerText = data.flush || 0;
+                document.getElementById('stat-yahtzee').innerText = data.yahtzee || 0;
+                document.getElementById('stat-heads').innerText = data.heads || 0;
+            }
+        });
+
+        // --- LEADERBOARD (LUCKY GUY) LOGICA ---
+        async function saveScoreToFirebase(levelReached) {
+            try {
+                const playerRef = doc(db, "globalScores", playerName);
+                const docSnap = await getDoc(playerRef);
+                if (docSnap.exists()) {
+                    if (levelReached > docSnap.data().level) {
+                        await setDoc(playerRef, { name: playerName, level: levelReached });
+                    }
+                } else {
+                    await setDoc(playerRef, { name: playerName, level: levelReached });
+                }
+                fetchAndRenderLeaderboard();
+            } catch (e) { console.error("Error saving score: ", e); }
+        }
+
+        async function fetchAndRenderLeaderboard() {
+            const list = document.getElementById('leaderboard-list');
+            try {
+                const q = query(collection(db, "globalScores"), orderBy("level", "desc"), limit(10));
+                const querySnapshot = await getDocs(q);
+                list.innerHTML = ''; let index = 1;
+                if (querySnapshot.empty) { list.innerHTML = '<li style="color: var(--text-muted);">No global scores yet. Be the first!</li>'; return; }
+                querySnapshot.forEach((doc) => {
+                    const score = doc.data();
+                    list.innerHTML += `<li><span>${index}. ${score.name}</span> <span>LVL ${score.level}</span></li>`;
+                    index++;
+                });
+            } catch (e) {
+                list.innerHTML = '<li style="color: var(--error);">Database connecting...</li>';
+            }
+        }
+    </script>
+</body>
+</html>
