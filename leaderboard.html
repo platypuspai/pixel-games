@@ -590,9 +590,12 @@ async function importAccount() {
         localStorage.setItem(DEV_KEY, data.deviceId);
         localStorage.setItem(LB_KEY, data.name);
         localStorage.setItem(ACC_KEY, code);
+        safeSetLS && safeSetLS('md6_n', data.name);
+        localStorage.setItem('pg_player_name', data.name);
 
-        // Update nameOwners to point to this device
+        // Register in Firebase
         await db.ref('nameOwners/' + data.deviceId).set({ name: data.name });
+        await db.ref('accountCodes/' + code).set({ deviceId: data.deviceId, name: data.name });
 
         document.getElementById('import-modal').classList.add('hidden');
         document.getElementById('bar-name').textContent = data.name;
@@ -744,22 +747,17 @@ if (!initName) {
     // (doet niks als al correct geregistreerd)
     setTimeout(() => {
         const db = fbApp.database();
-        db.ref('nameOwners/' + MY_DEVICE_ID).once('value').then(snap => {
-            const existing = snap.val();
-            if (!existing || existing.name.toLowerCase() !== initName.toLowerCase()) {
-                // Controleer eerst of niemand anders deze naam heeft
-                db.ref('nameOwners').once('value').then(allSnap => {
-                    const owners = allSnap.val() || {};
-                    const conflict = Object.entries(owners).find(([id, v]) =>
-                        id !== MY_DEVICE_ID && v.name && v.name.toLowerCase() === initName.toLowerCase()
-                    );
-                    if (!conflict) {
-                        db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: initName });
-                    }
-                });
-            }
+        // Register nameOwners and accountCodes if not already done
+        Promise.all([
+            db.ref('nameOwners/' + MY_DEVICE_ID).once('value'),
+            db.ref('accountCodes/' + MY_ACCOUNT_CODE).once('value'),
+        ]).then(([ownerSnap, codeSnap]) => {
+            const ownerOk = ownerSnap.val() && ownerSnap.val().name && ownerSnap.val().name.toLowerCase() === initName.toLowerCase();
+            const codeOk  = codeSnap.val() && codeSnap.val().deviceId === MY_DEVICE_ID;
+            if (!ownerOk) db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: initName }).catch(()=>{});
+            if (!codeOk)  db.ref('accountCodes/' + MY_ACCOUNT_CODE).set({ deviceId: MY_DEVICE_ID, name: initName }).catch(()=>{});
         });
-    }, 2000); // wacht tot Firebase geladen is
+    }, 2000);
 }
 
 // ── Helpers ──
