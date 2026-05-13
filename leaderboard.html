@@ -318,6 +318,90 @@
         }
         .board-foot span { color: var(--accent-yellow); font-weight: 700; }
 
+        .account-section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent-blue);
+            padding: 16px 22px;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .account-label {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.42rem;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+            flex-shrink: 0;
+        }
+        .account-code {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            letter-spacing: 0.15em;
+            flex: 1;
+            word-break: break-all;
+        }
+        .account-btn {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.38rem;
+            padding: 8px 14px;
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            letter-spacing: 0.08em;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .account-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+        /* Import modal */
+        .import-modal {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent-blue);
+            padding: 40px 36px;
+            max-width: 460px;
+            width: 90%;
+        }
+        .import-modal h3 {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.6rem;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+        }
+        .import-modal p { color: var(--text-muted); font-size: 0.8rem; line-height: 1.6; margin-bottom: 22px; }
+        .import-modal input {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'Inconsolata', monospace;
+            font-size: 0.9rem;
+            padding: 12px 14px;
+            outline: none;
+            transition: border-color 0.15s;
+            margin-bottom: 14px;
+            letter-spacing: 0.1em;
+        }
+        .import-modal input:focus { border-color: var(--accent-blue); }
+        .import-btn {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.5rem;
+            padding: 14px 20px;
+            background: var(--accent-blue);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            letter-spacing: 0.1em;
+            transition: filter 0.15s;
+        }
+        .import-btn:hover { filter: brightness(1.1); }
+
         .board-notice {
             padding: 8px 18px 14px;
             font-size: 0.66rem;
@@ -334,7 +418,7 @@
 <header>
     <a class="back-link" href="index.html">◀ BACK</a>
     <h1>🏆 LEADERBOARD</h1>
-    <p class="subtitle">Live rankings &nbsp;·&nbsp; Pixel-Games &nbsp;·&nbsp; <span>_</span></p>
+    <p class="subtitle">Live rankings &nbsp;·&nbsp; all Pixel-Games &nbsp;·&nbsp; <span>_</span></p>
 </header>
 
 <div class="wrap">
@@ -344,6 +428,26 @@
         <span class="name-bar-label">// PLAYER</span>
         <span class="name-bar-value" id="bar-name">—</span>
         <button class="change-btn" onclick="showModal()">CHANGE NAME</button>
+    </div>
+
+    <!-- Account code section -->
+    <div class="account-section">
+        <span class="account-label">// ACCOUNT CODE</span>
+        <span class="account-code" id="account-code">—</span>
+        <button class="account-btn" onclick="copyCode()">COPY</button>
+        <button class="account-btn" onclick="showImportModal()">IMPORT ON OTHER DEVICE</button>
+    </div>
+
+    <!-- Import modal -->
+    <div class="modal-overlay hidden" id="import-modal">
+        <div class="import-modal">
+            <h3>// IMPORT ACCOUNT</h3>
+            <p>Enter the 20-character code from your other device to transfer your account here.</p>
+            <input id="import-input" type="text" maxlength="20" placeholder="XXXXXXXXXXXXXXXXXXXX" autocomplete="off" spellcheck="false">
+            <div id="import-error" style="color:#ff4444;font-size:0.75rem;margin-bottom:12px;min-height:1em;"></div>
+            <button class="import-btn" onclick="importAccount()">► IMPORT ACCOUNT</button>
+            <p style="margin-top:14px;font-size:0.7rem;color:var(--text-muted);">Warning: this will replace the account on this device.</p>
+        </div>
     </div>
 
     <!-- Naam modal -->
@@ -422,6 +526,92 @@ function getDeviceId() {
 const MY_DEVICE_ID = getDeviceId();
 
 function getName() { return localStorage.getItem(LB_KEY) || ''; }
+
+// ── Account code ──
+// Code = first 20 chars of device ID (stripped of 'lb-' prefix), uppercased
+const ACC_KEY = 'pg_account_code';
+function getOrCreateCode() {
+    let code = localStorage.getItem(ACC_KEY);
+    if (!code) {
+        // Generate a clean 20-char alphanumeric code
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        code = Array.from({length: 20}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        localStorage.setItem(ACC_KEY, code);
+    }
+    return code;
+}
+const MY_ACCOUNT_CODE = getOrCreateCode();
+
+// Show code in UI
+document.getElementById('account-code').textContent = MY_ACCOUNT_CODE;
+
+function copyCode() {
+    navigator.clipboard.writeText(MY_ACCOUNT_CODE).then(() => {
+        const el = document.getElementById('account-code');
+        el.style.color = 'var(--accent-green)';
+        el.textContent = 'COPIED!';
+        setTimeout(() => { el.style.color = ''; el.textContent = MY_ACCOUNT_CODE; }, 1500);
+    }).catch(() => {
+        prompt('Copy your account code:', MY_ACCOUNT_CODE);
+    });
+}
+
+function showImportModal() {
+    document.getElementById('import-modal').classList.remove('hidden');
+    document.getElementById('import-input').value = '';
+    document.getElementById('import-error').textContent = '';
+    setTimeout(() => document.getElementById('import-input').focus(), 50);
+}
+
+async function importAccount() {
+    const code = document.getElementById('import-input').value.trim().toUpperCase();
+    const errEl = document.getElementById('import-error');
+    if (code.length !== 20) { errEl.textContent = 'Code must be exactly 20 characters.'; return; }
+
+    const btn = document.querySelector('.import-btn');
+    btn.textContent = '⏳ Looking up...';
+    btn.disabled = true;
+    errEl.textContent = '';
+
+    try {
+        const db = fbApp.database();
+        // Look up this code in Firebase accountCodes table
+        const snap = await db.ref('accountCodes/' + code).once('value');
+        const data = snap.val();
+
+        if (!data || !data.deviceId || !data.name) {
+            errEl.textContent = 'Code not found. Make sure you copied it correctly.';
+            btn.textContent = '► IMPORT ACCOUNT';
+            btn.disabled = false;
+            return;
+        }
+
+        // Transfer: set local storage to match the imported account
+        localStorage.setItem(DEV_KEY, data.deviceId);
+        localStorage.setItem(LB_KEY, data.name);
+        localStorage.setItem(ACC_KEY, code);
+
+        // Update nameOwners to point to this device
+        await db.ref('nameOwners/' + data.deviceId).set({ name: data.name });
+
+        document.getElementById('import-modal').classList.add('hidden');
+        document.getElementById('bar-name').textContent = data.name;
+        document.getElementById('account-code').textContent = code;
+        location.reload(); // reload to apply new device ID
+    } catch(e) {
+        errEl.textContent = 'Connection error. Try again.';
+        console.error(e);
+    }
+    btn.textContent = '► IMPORT ACCOUNT';
+    btn.disabled = false;
+}
+
+document.getElementById('import-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+});
+document.getElementById('import-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') importAccount();
+});
 function showModal() {
     document.getElementById('modal').classList.remove('hidden');
     const inp = document.getElementById('name-input');
@@ -486,6 +676,8 @@ async function confirmName() {
 
         // Name is free — register ownership and save locally
         await db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: val });
+        // Register account code in Firebase so other devices can import it
+        await db.ref('accountCodes/' + MY_ACCOUNT_CODE).set({ deviceId: MY_DEVICE_ID, name: val });
         localStorage.setItem(LB_KEY, val);
         document.getElementById('bar-name').textContent = val;
 
