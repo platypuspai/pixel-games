@@ -822,25 +822,35 @@ try {
 let mdOff = null;
 (function loadMD() {
     const body = document.getElementById('md-body');
+    const foot = document.getElementById('md-foot');
     body.innerHTML = '<div class="lb-loading">Connecting</div>';
     if (mdOff) { mdOff(); mdOff = null; }
     const ref = fbApp.database().ref('scores');
+    
     function onVal(snap) {
-        const byName = {}; // name -> max clicks
+        const rows = [];
+        let totalBillsSum = 0; // Hier wordt het totaal berekend
+        
         snap.forEach(child => {
-            const rec = child.val();
-            if (!rec || typeof rec !== 'object' || !rec.name) return;
-            const n = rec.name;
-            const cl = rec.clicks || 0;
-            if (!byName[n] || cl > byName[n]) byName[n] = cl;
+            const d = child.val();
+            if (!d) return;
+            const c = d.clicks || 0;
+            totalBillsSum += c; // Tel alle clicks op
+            rows.push({ name: d.name || child.key, score: ts(c), v: c });
         });
-        const rows = Object.keys(byName)
-            .map(n => ({ name: n, score: byName[n].toLocaleString() + ' clicks', v: byName[n] }))
-            .sort((a,b) => b.v - a.v)
-            .map(r => ({ name: r.name, score: r.score }));
-        window._mdData = rows;
-        render('md-body', 'md-foot', rows, getName());
+        
+        rows.sort((a,b) => b.v - a.v);
+        const cleaned = rows.map(r => ({ name: r.name, score: r.score }));
+        window._mdData = cleaned;
+        render('md-body', 'md-foot', cleaned, getName());
+        
+        // Laat het totaal zien in de md-foot sectie
+        if (foot) {
+            foot.style.display = 'block';
+            foot.innerHTML = `TOTALE GELDSTAPEL: <span style="color: var(--accent-orange);">${ts(totalBillsSum)}</span>`;
+        }
     }
+    
     ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
     mdOff = () => ref.off('value', onVal);
 })();
