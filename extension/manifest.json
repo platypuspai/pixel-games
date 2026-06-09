@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Lucky Guy",
+  "version": "4.3",
+  "description": "Pure chaos mode. Pick your number and spin the wheel!",
+  "permissions": ["storage"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Lucky Guy - Spin the Wheel"
+  },
+  "host_permissions": [
+    "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' https://www.gstatic.com; object-src 'self'"
+  }
+}
