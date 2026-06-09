@@ -463,7 +463,7 @@
         .lb-wrap{position:relative;z-index:10;max-width:960px;margin:50px auto 80px;padding:0 20px}
         .lb-wrap>h2{font-family:'Press Start 2P',monospace;font-size:.85rem;color:var(--accent-yellow);margin-bottom:6px}
         .lb-wrap>p{color:var(--text-muted);font-size:.78rem;margin-bottom:24px}
-        .lb-name-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent-yellow);padding:14px 20px;margin-bottom:24px}
+        .lb-name-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent-yellow);padding:14px 20px;margin-bottom:28px}
         .lb-name-bar-label{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--text-muted);letter-spacing:.1em}
         .lb-name-bar-value{font-size:.88rem;font-weight:700;color:var(--accent-yellow);flex:1}
         .lb-change-btn{font-family:'Press Start 2P',monospace;font-size:.4rem;padding:7px 14px;background:transparent;color:var(--text-muted);border:1px solid var(--border);cursor:pointer;letter-spacing:.08em;transition:all .15s}
@@ -473,9 +473,9 @@
         .lb-modal{background:var(--card);border:1px solid var(--border);border-top:3px solid var(--accent-yellow);padding:40px 36px;max-width:420px;width:90%}
         .lb-modal h3{font-family:'Press Start 2P',monospace;font-size:.62rem;color:var(--accent-yellow);margin-bottom:10px}
         .lb-modal p{color:var(--text-muted);font-size:.78rem;line-height:1.6;margin-bottom:22px}
-        .lb-modal input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Inconsolata',monospace;font-size:1rem;padding:11px 14px;outline:none;transition:border-color .15s;margin-bottom:14px;box-sizing:border-box}
+        .lb-modal input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Inconsolata',monospace;font-size:1rem;padding:11px 14px;outline:none;transition:border-color .15s}
         .lb-modal input:focus{border-color:var(--accent-yellow)}
-        .lb-modal-btn{font-family:'Press Start 2P',monospace;font-size:.5rem;padding:12px 20px;background:var(--accent-yellow);color:#000;border:none;cursor:pointer;width:100%;letter-spacing:.1em;transition:filter .15s}
+        .lb-modal-btn{font-family:'Press Start 2P',monospace;font-size:.5rem;padding:12px 20px;background:var(--accent-yellow);color:#000;border:none;cursor:pointer;width:100%;letter-spacing:.1em;transition:filter .15s;margin-top:16px}
         .lb-modal-btn:hover{filter:brightness(1.1)}
         .lb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:22px;align-items:start}
         .lb-board{background:var(--card);border:1px solid var(--border);border-radius:2px}
@@ -815,7 +815,7 @@
         </div>
         <div class="info-block">
             <h3>// THE GAMES</h3>
-            <p>There are currently 6 games available: Dino World, Mini Browser Platformer, One Square, Dodging Arena, Money Digger and Lucky Guy. Some games are also available as a Chrome extension.</p>
+            <p>There are currently 6 games available: Dino World, Mini Browser Platformer, One Square, Dodging Arena, Money Digger and Lucky Guy. Some games are also available as a Chrome extension or mobile app.</p>
             <div class="info-tag-list">
                 <span class="info-tag">DINO WORLD</span>
                 <span class="info-tag">MINI PLATFORMER</span>
@@ -876,6 +876,15 @@
         <div class="lb-foot" id="lb-pf-foot"></div>
         <div class="lb-notice">⚠ Scores worden lokaal opgeslagen per browser.</div>
       </div>
+      <div class="lb-board" style="border-top:2px solid var(--accent-pink)">
+        <div class="lb-board-head">
+          <span class="lb-live"></span>
+          <span class="lb-board-title" style="color:var(--accent-pink)">DODGING ARENA</span>
+          <span class="lb-board-meta">score</span>
+        </div>
+        <div class="lb-board-body" id="lb-da-body"><div class="lb-loading">Verbinden</div></div>
+        <div class="lb-foot" id="lb-da-foot"></div>
+      </div>
       <div class="lb-board" style="border-top:2px solid var(--accent-cyan)">
         <div class="lb-board-head">
           <span class="lb-live"></span>
@@ -929,30 +938,30 @@
     // Page navigation
    function showPage(name, btn) {
     try {
-        // Verberg alle pagina's
-        document.querySelectorAll('.page').forEach(function(p) {
-            p.classList.remove('active');
-            p.style.display = 'none';
-        });
-        document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
-        
-        // Toon de gevraagde pagina
-        var target = document.getElementById('page-' + name);
-        if (!target) { console.error('Page niet gevonden: page-' + name); return; }
-        target.classList.add('active');
-        target.style.display = 'block';
-        if (btn) btn.classList.add('active');
-        
-        // Footer alleen bij home
-        var footer = document.querySelector('footer');
-        if (footer) footer.style.display = (name === 'home') ? '' : 'none';
-        
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        if (name === 'leaderboard') { if (window.lbOpen) window.lbOpen(); }
-        else { if (window.lbClose) window.lbClose(); }
-    } catch(err) {
-        console.error('showPage fout:', err);
-    }
+         // Verberg alle pagina's
+         document.querySelectorAll('.page').forEach(function(p) {
+             p.classList.remove('active');
+             p.style.display = 'none';
+         });
+         document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
+         
+         // Toon de gevraagde pagina
+         var target = document.getElementById('page-' + name);
+         if (!target) { console.error('Page niet gevonden: page-' + name); return; }
+         target.classList.add('active');
+         target.style.display = 'block';
+         if (btn) btn.classList.add('active');
+         
+         // Footer alleen bij home
+         var footer = document.querySelector('footer');
+         if (footer) footer.style.display = (name === 'home') ? '' : 'none';
+         
+         window.scrollTo({ top: 0, behavior: 'smooth' });
+         if (name === 'leaderboard') { if (window.lbOpen) window.lbOpen(); }
+         else { if (window.lbClose) window.lbClose(); }
+     } catch(err) {
+         console.error('showPage fout:', err);
+     }
 }
 
     // Contact form — Formspree
@@ -982,8 +991,8 @@
 
 <script>
 // ── Leaderboard — staat HELEMAAL ONDERAAN zodat alle DOM-elementen al bestaan ──
-var LB_KEY='pg_player_name', _mdOff=null, _lgOff=null, _mdData=null, _lgData=null;
-var FB_CFG={apiKey:'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',authDomain:'money-digger-9b05e.firebaseapp.com',databaseURL:'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app',projectId:'money-digger-9b05e',storageBucket:'money-digger-9b05e.firebasestorage.app',messagingSenderId:'883506536944',appId:'1:883506536944:web:921b342dff76154fcbbd35'};
+var LB_KEY='pg_player_name', _mdOff=null, _lgOff=null, _daOff=null, _mdData=null, _lgData=null, _daData=null;
+var FB_CFG={apiKey:'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',authDomain:'money-digger-9b05e.firebaseapp.com',databaseURL:'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app'};
 
 function lbGetName(){return localStorage.getItem(LB_KEY)||'';}
 function lbEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -998,102 +1007,67 @@ function lbRender(bodyId,footId,rows,me){
   for(var i=0;i<rows.length;i++){
     var r=rows[i],isMe=low&&r.name.toLowerCase()===low;
     if(isMe)pos=i;
-    html+='<div class="lb-row'+(isMe?' me':'')+'"><span class="lb-rank '+lbMedalCls(i)+'">'+lbMedal(i)+'</span><span class="lb-name-c'+(isMe?' me':'')+'">'+lbEsc(r.name)+'</span><span class="lb-score-c">'+lbEsc(r.score)+'</span></div>';
+    html+='<div class="lb-row'+(isMe?' me':'')+'"><span class="lb-rank '+lbMedalCls(i)+'">'+lbMedal(i)+'</span><span class="lb-name-c'+(isMe?' me':'')+'">'+lbEsc(r.name)+'</span><span class="lb-score-c">'+r.score+'</span></div>';
   }
   body.innerHTML=html;
-  if(foot){
-    if(me&&pos>=0){foot.innerHTML='Jouw rang: <span>#'+(pos+1)+'</span> · '+lbEsc(rows[pos].score);foot.style.display='';}
-    else if(me){foot.innerHTML='Jij staat nog niet in dit klassement.';foot.style.display='';}
-    else foot.style.display='none';
-  }
-}
-
-function lbGetApp(){
-  try{return firebase.app('lb');}catch(e){return firebase.initializeApp(FB_CFG,'lb');}
-}
-
-function lbInitMD(){
-  var body=document.getElementById('lb-md-body');
-  if(!body)return;
-  body.innerHTML='<div class="lb-loading">Verbinden</div>';
-  if(_mdOff){_mdOff();_mdOff=null;}
-  var ref=lbGetApp().database().ref('scores');
-  function onVal(snap){
-    var byName={};
-    snap.forEach(function(child){var rec=child.val();if(!rec)return;if(typeof rec==='number'){byName['Onbekend']=(byName['Onbekend']||0)+rec;return;}var n=rec.name||child.key,c=rec.clicks||0;byName[n]=(byName[n]||0)+c;});
-    var rows=Object.keys(byName).map(function(n){return{name:n,score:byName[n].toLocaleString()+' clicks',v:byName[n]};}).sort(function(a,b){return b.v-a.v;}).map(function(r){return{name:r.name,score:r.score};});
-    _mdData=rows;lbRender('lb-md-body','lb-md-foot',rows,lbGetName());
-  }
-  ref.on('value',onVal,function(){body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>';});
-  _mdOff=function(){ref.off('value',onVal);};
-}
-
-function lbLoadPF(){
-  var body=document.getElementById('lb-pf-body'),foot=document.getElementById('lb-pf-foot');
-  if(!body)return;
-  function ts(ms){var s=Math.floor(ms/1000),m=Math.floor(s/60),t=Math.floor((ms%1000)/100);return m>0?m+'m '+(s%60)+'.'+t+'s':s+'.'+t+'s';}
-  var raw=localStorage.getItem('platformer_highscore'),me=lbGetName();
-  if(raw===null){body.innerHTML='<div class="lb-empty">Nog geen score.<br>Speel eerst Mini Platformer!</div>';if(foot)foot.style.display='none';return;}
-  lbRender('lb-pf-body','lb-pf-foot',[{name:me||'Jij',score:ts(parseInt(raw))}],me||'Jij');
-}
-
-function lbInitLG(){
-  var body=document.getElementById('lb-lg-body');
-  if(!body)return;
-  body.innerHTML='<div class="lb-loading">Verbinden</div>';
-  if(_lgOff){_lgOff();_lgOff=null;}
-  var ref=lbGetApp().database().ref('luckyGuyScores');
-  function onVal(snap){
-    var rows=[];
-    snap.forEach(function(child){var d=child.val();if(!d)return;rows.push({name:d.name||child.key,score:'LVL '+(d.level||0),v:d.level||0});});
-    rows.sort(function(a,b){return b.v-a.v;});
-    rows=rows.map(function(r){return{name:r.name,score:r.score};});
-    _lgData=rows;lbRender('lb-lg-body','lb-lg-foot',rows,lbGetName());
-  }
-  ref.on('value',onVal,function(){body.innerHTML='<div class="lb-empty">Verbinding mislukt.</div>';});
-  _lgOff=function(){ref.off('value',onVal);};
+  if(foot&&pos>-1){foot.innerHTML='<span>Je ranking: #'+(pos+1)+'</span>';foot.style.display='block';}
+  else if(foot)foot.style.display='none';
 }
 
 function lbOpen(){
-  var n=lbGetName();
-  document.getElementById('lb-bar-name').textContent=n||'—';
-  if(!n)lbShowModal();
-  lbInitMD();lbLoadPF();lbInitLG();
+  var me=lbGetName();
+  document.getElementById('lb-bar-name').innerText=me||'—';
+  if(!me)lbShowModal();
+  else {
+    firebase.initializeApp(FB_CFG);
+    var db=firebase.database();
+    
+    // Money Digger
+    db.ref('scores/moneyDigger').orderByChild('score').limitToLast(10).on('value',function(snap){
+      var arr=[];
+      snap.forEach(function(ch){arr.unshift({name:ch.child('name').val(),score:ch.child('score').val()});});
+      _mdData=arr;
+      lbRender('lb-md-body','lb-md-foot',arr,me);
+    });
+    
+    // Lucky Guy
+    db.ref('scores/luckyGuy').orderByChild('level').limitToLast(10).on('value',function(snap){
+      var arr=[];
+      snap.forEach(function(ch){arr.unshift({name:ch.child('name').val(),score:ch.child('level').val()});});
+      _lgData=arr;
+      lbRender('lb-lg-body','lb-lg-foot',arr,me);
+    });
+    
+    // Dodging Arena
+    db.ref('scores/dodgingArena').orderByChild('score').limitToLast(10).on('value',function(snap){
+      var arr=[];
+      snap.forEach(function(ch){arr.unshift({name:ch.child('name').val(),score:ch.child('score').val()});});
+      _daData=arr;
+      lbRender('lb-da-body','lb-da-foot',arr,me);
+    });
+  }
 }
-window.lbOpen=lbOpen;
+
 function lbClose(){
-  if(_mdOff){_mdOff();_mdOff=null;}
-  if(_lgOff){_lgOff();_lgOff=null;}
+  if(firebase.apps.length>0){
+    firebase.database().ref('scores/moneyDigger').off();
+    firebase.database().ref('scores/luckyGuy').off();
+    firebase.database().ref('scores/dodgingArena').off();
+  }
 }
-window.lbClose=lbClose;
-function lbShowModal(){
-  var ov=document.getElementById('lb-overlay');if(!ov)return;
-  ov.classList.remove('lb-hidden');
-  ov.style.display='flex';
-  var inp=document.getElementById('lb-modal-inp');
-  if(inp){inp.value=lbGetName();setTimeout(function(){inp.focus();},50);}
-}
-function lbHideModal(){
-  var ov=document.getElementById('lb-overlay');
-  if(!ov)return;
-  ov.classList.add('lb-hidden');
-  ov.style.display='none';
-}
+
+function lbShowModal(){document.getElementById('lb-overlay').style.display='flex';}
+function lbHideModal(){document.getElementById('lb-overlay').style.display='none';}
 function lbConfirmName(){
-  var inp=document.getElementById('lb-modal-inp'),val=inp?inp.value.trim():'';
-  if(!val){if(inp)inp.focus();return;}
-  localStorage.setItem(LB_KEY,val);
-  document.getElementById('lb-bar-name').textContent=val;
+  var inp=document.getElementById('lb-modal-inp'),name=(inp.value||'').trim().substring(0,18);
+  if(!name){alert('Voer een spelernaam in!');return;}
+  localStorage.setItem(LB_KEY,name);
   lbHideModal();
-  if(_mdData)lbRender('lb-md-body','lb-md-foot',_mdData,val);
-  lbLoadPF();
-  if(_lgData)lbRender('lb-lg-body','lb-lg-foot',_lgData,val);
+  lbOpen();
 }
-// Veilig event listeners toevoegen - elementen bestaan zeker op dit punt
-var _lbInp=document.getElementById('lb-modal-inp');
-var _lbOv=document.getElementById('lb-overlay');
-if(_lbInp)_lbInp.addEventListener('keydown',function(e){if(e.key==='Enter')lbConfirmName();});
-if(_lbOv)_lbOv.addEventListener('click',function(e){if(e.target===this&&lbGetName())lbHideModal();});
+
+document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp').addEventListener('keypress',function(e){if(e.key==='Enter')lbConfirmName();});
 </script>
+
 </body>
 </html>
