@@ -829,13 +829,15 @@ let mdOff = null;
     
     function onVal(snap) {
         const rows = [];
-        let totalBillsSum = 0; // Hier wordt het totaal berekend
+        let totalBillsSum = 0; 
         
         snap.forEach(child => {
             const d = child.val();
             if (!d) return;
             const c = d.clicks || 0;
-            totalBillsSum += c; // Tel alle clicks op
+            totalBillsSum += c; 
+            
+            // ts(c) formatteert puur de getallen (bijv. 1,000). Geen seconden of ms hier!
             rows.push({ name: d.name || child.key, score: ts(c), v: c });
         });
         
@@ -844,7 +846,7 @@ let mdOff = null;
         window._mdData = cleaned;
         render('md-body', 'md-foot', cleaned, getName());
         
-        // Laat het totaal zien in de md-foot sectie
+        // Jouw eigen footer-styling met het berekende totaal erin:
         if (foot) {
             foot.style.display = 'block';
             foot.innerHTML = `TOTALE GELDSTAPEL: <span style="color: var(--accent-orange);">${ts(totalBillsSum)}</span>`;
