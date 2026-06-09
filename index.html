@@ -1002,7 +1002,7 @@ function lbMedalCls(i){return i===0?'g':i===1?'s':i===2?'b':'';}
 function lbRender(bodyId,footId,rows,me){
   var body=document.getElementById(bodyId),foot=document.getElementById(footId);
   if(!body)return;
-  if(!rows||!rows.length){body.innerHTML='<div class="lb-empty">Nog geen scores.</div>';if(foot)foot.style.display='none';return;}
+  if(!rows||!rows.length){body.innerHTML='<div class="lb-empty">Not done yet.</div>';if(foot)foot.style.display='none';return;}
   var low=(me||'').toLowerCase(),html='',pos=-1;
   for(var i=0;i<rows.length;i++){
     var r=rows[i],isMe=low&&r.name.toLowerCase()===low;
