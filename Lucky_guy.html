@@ -248,35 +248,37 @@ window.startGame = async function() {
             window.currentPlayerName = finalName;
             let startingLevel = 1;
 
-            // 1. Kijk wat de speler lokaal heeft opgeslagen
             if (personalSave && personalSave.name === finalName) {
                 startingLevel = personalSave.level;
             }
 
-            // Geef visuele feedback dat we contact maken met de database
-            const startBtn = document.querySelector('#start-ui button');
+            const startBtn = document.querySelector('#start-ui button') || document.getElementById('start-btn');
             const oldText = startBtn.innerText;
             startBtn.innerText = "SERVER CHECKEN...";
             startBtn.disabled = true;
 
-            // 2. Vraag Firebase om de ECHTE data (zodat Admin aanpassingen direct werken)
             try {
-                const snap = await db.child(finalName).once('value');
-                const serverData = snap.val();
-                
-                // Als de database een level heeft, is de database ALTIJD de baas!
-                if (serverData && typeof serverData.level === 'number') {
-                    startingLevel = serverData.level;
+                // Slim zoeken naar het level op de server (kijkt naar de naam, niet de key)
+                const snap = await db.orderByChild('name').equalTo(finalName).once('value');
+                if (snap.exists()) {
+                    let highestLevel = 0;
+                    snap.forEach(child => {
+                        if (child.val().level > highestLevel) highestLevel = child.val().level;
+                    });
+                    
+                    // De server heeft altijd gelijk als het level daar hoger is!
+                    if (highestLevel > 0) {
+                        startingLevel = highestLevel;
+                    }
                 }
             } catch (e) {
                 console.warn("Kon Firebase niet bereiken, we gebruiken de lokale save.");
             }
 
-            // 3. Pas het level toe en overschrijf de oude browser-save met de juiste data
+            // Update het lokale geheugen en start het spel
             window.currentLevel = startingLevel;
             savePersonalProgress();
 
-            // 4. UI herstellen en het spel starten
             startBtn.innerText = oldText;
             startBtn.disabled = false;
             startUI.style.display = 'none';
@@ -421,13 +423,22 @@ window.startGame = async function() {
             }
         }
 
-        async function saveScoreToFirebase(levelReached) {
+async function saveScoreToFirebase(levelReached) {
             try {
-                const playerRef = db.child(window.currentPlayerName);
-                const snap = await playerRef.once('value');
-                const existing = snap.val();
-                if (!existing || levelReached > (existing.level || 0)) {
-                    await playerRef.set({ name: window.currentPlayerName, level: levelReached });
+                // Eerst zoeken we of de speler al bestaat in de database
+                const snap = await db.orderByChild('name').equalTo(window.currentPlayerName).once('value');
+                
+                if (snap.exists()) {
+                    // Speler bestaat al, we updaten de bestaande score
+                    snap.forEach(child => {
+                        const existing = child.val();
+                        if (levelReached > (existing.level || 0)) {
+                            child.ref.update({ level: levelReached });
+                        }
+                    });
+                } else {
+                    // Speler bestaat nog niet op het leaderboard, we maken een nieuw record aan
+                    await db.push({ name: window.currentPlayerName, level: levelReached });
                 }
             } catch (e) {
                 console.error("Error saving score: ", e);
