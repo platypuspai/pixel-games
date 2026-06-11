@@ -244,15 +244,41 @@
             }
         }
 
-        window.startGame = function() {
+window.startGame = async function() {
+            window.currentPlayerName = finalName;
+            let startingLevel = 1;
+
+            // 1. Kijk wat de speler lokaal heeft opgeslagen
             if (personalSave && personalSave.name === finalName) {
-                window.currentPlayerName = finalName;
-                window.currentLevel = personalSave.level;
-            } else {
-                window.currentPlayerName = finalName;
-                window.currentLevel = 1;
+                startingLevel = personalSave.level;
             }
+
+            // Geef visuele feedback dat we contact maken met de database
+            const startBtn = document.querySelector('#start-ui button');
+            const oldText = startBtn.innerText;
+            startBtn.innerText = "SERVER CHECKEN...";
+            startBtn.disabled = true;
+
+            // 2. Vraag Firebase om de ECHTE data (zodat Admin aanpassingen direct werken)
+            try {
+                const snap = await db.child(finalName).once('value');
+                const serverData = snap.val();
+                
+                // Als de database een level heeft, is de database ALTIJD de baas!
+                if (serverData && typeof serverData.level === 'number') {
+                    startingLevel = serverData.level;
+                }
+            } catch (e) {
+                console.warn("Kon Firebase niet bereiken, we gebruiken de lokale save.");
+            }
+
+            // 3. Pas het level toe en overschrijf de oude browser-save met de juiste data
+            window.currentLevel = startingLevel;
             savePersonalProgress();
+
+            // 4. UI herstellen en het spel starten
+            startBtn.innerText = oldText;
+            startBtn.disabled = false;
             startUI.style.display = 'none';
             gameUI.style.display = 'flex';
             updateUI();
