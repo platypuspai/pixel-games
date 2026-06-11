@@ -1392,32 +1392,39 @@ try {
       document.getElementById('online').textContent = `● ${snap.numChildren()} online`;
     });
 
-    billsRef.on('value', snap => {
-      totalBills = snap.val() || 0; 
-    });
-
-    scoresRef.on('value', snap => {
+scoresRef.on('value', snap => {
       scores = {};
+      let berekendTotaal = 0;
+
       snap.forEach(child => {
         const rec = child.val();
         if(rec === null || rec === undefined) return;
         
         if (typeof rec === 'number') {
           scores[child.key] = (scores[child.key] || 0) + rec;
+          berekendTotaal += rec;
           return;
         }
 
         const did   = child.key;
         const name  = rec.name  || 'Onbekend';
         const clicks= rec.clicks|| 0;
+        
         if(did === deviceId){
           myClicks = clicks;
           myName   = rec.name || myName;
           safeSetLS('pg_player_name', myName);
           safeSetLS('md6_n', myName);
         }
+        
         scores[name] = (scores[name]||0) + clicks;
+        berekendTotaal += clicks;
       });
+      
+      if (typeof gameMode !== 'undefined' && gameMode !== 'sp') {
+          totalBills = berekendTotaal;
+      }
+      
       updateScoreboard();
     });
   } else {
@@ -1475,9 +1482,8 @@ document.getElementById('cbtn').addEventListener('click', ()=>{
     return;
   }
 
-  try {
-    if(billsRef && typeof billsRef.transaction === 'function') {
-      billsRef.transaction(v => (v||0)+1);
+try {
+    if(scoresRef && typeof scoresRef.transaction === 'function') {
       
       scoresRef.child(deviceId).transaction(rec => {
         if(!rec || typeof rec !== 'object') rec = { clicks: 0, name: myName };
