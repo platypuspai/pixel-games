@@ -688,7 +688,68 @@
             </div>
         </div>
     </div>
+    <div class="game-card" style="--card-accent: #7CFF5B;">
+    <div class="card-corner tl"></div>
+    <div class="card-corner br"></div>
 
+    <div class="card-preview" style="--preview-bg: #0f1f0f;">
+        <svg width="100" height="100" viewBox="0 0 100 100" style="image-rendering:pixelated;">
+
+            <style>
+                @keyframes zombieSwarm {
+                    0%   { transform: translate(0px,0px); }
+                    25%  { transform: translate(-3px,2px); }
+                    50%  { transform: translate(2px,-3px); }
+                    75%  { transform: translate(-2px,-1px); }
+                    100% { transform: translate(0px,0px); }
+                }
+
+                @keyframes survivorPulse {
+                    0%,100% { transform: scale(1); }
+                    50% { transform: scale(1.1); }
+                }
+            </style>
+
+            <!-- speler -->
+            <g style="animation: survivorPulse 1.2s infinite;">
+                <rect x="45" y="45" width="10" height="10" fill="#ff3333"/>
+            </g>
+
+            <!-- zombies -->
+            <g style="animation: zombieSwarm 2s infinite;">
+                <rect x="20" y="20" width="8" height="8" fill="#7CFF5B"/>
+                <rect x="70" y="18" width="12" height="12" fill="#7CFF5B"/>
+                <rect x="18" y="70" width="10" height="10" fill="#7CFF5B"/>
+                <rect x="72" y="72" width="7" height="7" fill="#7CFF5B"/>
+
+                <rect x="45" y="10" width="6" height="6" fill="#7CFF5B"/>
+                <rect x="10" y="48" width="9" height="9" fill="#7CFF5B"/>
+                <rect x="82" y="48" width="9" height="9" fill="#7CFF5B"/>
+                <rect x="48" y="82" width="11" height="11" fill="#7CFF5B"/>
+            </g>
+        </svg>
+    </div>
+
+    <div class="card-body">
+        <span class="card-tag" style="color:#7CFF5B;">
+            // 08 · survival
+        </span>
+
+        <h2 class="card-title">Mini Apocalypse</h2>
+
+        <p class="card-desc">
+            Survive endless waves of zombies and stay alive as long as possible.
+        </p>
+
+        <div class="card-actions">
+            <a class="btn btn-play"
+               href="mini apocalypse.html"
+               style="background:#7CFF5B; color:#000;">
+                ▶ PLAY
+            </a>
+        </div>
+      </div>
+    </div>
     <div class="game-card" style="--card-accent: #ff8844;">
         <div class="card-corner tl"></div>
         <div class="card-corner br"></div>
