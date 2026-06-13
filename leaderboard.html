@@ -17,7 +17,6 @@
             --accent-green: #00ff88;
             --accent-blue: #4488ff;
             --accent-orange: #ff8844;
-            --accent-pink: #ff44aa;
             --accent-cyan: #00e5ff;
             --accent-yellow: #ffdd00;
             --text: #e8e8ff;
@@ -318,6 +317,98 @@
             display: none;
         }
         .board-foot span { color: var(--accent-yellow); font-weight: 700; }
+
+        .account-section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent-blue);
+            padding: 16px 22px;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .account-label {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.42rem;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+            flex-shrink: 0;
+        }
+        .account-code {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            letter-spacing: 0.15em;
+            flex: 1;
+            word-break: break-all;
+        }
+        .account-btn {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.38rem;
+            padding: 8px 14px;
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            letter-spacing: 0.08em;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .account-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+        /* Import modal */
+        .import-modal {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent-blue);
+            padding: 40px 36px;
+            max-width: 460px;
+            width: 90%;
+        }
+        .import-modal h3 {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.6rem;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+        }
+        .import-modal p { color: var(--text-muted); font-size: 0.8rem; line-height: 1.6; margin-bottom: 22px; }
+        .import-modal input {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'Inconsolata', monospace;
+            font-size: 0.9rem;
+            padding: 12px 14px;
+            outline: none;
+            transition: border-color 0.15s;
+            margin-bottom: 14px;
+            letter-spacing: 0.1em;
+        }
+        .import-modal input:focus { border-color: var(--accent-blue); }
+        .import-btn {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.5rem;
+            padding: 14px 20px;
+            background: var(--accent-blue);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            letter-spacing: 0.1em;
+            transition: filter 0.15s;
+        }
+        .import-btn:hover { filter: brightness(1.1); }
+
+        .board-notice {
+            padding: 8px 18px 14px;
+            font-size: 0.66rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            border-top: 1px solid var(--border);
+        }
     </style>
 </head>
 <body>
@@ -332,14 +423,30 @@
 
 <div class="wrap">
 
-    <!-- Naam balk -->
     <div class="name-bar">
         <span class="name-bar-label">// PLAYER</span>
         <span class="name-bar-value" id="bar-name">—</span>
         <button class="change-btn" onclick="showModal()">CHANGE NAME</button>
     </div>
 
-    <!-- Naam modal -->
+    <div class="account-section">
+        <span class="account-label">// ACCOUNT CODE</span>
+        <span class="account-code" id="account-code">—</span>
+        <button class="account-btn" onclick="copyCode()">COPY</button>
+        <button class="account-btn" onclick="showImportModal()">IMPORT ON OTHER DEVICE</button>
+    </div>
+
+    <div class="modal-overlay hidden" id="import-modal">
+        <div class="import-modal">
+            <h3>// IMPORT ACCOUNT</h3>
+            <p>Enter the 20-character code from your other device to transfer your account here.</p>
+            <input id="import-input" type="text" maxlength="20" placeholder="XXXXXXXXXXXXXXXXXXXX" autocomplete="off" spellcheck="false">
+            <div id="import-error" style="color:#ff4444;font-size:0.75rem;margin-bottom:12px;min-height:1em;"></div>
+            <button class="import-btn" onclick="importAccount()">► IMPORT ACCOUNT</button>
+            <p style="margin-top:14px;font-size:0.7rem;color:var(--text-muted);">Warning: this will replace the account on this device.</p>
+        </div>
+    </div>
+
     <div class="modal-overlay hidden" id="modal">
         <div class="modal">
             <h3>// CHOOSE YOUR NAME</h3>
@@ -349,10 +456,8 @@
         </div>
     </div>
 
-    <!-- Boards -->
     <div class="grid">
 
-        <!-- Money Digger -->
         <div class="board" style="border-top: 2px solid var(--accent-orange);">
             <div class="board-head">
                 <span class="live-dot"></span>
@@ -363,29 +468,16 @@
             <div class="board-foot" id="md-foot"></div>
         </div>
 
-        <!-- Mini Platformer -->
         <div class="board" style="border-top: 2px solid var(--accent-green);">
             <div class="board-head">
                 <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-green)">MINI PLATFORMER</span>
                 <span class="board-meta">best time</span>
             </div>
-            <div class="board-body" id="pf-body"><div class="lb-loading">Connecting</div></div>
+            <div class="board-body" id="pf-body"><div class="lb-loading">Laden</div></div>
             <div class="board-foot" id="pf-foot"></div>
         </div>
 
-        <!-- Dodging Arena -->
-        <div class="board" style="border-top: 2px solid var(--accent-pink);">
-            <div class="board-head">
-                <span class="live-dot"></span>
-                <span class="board-title" style="color:var(--accent-pink)">DODGING ARENA</span>
-                <span class="board-meta">score</span>
-            </div>
-            <div class="board-body" id="da-body"><div class="lb-loading">Connecting</div></div>
-            <div class="board-foot" id="da-foot"></div>
-        </div>
-
-        <!-- Lucky Guy -->
         <div class="board" style="border-top: 2px solid var(--accent-cyan);">
             <div class="board-head">
                 <span class="live-dot"></span>
@@ -410,11 +502,108 @@ for (let i = 0; i < 80; i++) {
     starsEl.appendChild(s);
 }
 
-// ── Naam ──
+// ── Naam & Device ID ──
 const LB_KEY = 'pg_player_name';
+const DEV_KEY = 'pg_device_id';
+
+// Unieke device ID
+function getDeviceId() {
+    let id = localStorage.getItem(DEV_KEY);
+    if (!id) {
+        id = 'lb-' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+        localStorage.setItem(DEV_KEY, id);
+    }
+    return id;
+}
+const MY_DEVICE_ID = getDeviceId();
 
 function getName() { return localStorage.getItem(LB_KEY) || ''; }
 
+// ── Account code ──
+const ACC_KEY = 'pg_account_code';
+function getOrCreateCode() {
+    let code = localStorage.getItem(ACC_KEY);
+    if (!code) {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        code = Array.from({length: 20}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        localStorage.setItem(ACC_KEY, code);
+    }
+    return code;
+}
+const MY_ACCOUNT_CODE = getOrCreateCode();
+
+// Show code in UI
+document.getElementById('account-code').textContent = MY_ACCOUNT_CODE;
+
+function copyCode() {
+    navigator.clipboard.writeText(MY_ACCOUNT_CODE).then(() => {
+        const el = document.getElementById('account-code');
+        el.style.color = 'var(--accent-green)';
+        el.textContent = 'COPIED!';
+        setTimeout(() => { el.style.color = ''; el.textContent = MY_ACCOUNT_CODE; }, 1500);
+    }).catch(() => {
+        prompt('Copy your account code:', MY_ACCOUNT_CODE);
+    });
+}
+
+function showImportModal() {
+    document.getElementById('import-modal').classList.remove('hidden');
+    document.getElementById('import-input').value = '';
+    document.getElementById('import-error').textContent = '';
+    setTimeout(() => document.getElementById('import-input').focus(), 50);
+}
+
+async function importAccount() {
+    const code = document.getElementById('import-input').value.trim().toUpperCase();
+    const errEl = document.getElementById('import-error');
+    if (code.length !== 20) { errEl.textContent = 'Code must be exactly 20 characters.'; return; }
+
+    const btn = document.querySelector('.import-btn');
+    btn.textContent = '⏳ Looking up...';
+    btn.disabled = true;
+    errEl.textContent = '';
+
+    try {
+        const db = fbApp.database();
+        const snap = await db.ref('accountCodes/' + code).once('value');
+        const data = snap.val();
+
+        if (!data || !data.deviceId || !data.name) {
+            errEl.textContent = 'Code not found. Make sure you copied it correctly.';
+            btn.textContent = '► IMPORT ACCOUNT';
+            btn.disabled = false;
+            return;
+        }
+
+        // Transfer local storage
+        localStorage.setItem(DEV_KEY, data.deviceId);
+        localStorage.setItem(LB_KEY, data.name);
+        localStorage.setItem(ACC_KEY, code);
+        localStorage.setItem('md6_n', data.name);
+        localStorage.setItem('pg_player_name', data.name);
+
+        // Register in Firebase
+        await db.ref('nameOwners/' + data.deviceId).set({ name: data.name });
+        await db.ref('accountCodes/' + code).set({ deviceId: data.deviceId, name: data.name });
+
+        document.getElementById('import-modal').classList.add('hidden');
+        document.getElementById('bar-name').textContent = data.name;
+        document.getElementById('account-code').textContent = code;
+        location.reload(); 
+    } catch(e) {
+        errEl.textContent = 'Connection error. Try again.';
+        console.error(e);
+    }
+    btn.textContent = '► IMPORT ACCOUNT';
+    btn.disabled = false;
+}
+
+document.getElementById('import-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+});
+document.getElementById('import-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') importAccount();
+});
 function showModal() {
     document.getElementById('modal').classList.remove('hidden');
     const inp = document.getElementById('name-input');
@@ -422,29 +611,130 @@ function showModal() {
     setTimeout(() => inp.focus(), 50);
 }
 
+// ── Error message helper ──
+function showNameError(msg) {
+    let el = document.getElementById('name-error');
+    if (!el) {
+        el = document.createElement('p');
+        el.id = 'name-error';
+        el.style.cssText = 'color:#ff4444;font-size:0.75rem;margin-bottom:12px;min-height:1em;';
+        const btn = document.querySelector('.modal-btn');
+        btn.parentNode.insertBefore(el, btn);
+    }
+    el.textContent = msg;
+}
+function clearNameError() {
+    const el = document.getElementById('name-error');
+    if (el) el.textContent = '';
+}
+
+// ── Naam opslaan en scores bijwerken als naam verandert ──
 async function confirmName() {
     const val = document.getElementById('name-input').value.trim();
     if (!val) { document.getElementById('name-input').focus(); return; }
+    clearNameError();
 
-    localStorage.setItem(LB_KEY, val);
-    document.getElementById('bar-name').textContent = val;
-    document.getElementById('modal').classList.add('hidden');
-    
-    // Re-render all boards with new name
-    if (window._mdData) render('md-body', 'md-foot', window._mdData, val);
-    if (window._pfData) render('pf-body', 'pf-foot', window._pfData, val);
-    if (window._daData) render('da-body', 'da-foot', window._daData, val);
-    if (window._lgData) render('lg-body', 'lg-foot', window._lgData, val);
+    const oldName = getName();
+    const valLow = val.toLowerCase();
+
+    if (oldName && oldName.toLowerCase() === valLow) {
+        document.getElementById('modal').classList.add('hidden');
+        return;
+    }
+
+    const btn = document.querySelector('.modal-btn');
+    btn.textContent = '⏳ Checking...';
+    btn.disabled = true;
+
+    try {
+        const db = fbApp.database();
+        const nameSnap = await db.ref('nameOwners').once('value');
+        const owners = nameSnap.val() || {};
+
+        const conflict = Object.entries(owners).find(([devId, v]) =>
+            devId !== MY_DEVICE_ID && v.name && v.name.toLowerCase() === valLow
+        );
+        if (conflict) {
+            showNameError('Name already taken. Choose a different name.');
+            btn.textContent = '► CONFIRM NAME';
+            btn.disabled = false;
+            return;
+        }
+
+        await db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: val });
+        await db.ref('accountCodes/' + MY_ACCOUNT_CODE).set({ deviceId: MY_DEVICE_ID, name: val });
+        localStorage.setItem(LB_KEY, val);
+        document.getElementById('bar-name').textContent = val;
+
+        if (oldName && oldName.toLowerCase() !== valLow) {
+            const [mdSnap, lgSnap, pfSnap] = await Promise.all([
+                db.ref('scores').once('value'),
+                db.ref('luckyGuyScores').once('value'),
+                db.ref('platformerScores').once('value'),
+            ]);
+            
+            const lgSave = localStorage.getItem('luckyGuySaveData');
+            if (lgSave) {
+                try {
+                    const d = JSON.parse(lgSave);
+                    if (d.name && d.name.toLowerCase() === oldName.toLowerCase()) {
+                        d.name = val;
+                        localStorage.setItem('luckyGuySaveData', JSON.stringify(d));
+                    }
+                } catch(e) {}
+            }
+            mdSnap.forEach(child => {
+                const rec = child.val();
+                if (rec && rec.name && rec.name.toLowerCase() === oldName.toLowerCase())
+                    db.ref('scores/' + child.key + '/name').set(val).catch(()=>{});
+            });
+            lgSnap.forEach(child => {
+                const rec = child.val();
+                if (rec && rec.name && rec.name.toLowerCase() === oldName.toLowerCase())
+                    db.ref('luckyGuyScores/' + child.key + '/name').set(val).catch(()=>{});
+            });
+            pfSnap.forEach(child => {
+                const rec = child.val();
+                if (rec && rec.name && rec.name.toLowerCase() === oldName.toLowerCase())
+                    db.ref('platformerScores/' + child.key + '/name').set(val).catch(()=>{});
+            });
+        }
+
+        document.getElementById('modal').classList.add('hidden');
+        if (window._mdData) render('md-body', 'md-foot', window._mdData, val);
+        if (window._pfData) render('pf-body', 'pf-foot', window._pfData, val);
+        if (window._lgData) render('lg-body', 'lg-foot', window._lgData, val);
+
+    } catch(e) {
+        showNameError('Connection error. Please try again.');
+        console.error(e);
+    }
+
+    btn.textContent = '► CONFIRM NAME';
+    btn.disabled = false;
 }
 
 document.getElementById('name-input').addEventListener('keydown', e => { if (e.key === 'Enter') confirmName(); });
+document.getElementById('name-input').addEventListener('input', () => clearNameError());
 document.getElementById('modal').addEventListener('click', e => { if (e.target === e.currentTarget && getName()) e.currentTarget.classList.add('hidden'); });
 
-// Init naam
 const initName = getName();
 document.getElementById('bar-name').textContent = initName || '—';
 if (!initName) {
     showModal();
+} else {
+    setTimeout(() => {
+        const db = fbApp.database();
+        Promise.all([
+            db.ref('nameOwners/' + MY_DEVICE_ID).once('value'),
+            db.ref('accountCodes/' + MY_ACCOUNT_CODE).once('value'),
+        ]).then(([ownerSnap, codeSnap]) => {
+            const ownerOk = ownerSnap.val() && ownerSnap.val().name && ownerSnap.val().name.toLowerCase() === initName.toLowerCase();
+            const codeOk  = codeSnap.val() && codeSnap.val().deviceId === MY_DEVICE_ID;
+            if (!ownerOk) db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: initName }).catch(()=>{});
+            if (!codeOk)  db.ref('accountCodes/' + MY_ACCOUNT_CODE).set({ deviceId: MY_DEVICE_ID, name: initName }).catch(()=>{});
+        });
+    }, 2000);
 }
 
 // ── Helpers ──
@@ -476,7 +766,7 @@ function render(bodyId, footId, rows, me) {
     body.innerHTML = html;
     if (foot) {
         if (me && pos >= 0) {
-            foot.innerHTML = `Your rank: <span>#${pos+1}</span> · ${esc(rows[pos].score)}`;
+            foot.innerHTML = `Jouw rang: <span>#${pos+1}</span> · ${esc(rows[pos].score)}`;
             foot.style.display = '';
         } else if (me) {
             foot.innerHTML = 'You are not in this ranking yet.';
@@ -517,23 +807,28 @@ let mdOff = null;
     
     function onVal(snap) {
         const rows = [];
-        let totalSum = 0;
+        let totalBillsSum = 0; 
+        
         snap.forEach(child => {
             const d = child.val();
             if (!d) return;
             const c = d.clicks || 0;
-            totalSum += c;
+            totalBillsSum += c; 
+            
             rows.push({ name: d.name || child.key, score: formatNum(c), v: c });
         });
+        
         rows.sort((a,b) => b.v - a.v);
         const cleaned = rows.map(r => ({ name: r.name, score: r.score }));
         window._mdData = cleaned;
         render('md-body', 'md-foot', cleaned, getName());
+        
         if (foot) {
             foot.style.display = 'block';
-            foot.innerHTML = `TOTAL: <span style="color: var(--accent-orange);">${formatNum(totalSum)}</span>`;
+            foot.innerHTML = `TOTALE GELDSTAPEL: <span style="color: var(--accent-orange);">${formatNum(totalBillsSum)}</span>`;
         }
     }
+    
     ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
     mdOff = () => ref.off('value', onVal);
 })();
@@ -550,7 +845,7 @@ let pfOff = null;
     if (pfOff) { pfOff(); pfOff = null; }
     const ref = fbApp.database().ref('platformerScores');
     function onVal(snap) {
-        const byName = {};
+        const byName = {}; 
         snap.forEach(child => {
             const d = child.val();
             if (!d || !d.name || d.time == null) return;
@@ -565,29 +860,6 @@ let pfOff = null;
     }
     ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
     pfOff = () => ref.off('value', onVal);
-})();
-
-// Dodging Arena
-let daOff = null;
-(function loadDA() {
-    const body = document.getElementById('da-body');
-    body.innerHTML = '<div class="lb-loading">Connecting</div>';
-    if (daOff) { daOff(); daOff = null; }
-    const ref = fbApp.database().ref('dodgingArenaScores');
-    function onVal(snap) {
-        const rows = [];
-        snap.forEach(child => {
-            const d = child.val();
-            if (!d) return;
-            rows.push({ name: d.name || child.key, score: formatNum(d.score || 0), v: d.score || 0 });
-        });
-        rows.sort((a,b) => b.v - a.v);
-        const cleaned = rows.map(r => ({ name: r.name, score: r.score }));
-        window._daData = cleaned;
-        render('da-body', 'da-foot', cleaned, getName());
-    }
-    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
-    daOff = () => ref.off('value', onVal);
 })();
 
 // Lucky Guy
@@ -613,6 +885,5 @@ let lgOff = null;
     lgOff = () => ref.off('value', onVal);
 })();
 </script>
-
 </body>
 </html>
