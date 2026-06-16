@@ -17,6 +17,7 @@
             --accent-green: #00ff88;
             --accent-blue: #4488ff;
             --accent-orange: #ff8844;
+            --accent-pink: #ff44aa;
             --accent-cyan: #00e5ff;
             --accent-yellow: #ffdd00;
             --text: #e8e8ff;
@@ -121,7 +122,7 @@
         .wrap {
             position: relative;
             z-index: 10;
-            max-width: 980px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 40px 24px 80px;
         }
@@ -219,9 +220,18 @@
         /* ── BOARDS GRID ── */
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            /* Maximaal 3 kolommen (borden) per rij */
+            grid-template-columns: repeat(3, 1fr);
             gap: 24px;
             align-items: start;
+        }
+        
+        /* Zorg dat het er op kleinere schermen ook goed uit blijft zien */
+        @media (max-width: 980px) {
+            .grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 650px) {
+            .grid { grid-template-columns: 1fr; }
         }
 
         .board {
@@ -255,7 +265,8 @@
         .board-meta { font-size: 0.62rem; color: var(--text-muted); white-space: nowrap; }
 
         .board-body {
-            max-height: 420px;
+            /* 580px is genoeg hoogte om ongeveer 15 rijen (spelers) direct te tonen */
+            max-height: 580px; 
             overflow-y: auto;
             scrollbar-width: thin;
             scrollbar-color: var(--border) transparent;
@@ -401,14 +412,6 @@
             transition: filter 0.15s;
         }
         .import-btn:hover { filter: brightness(1.1); }
-
-        .board-notice {
-            padding: 8px 18px 14px;
-            font-size: 0.66rem;
-            color: var(--text-muted);
-            line-height: 1.6;
-            border-top: 1px solid var(--border);
-        }
     </style>
 </head>
 <body>
@@ -488,6 +491,16 @@
             <div class="board-foot" id="lg-foot"></div>
         </div>
 
+        <div class="board" style="border-top: 2px solid var(--accent-pink);">
+            <div class="board-head">
+                <span class="live-dot"></span>
+                <span class="board-title" style="color:var(--accent-pink)">MINI APOCALYPSE</span>
+                <span class="board-meta">score</span>
+            </div>
+            <div class="board-body" id="ma-body"><div class="lb-loading">Connecting</div></div>
+            <div class="board-foot" id="ma-foot"></div>
+        </div>
+
     </div>
 </div>
 
@@ -506,7 +519,6 @@ for (let i = 0; i < 80; i++) {
 const LB_KEY = 'pg_player_name';
 const DEV_KEY = 'pg_device_id';
 
-// Unieke device ID
 function getDeviceId() {
     let id = localStorage.getItem(DEV_KEY);
     if (!id) {
@@ -532,7 +544,6 @@ function getOrCreateCode() {
 }
 const MY_ACCOUNT_CODE = getOrCreateCode();
 
-// Show code in UI
 document.getElementById('account-code').textContent = MY_ACCOUNT_CODE;
 
 function copyCode() {
@@ -575,14 +586,12 @@ async function importAccount() {
             return;
         }
 
-        // Transfer local storage
         localStorage.setItem(DEV_KEY, data.deviceId);
         localStorage.setItem(LB_KEY, data.name);
         localStorage.setItem(ACC_KEY, code);
         localStorage.setItem('md6_n', data.name);
         localStorage.setItem('pg_player_name', data.name);
 
-        // Register in Firebase
         await db.ref('nameOwners/' + data.deviceId).set({ name: data.name });
         await db.ref('accountCodes/' + code).set({ deviceId: data.deviceId, name: data.name });
 
@@ -611,7 +620,6 @@ function showModal() {
     setTimeout(() => inp.focus(), 50);
 }
 
-// ── Error message helper ──
 function showNameError(msg) {
     let el = document.getElementById('name-error');
     if (!el) {
@@ -628,7 +636,6 @@ function clearNameError() {
     if (el) el.textContent = '';
 }
 
-// ── Naam opslaan en scores bijwerken als naam verandert ──
 async function confirmName() {
     const val = document.getElementById('name-input').value.trim();
     if (!val) { document.getElementById('name-input').focus(); return; }
@@ -667,10 +674,11 @@ async function confirmName() {
         document.getElementById('bar-name').textContent = val;
 
         if (oldName && oldName.toLowerCase() !== valLow) {
-            const [mdSnap, lgSnap, pfSnap] = await Promise.all([
+            const [mdSnap, lgSnap, pfSnap, maSnap] = await Promise.all([
                 db.ref('scores').once('value'),
                 db.ref('luckyGuyScores').once('value'),
                 db.ref('platformerScores').once('value'),
+                db.ref('miniApocalypseScores').once('value'),
             ]);
             
             const lgSave = localStorage.getItem('luckyGuySaveData');
@@ -698,12 +706,18 @@ async function confirmName() {
                 if (rec && rec.name && rec.name.toLowerCase() === oldName.toLowerCase())
                     db.ref('platformerScores/' + child.key + '/name').set(val).catch(()=>{});
             });
+            maSnap.forEach(child => {
+                const rec = child.val();
+                if (rec && rec.name && rec.name.toLowerCase() === oldName.toLowerCase())
+                    db.ref('miniApocalypseScores/' + child.key + '/name').set(val).catch(()=>{});
+            });
         }
 
         document.getElementById('modal').classList.add('hidden');
         if (window._mdData) render('md-body', 'md-foot', window._mdData, val);
         if (window._pfData) render('pf-body', 'pf-foot', window._pfData, val);
         if (window._lgData) render('lg-body', 'lg-foot', window._lgData, val);
+        if (window._maData) render('ma-body', 'ma-foot', window._maData, val);
 
     } catch(e) {
         showNameError('Connection error. Please try again.');
@@ -833,7 +847,7 @@ let mdOff = null;
     mdOff = () => ref.off('value', onVal);
 })();
 
-// Mini Platformer (Firebase)
+// Mini Platformer
 function ts(ms) {
     const s = Math.floor(ms/1000), m = Math.floor(s/60), t = Math.floor((ms%1000)/100);
     return m > 0 ? m+'m '+(s%60)+'.'+t+'s' : s+'.'+t+'s';
@@ -883,6 +897,29 @@ let lgOff = null;
     }
     ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
     lgOff = () => ref.off('value', onVal);
+})();
+
+// Mini Apocalypse
+let maOff = null;
+(function loadMA() {
+    const body = document.getElementById('ma-body');
+    body.innerHTML = '<div class="lb-loading">Connecting</div>';
+    if (maOff) { maOff(); maOff = null; }
+    const ref = fbApp.database().ref('miniApocalypseScores');
+    function onVal(snap) {
+        const rows = [];
+        snap.forEach(child => {
+            const d = child.val();
+            if (!d) return;
+            rows.push({ name: d.name || child.key, score: formatNum(d.score || 0), v: d.score || 0 });
+        });
+        rows.sort((a,b) => b.v - a.v); 
+        const cleaned = rows.map(r => ({ name: r.name, score: r.score }));
+        window._maData = cleaned;
+        render('ma-body', 'ma-foot', cleaned, getName());
+    }
+    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
+    maOff = () => ref.off('value', onVal);
 })();
 </script>
 </body>
