@@ -382,6 +382,79 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
       }
     };
     run().catch(handleError);
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+  // 1. Verbinden met jouw database
+  const FB_CFG = {
+      apiKey: 'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',
+      databaseURL: 'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app',
+      projectId: 'money-digger-9b05e'
+  };
+  if (!firebase.apps.length) {
+      firebase.initializeApp(FB_CFG);
+  }
+  const db = firebase.database().ref('miniApocalypseScores');
+  const playerName = localStorage.getItem('pg_player_name');
+
+  // 2. Hack-functie om in de TurboWarp/Scratch engine te kijken
+  function getScratchVar(varName) {
+      if(!window.scaffolding || !window.scaffolding.vm) return null;
+      const targets = window.scaffolding.vm.runtime.targets;
+      for(let i = 0; i < targets.length; i++) {
+          let vars = targets[i].variables;
+          for(let id in vars) {
+              if(vars[id].name.toLowerCase() === varName.toLowerCase()) {
+                  return vars[id].value;
+              }
+          }
+      }
+      return null;
+  }
+
+  // 3. Elke 2 seconden de score uitlezen en doorsturen
+  let myBestSavedScore = -1;
+
+  if (playerName) {
+      setInterval(() => {
+          
+          // ⚠️ BELANGRIJK: Zorg dat het woord hieronder exact overeenkomt 
+          // met de naam van de variabele in jouw Scratch code!
+          let val = getScratchVar('Record'); 
+          if (val === null) val = getScratchVar('punten'); // Fallback voor 'punten'
+          
+          let currentScore = val;
+          
+          if (currentScore !== null && !isNaN(currentScore)) {
+              currentScore = parseInt(currentScore, 10);
+              
+              // Alleen doorsturen als je een nieuw persoonlijk record hebt tijdens het spelen
+              if (currentScore > myBestSavedScore && currentScore > 0) {
+                  myBestSavedScore = currentScore;
+                  
+                  // Check in de cloud of het ook echt een all-time highscore is
+                  db.orderByChild('name').equalTo(playerName).once('value').then(snap => {
+                      let keyToUpdate = null;
+                      let dbScore = -1;
+                      
+                      snap.forEach(child => {
+                          keyToUpdate = child.key;
+                          dbScore = child.val().score;
+                      });
+
+                      if (currentScore > dbScore) {
+                          if (keyToUpdate) {
+                              db.child(keyToUpdate).update({ score: currentScore });
+                          } else {
+                              db.push({ name: playerName, score: currentScore });
+                          }
+                      }
+                  });
+              }
+          }
+      }, 2000);
+  }
+</script>
   </script>
 </body>
 </html>
