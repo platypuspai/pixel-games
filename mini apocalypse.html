@@ -385,7 +385,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
   </script>
 </body>
 </html>
-
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
@@ -401,7 +400,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     let playerName = localStorage.getItem('pg_player_name');
     if (playerName === "null") playerName = null;
 
-    // KOGELVRIJE ZOEKFUNCTIE
+    // 1. Functie om de Scratch variabele UIT te lezen
     function getScratchVar(varName) {
         try {
             let targetVm = null;
@@ -418,11 +417,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
                 let vars = targets[i].variables;
                 for(let id in vars) {
                     let currentName = vars[id].name.toLowerCase();
-                    // Zoekt of de naam voorkomt (negeert wolkjes of spaties)
                     if(currentName.includes(varName.toLowerCase())) {
                         let val = parseFloat(vars[id].value);
                         if (!isNaN(val)) {
-                            // Als we meerdere variabelen vinden, pak áltijd de hoogste
                             if (highestValue === null || val > highestValue) {
                                 highestValue = val;
                             }
@@ -435,12 +432,49 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
         return null;
     }
 
+    // 2. NIEUW: Functie om de Scratch variabele IN DE GAME aan te passen
+    function setScratchVar(varName, newValue) {
+        try {
+            let targetVm = null;
+            if (typeof scaffolding !== 'undefined' && scaffolding.vm) targetVm = scaffolding.vm;
+            else if (window.scaffolding && window.scaffolding.vm) targetVm = window.scaffolding.vm;
+            else if (window.vm) targetVm = window.vm;
+
+            if (!targetVm) return;
+
+            const targets = targetVm.runtime.targets;
+            for(let i = 0; i < targets.length; i++) {
+                let vars = targets[i].variables;
+                for(let id in vars) {
+                    let currentName = vars[id].name.toLowerCase();
+                    if(currentName.includes(varName.toLowerCase())) {
+                        // Pas de waarde in de Scratch/TurboWarp motor aan!
+                        vars[id].value = newValue;
+                    }
+                }
+            }
+        } catch(e) {}
+    }
+
     let myBestSavedScore = -1;
 
     if (playerName) {
+        
+        // 3. NIEUW: LIVE LUISTEREN NAAR ADMIN WIJZIGINGEN
+        // Als jij de score verandert in het admin paneel, vangt dit stukje dat direct op
+        db.orderByChild('name').equalTo(playerName).on('value', snap => {
+            snap.forEach(child => {
+                let dbScore = parseInt(child.val().score, 10);
+                if (!isNaN(dbScore)) {
+                    myBestSavedScore = dbScore; // Zorg dat de game het niet meteen weer terugstuurt
+                    setScratchVar('Record', dbScore); // Verander 'Record' op het scherm van de speler!
+                }
+            });
+        });
+
+        // 4. SCORE CONTROLE (Elke 3 seconden)
         setInterval(() => {
             try {
-                // VUL HIER JOUW WOORD IN (Nu zoekt hij slim naar alles wat op 'Record' lijkt)
                 let currentScore = getScratchVar('Record'); 
                 
                 if (currentScore !== null && currentScore > myBestSavedScore && currentScore > 0) {
