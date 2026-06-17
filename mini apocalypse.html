@@ -385,6 +385,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
   </script>
 </body>
 </html>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
@@ -397,7 +398,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     if (!firebase.apps.length) firebase.initializeApp(FB_CFG);
     const db = firebase.database().ref('miniApocalypseScores');
     
-    // Check of de speler een naam heeft ingesteld (en repareer de "null" fout)
     let playerName = localStorage.getItem('pg_player_name');
     if (playerName === "null") playerName = null;
 
@@ -425,17 +425,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
     let myBestSavedScore = -1;
 
-    // Alleen uitvoeren als de speler een echte naam heeft
     if (playerName) {
         setInterval(() => {
             try {
-                // HIER LEZEN WE NU JOUW 'score' VARIABELE UIT!
-                let val = getScratchVar('score'); 
+                // HIER ZOEKT HIJ NU NAAR 'Record' (Gevonden via je screenshot!)
+                let val = getScratchVar('Record'); 
                 
                 if (val !== null && !isNaN(val)) {
                     let currentScore = parseInt(val, 10);
                     
-                    // Is je score hoger dan 0 en beter dan wat dit script heeft gezien?
                     if (currentScore > myBestSavedScore && currentScore > 0) {
                         myBestSavedScore = currentScore;
                         
@@ -448,7 +446,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
                                 dbScore = child.val().score;
                             });
 
-                            // Stuur alleen naar database als je het oude record hebt verbroken
                             if (currentScore > dbScore) {
                                 if (keyToUpdate) {
                                     db.child(keyToUpdate).update({ score: currentScore });
@@ -460,50 +457,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
                     }
                 }
             } catch(err) {} 
-        }, 3000); // Kijkt elke 3 seconden naar je score
-    } else {
-        console.warn("Mini Apocalypse: Speler heeft nog geen naam ingesteld via het leaderboard!");
+        }, 3000); 
     }
   } catch (e) {}
-</script>
-
-
-
-
-
-<script>
-  try {
-    // Maak een groen hacker-schermpje rechtsboven in beeld
-    const debugBox = document.createElement('div');
-    debugBox.style.cssText = 'position:fixed; top:10px; right:10px; background:rgba(0,0,0,0.85); color:#00ff88; padding:15px; font-family:monospace; font-size:14px; z-index:99999; border:2px solid #00ff88; pointer-events:none; border-radius:5px;';
-    document.body.appendChild(debugBox);
-
-    setInterval(() => {
-        try {
-            let targetVm = null;
-            if (typeof scaffolding !== 'undefined' && scaffolding.vm) targetVm = scaffolding.vm;
-            else if (window.scaffolding && window.scaffolding.vm) targetVm = window.scaffolding.vm;
-            else if (window.vm) targetVm = window.vm;
-
-            if (!targetVm) {
-                debugBox.innerHTML = 'Game motor zoeken...';
-                return;
-            }
-
-            let html = '<strong style="color:white;">🕵️ JOUW VARIABELEN:</strong><br><hr style="border-color:#00ff88; margin:5px 0;">';
-            const targets = targetVm.runtime.targets;
-            
-            for(let i = 0; i < targets.length; i++) {
-                let vars = targets[i].variables;
-                for(let id in vars) {
-                    // Filter lijsten eruit, we willen alleen normale variabelen zien
-                    if(vars[id].type === '' || !vars[id].type) {
-                        html += `<b>${vars[id].name}</b> = <span style="color:white;">${vars[id].value}</span><br>`;
-                    }
-                }
-            }
-            debugBox.innerHTML = html;
-        } catch(e) {}
-    }, 500); // Update het schermpje elke halve seconde (500ms)
-  } catch(err) {}
 </script>
