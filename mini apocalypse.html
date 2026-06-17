@@ -466,3 +466,44 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     }
   } catch (e) {}
 </script>
+
+
+
+
+
+<script>
+  try {
+    // Maak een groen hacker-schermpje rechtsboven in beeld
+    const debugBox = document.createElement('div');
+    debugBox.style.cssText = 'position:fixed; top:10px; right:10px; background:rgba(0,0,0,0.85); color:#00ff88; padding:15px; font-family:monospace; font-size:14px; z-index:99999; border:2px solid #00ff88; pointer-events:none; border-radius:5px;';
+    document.body.appendChild(debugBox);
+
+    setInterval(() => {
+        try {
+            let targetVm = null;
+            if (typeof scaffolding !== 'undefined' && scaffolding.vm) targetVm = scaffolding.vm;
+            else if (window.scaffolding && window.scaffolding.vm) targetVm = window.scaffolding.vm;
+            else if (window.vm) targetVm = window.vm;
+
+            if (!targetVm) {
+                debugBox.innerHTML = 'Game motor zoeken...';
+                return;
+            }
+
+            let html = '<strong style="color:white;">🕵️ JOUW VARIABELEN:</strong><br><hr style="border-color:#00ff88; margin:5px 0;">';
+            const targets = targetVm.runtime.targets;
+            
+            for(let i = 0; i < targets.length; i++) {
+                let vars = targets[i].variables;
+                for(let id in vars) {
+                    // Filter lijsten eruit, we willen alleen normale variabelen zien
+                    if(vars[id].type === '' || !vars[id].type) {
+                        html += `<b>${vars[id].name}</b> = <span style="color:white;">${vars[id].value}</span><br>`;
+                    }
+                }
+            }
+            debugBox.innerHTML = html;
+        } catch(e) {}
+    }, 500); // Update het schermpje elke halve seconde (500ms)
+  } catch(err) {}
+</script>
