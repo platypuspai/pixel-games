@@ -401,6 +401,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     let playerName = localStorage.getItem('pg_player_name');
     if (playerName === "null") playerName = null;
 
+    // KOGELVRIJE ZOEKFUNCTIE
     function getScratchVar(varName) {
         try {
             let targetVm = null;
@@ -410,15 +411,26 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
             if (!targetVm) return null;
 
+            let highestValue = null;
             const targets = targetVm.runtime.targets;
+            
             for(let i = 0; i < targets.length; i++) {
                 let vars = targets[i].variables;
                 for(let id in vars) {
-                    if(vars[id].name.toLowerCase() === varName.toLowerCase()) {
-                        return vars[id].value;
+                    let currentName = vars[id].name.toLowerCase();
+                    // Zoekt of de naam voorkomt (negeert wolkjes of spaties)
+                    if(currentName.includes(varName.toLowerCase())) {
+                        let val = parseFloat(vars[id].value);
+                        if (!isNaN(val)) {
+                            // Als we meerdere variabelen vinden, pak áltijd de hoogste
+                            if (highestValue === null || val > highestValue) {
+                                highestValue = val;
+                            }
+                        }
                     }
                 }
             }
+            return highestValue;
         } catch(e) {}
         return null;
     }
@@ -428,33 +440,29 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     if (playerName) {
         setInterval(() => {
             try {
-                // HIER ZOEKT HIJ NU NAAR 'Record' (Gevonden via je screenshot!)
-                let val = getScratchVar('Record'); 
+                // VUL HIER JOUW WOORD IN (Nu zoekt hij slim naar alles wat op 'Record' lijkt)
+                let currentScore = getScratchVar('Record'); 
                 
-                if (val !== null && !isNaN(val)) {
-                    let currentScore = parseInt(val, 10);
+                if (currentScore !== null && currentScore > myBestSavedScore && currentScore > 0) {
+                    myBestSavedScore = currentScore;
                     
-                    if (currentScore > myBestSavedScore && currentScore > 0) {
-                        myBestSavedScore = currentScore;
+                    db.orderByChild('name').equalTo(playerName).once('value').then(snap => {
+                        let keyToUpdate = null;
+                        let dbScore = -1;
                         
-                        db.orderByChild('name').equalTo(playerName).once('value').then(snap => {
-                            let keyToUpdate = null;
-                            let dbScore = -1;
-                            
-                            snap.forEach(child => {
-                                keyToUpdate = child.key;
-                                dbScore = child.val().score;
-                            });
+                        snap.forEach(child => {
+                            keyToUpdate = child.key;
+                            dbScore = child.val().score;
+                        });
 
-                            if (currentScore > dbScore) {
-                                if (keyToUpdate) {
-                                    db.child(keyToUpdate).update({ score: currentScore });
-                                } else {
-                                    db.push({ name: playerName, score: currentScore });
-                                }
+                        if (currentScore > dbScore) {
+                            if (keyToUpdate) {
+                                db.child(keyToUpdate).update({ score: currentScore });
+                            } else {
+                                db.push({ name: playerName, score: currentScore });
                             }
-                        }).catch(()=>{});
-                    }
+                        }
+                    }).catch(()=>{});
                 }
             } catch(err) {} 
         }, 3000); 
