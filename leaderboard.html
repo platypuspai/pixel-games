@@ -11,10 +11,11 @@
     <style>
         :root {
             --bg: #0a0a0f; --surface: #12121a; --card: #1a1a28; --border: #2a2a42;
-            --accent-green: #00ff88; --accent-blue: #4488ff; --accent-orange: #ff8844;
-            --accent-pink: #ff44aa; --accent-cyan: #00e5ff; --accent-yellow: #ffdd00;
-            --accent-red: #ff4444; /* Nieuwe rode kleur voor Bug Escape */
+            --accent-orange: #ff8844; --accent-green: #00ff88; --accent-cyan: #00e5ff;
+            --accent-pink: #ff44aa; --accent-red: #ff4444; --accent-yellow: #ffdd00;
+            --accent-indigo: #6e44ff; /* Kleur voor Dodging Arena */
             --text: #e8e8ff; --text-muted: #7777aa;
+            --accent-blue: #4488ff;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -61,7 +62,7 @@
         @media (max-width: 980px) { .grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 650px) { .grid { grid-template-columns: 1fr; } }
 
-        .board { background: var(--card); border: 1px solid var(--border); border-radius: 2px; }
+        .board { background: var(--card); border: 1px solid var(--border); border-radius: 2px; margin-bottom: 10px; }
         .board-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
         .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green); animation: pulse 1.5s ease-in-out infinite; flex-shrink: 0; }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
@@ -188,6 +189,16 @@
             </div>
             <div class="board-body" id="be-body"><div class="lb-loading">Connecting</div></div>
             <div class="board-foot" id="be-foot"></div>
+        </div>
+
+        <div class="board" style="border-top: 2px solid var(--accent-indigo);">
+            <div class="board-head">
+                <span class="live-dot"></span>
+                <span class="board-title" style="color:var(--accent-indigo)">DODGING ARENA</span>
+                <span class="board-meta">score</span>
+            </div>
+            <div class="board-body" id="da-body"><div class="lb-loading">Connecting</div></div>
+            <div class="board-foot" id="da-foot"></div>
         </div>
 
     </div>
@@ -317,12 +328,13 @@ async function confirmName() {
         document.getElementById('bar-name').textContent = val;
 
         if (oldName && oldName.toLowerCase() !== valLow) {
-            const [mdSnap, lgSnap, pfSnap, maSnap, beSnap] = await Promise.all([
+            const [mdSnap, lgSnap, pfSnap, maSnap, beSnap, daSnap] = await Promise.all([
                 db.ref('scores').once('value'),
                 db.ref('luckyGuyScores').once('value'),
                 db.ref('platformerScores').once('value'),
                 db.ref('miniApocalypseScores').once('value'),
-                db.ref('bugEscapeScores').once('value')
+                db.ref('bugEscapeScores').once('value'),
+                db.ref('dodgingArenaScores').once('value')
             ]);
             
             const lgSave = localStorage.getItem('luckyGuySaveData');
@@ -334,6 +346,7 @@ async function confirmName() {
             pfSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('platformerScores/' + child.key + '/name').set(val).catch(()=>{}); });
             maSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('miniApocalypseScores/' + child.key + '/name').set(val).catch(()=>{}); });
             beSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('bugEscapeScores/' + child.key + '/name').set(val).catch(()=>{}); });
+            daSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('dodgingArenaScores/' + child.key + '/name').set(val).catch(()=>{}); });
         }
 
         document.getElementById('modal').classList.add('hidden');
@@ -342,6 +355,7 @@ async function confirmName() {
         if (window._lgData) render('lg-body', 'lg-foot', window._lgData, val);
         if (window._maData) render('ma-body', 'ma-foot', window._maData, val);
         if (window._beData) render('be-body', 'be-foot', window._beData, val);
+        if (window._daData) render('da-body', 'da-foot', window._daData, val);
 
     } catch(e) { showNameError('Connection error. Please try again.'); console.error(e); }
 
@@ -481,9 +495,7 @@ let maOff = null;
 // Bug Escape
 let beOff = null;
 (function loadBE() {
-    const body = document.getElementById('be-body');
-    const foot = document.getElementById('be-foot');
-    body.innerHTML = '<div class="lb-loading">Connecting</div>';
+    const body = document.getElementById('be-body'); body.innerHTML = '<div class="lb-loading">Connecting</div>';
     if (beOff) { beOff(); beOff = null; }
     const ref = fbApp.database().ref('bugEscapeScores');
     function onVal(snap) {
@@ -493,6 +505,22 @@ let beOff = null;
     }
     ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
     beOff = () => ref.off('value', onVal);
+})();
+
+// Dodging Arena (NIEUW!)
+let daOff = null;
+(function loadDA() {
+    const body = document.getElementById('da-body'); const foot = document.getElementById('da-foot');
+    body.innerHTML = '<div class="lb-loading">Connecting</div>';
+    if (daOff) { daOff(); daOff = null; }
+    const ref = fbApp.database().ref('dodgingArenaScores');
+    function onVal(snap) {
+        const rows = [];
+        snap.forEach(child => { const d = child.val(); if (!d) return; rows.push({ name: d.name || child.key, score: formatNum(d.score || 0), v: d.score || 0 }); });
+        rows.sort((a,b) => b.v - a.v); const cleaned = rows.map(r => ({ name: r.name, score: r.score })); window._daData = cleaned; render('da-body', 'da-foot', cleaned, getName());
+    }
+    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
+    daOff = () => ref.off('value', onVal);
 })();
 </script>
 </body>
