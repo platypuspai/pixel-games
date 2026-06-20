@@ -253,7 +253,7 @@ function showImportModal() {
     setTimeout(() => document.getElementById('import-input').focus(), 50);
 }
 
-// 🔥 DE VERNIEUWDE, VEILIGE IMPORT FUNCTIE (MET MONEY DIGGER FIX) 🔥
+// 🔥 DE VERNIEUWDE, VEILIGE IMPORT FUNCTIE (MET PERFECTE MONEY DIGGER FIX) 🔥
 async function importAccount() {
     const code = document.getElementById('import-input').value.trim().toUpperCase();
     const errEl = document.getElementById('import-error');
@@ -271,6 +271,25 @@ async function importAccount() {
 
         const cleanName = data.name.trim();
 
+        // 🚀 NIEUW: Haal eerst alle data op (vooral voor de slimme Money Digger check)
+        const [mdSnap, lgSnap, pfSnap, maSnap, beSnap, daSnap] = await Promise.all([
+            db.ref('scores').once('value'),
+            db.ref('luckyGuyScores').once('value'),
+            db.ref('platformerScores').once('value'),
+            db.ref('miniApocalypseScores').once('value'),
+            db.ref('bugEscapeScores').once('value'),
+            db.ref('dodgingArenaScores').once('value')
+        ]);
+
+        // 🚀 NIEUW: Zoek de ECHTE Money Digger ID op basis van de naam in de cloud!
+        let trueMdDeviceId = data.deviceId; 
+        mdSnap.forEach(child => {
+            let n = child.val()?.name;
+            if (n && n.trim().toLowerCase() === cleanName.toLowerCase()) {
+                trueMdDeviceId = child.key; // Gevonden! We stelen de originele 'dev-...' sleutel
+            }
+        });
+
         // 🔥 DE GROTE SCHOONMAAK
         localStorage.clear();
 
@@ -280,24 +299,15 @@ async function importAccount() {
         localStorage.setItem(ACC_KEY, code);
         localStorage.setItem('pg_player_name', cleanName);
         
-        // 🚀 DE MONEY DIGGER FIX 🚀
-        // We vertellen Money Digger exact welk apparaat-ID hij moet overnemen
-        localStorage.setItem('md6_device_id', data.deviceId);
+        // 🚀 DE ECHTE MONEY DIGGER FIX 🚀
+        // Zet de correcte sleutel in md6_did (en NIET md6_device_id!)
+        localStorage.setItem('md6_did', trueMdDeviceId);
         localStorage.setItem('md6_n', cleanName);
 
         await db.ref('nameOwners/' + data.deviceId).set({ name: cleanName });
         await db.ref('accountCodes/' + code).set({ deviceId: data.deviceId, name: cleanName });
 
         // AUTO-FIX: We dwingen de database om eventuele foutjes gelijk te trekken
-        const [mdSnap, lgSnap, pfSnap, maSnap, beSnap, daSnap] = await Promise.all([
-            db.ref('scores').once('value'),
-            db.ref('luckyGuyScores').once('value'),
-            db.ref('platformerScores').once('value'),
-            db.ref('miniApocalypseScores').once('value'),
-            db.ref('bugEscapeScores').once('value'),
-            db.ref('dodgingArenaScores').once('value')
-        ]);
-        
         const fixNameInDB = (dbSnap, path) => {
             dbSnap.forEach(child => {
                 let n = child.val()?.name;
