@@ -423,28 +423,79 @@ window.startGame = async function() {
             }
         }
 
-async function saveScoreToFirebase(levelReached) {
-            try {
-                // Eerst zoeken we of de speler al bestaat in de database
-                const snap = await db.orderByChild('name').equalTo(window.currentPlayerName).once('value');
-                
-                if (snap.exists()) {
-                    // Speler bestaat al, we updaten de bestaande score
-                    snap.forEach(child => {
-                        const existing = child.val();
-                        if (levelReached > (existing.level || 0)) {
-                            child.ref.update({ level: levelReached });
-                        }
-                    });
-                } else {
-                    // Speler bestaat nog niet op het leaderboard, we maken een nieuw record aan
-                    await db.push({ name: window.currentPlayerName, level: levelReached });
-                }
-            } catch (e) {
-                console.error("Error saving score: ", e);
-            }
-        }
+// ============================================================================
+// VERVANG ALLES VANAF HIER TOT EN MET DE ONDERKANT VAN JE BESTAND (</html>)
+// ============================================================================
 
-    </script>
+    // --- COGNITO / FIREBASE SETUP ---
+    const FB_CFG = {
+        apiKey: 'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',
+        databaseURL: 'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app',
+        projectId: 'money-digger-9b05e'
+    };
+    if (!firebase.apps.length) firebase.initializeApp(FB_CFG);
+    const lg_db = firebase.database().ref('luckyGuyScores');
+
+    // --- GEBRUIKER IDENTIFICATIE & LIVE 2-WAY SYNC ---
+    let playerName = localStorage.getItem('pg_player_name');
+    let myBestSavedScore = -1;
+
+    if (playerName && playerName !== "null") {
+        // LIVE LUISTEREN: Als de admin het leaderboard aanpast, verandert de game LIVE mee!
+        lg_db.orderByChild('name').equalTo(playerName).on('value', snap => {
+            snap.forEach(child => {
+                let dbScore = parseInt(child.val().level, 10);
+                if (!isNaN(dbScore)) {
+                    myBestSavedScore = dbScore; // Zorg dat het spel het niet meteen weer overschrijft
+                    
+                    // Synchroniseer met alle mogelijke lokale opslagplekken van Lucky Guy
+                    localStorage.setItem('luckyGuyHighscore', dbScore);
+                    localStorage.setItem('luckyGuy_highScore', dbScore);
+                    localStorage.setItem('luckyGuyBestLevel', dbScore);
+                    
+                    // Mocht het spel een globale variabele gebruiken, pas die ook aan:
+                    if (window.highScore !== undefined) window.highScore = dbScore;
+                    if (window.highestLevel !== undefined) window.highestLevel = dbScore;
+                    
+                    // Ververs direct live het scherm van de speler!
+                    if (typeof updateUI === 'function') {
+                        try { updateUI(); } catch(e) {}
+                    }
+                }
+            });
+        });
+    }
+
+    // --- SCORE OPSLAAN BIJ GEWONNEN LEVEL ---
+    async function saveScoreToFirebase(levelReached) {
+        let currentName = localStorage.getItem('pg_player_name');
+        if (!currentName || currentName === "null") return; 
+
+        try {
+            const snap = await lg_db.orderByChild('name').equalTo(currentName).once('value');
+
+            if (snap.exists()) {
+                // Speler bestaat al, update alleen als het een écht nieuw record is
+                snap.forEach(child => {
+                    const existing = child.val();
+                    if (levelReached > (existing.level || 0)) {
+                        child.ref.update({ level: levelReached });
+                        console.log("🔥 Firebase geüpdatet met nieuw record level:", levelReached);
+                    }
+                });
+            } else {
+                // Eerste keer dat deze speler een score haalt
+                await lg_db.push({ name: currentName, level: levelReached });
+                console.log("🔥 Eerste score succesvol opgeslagen in Firebase:", levelReached);
+            }
+        } catch (e) {
+            console.error("Fout tijdens het communiceren met Firebase leaderboard: ", e);
+        }
+    }
+
+    // Zorg dat de rest van je game de nieuwe, stabiele functie kan aanroepen
+    window.saveScoreToFirebase = saveScoreToFirebase;
+
+</script>
 </body>
 </html>
