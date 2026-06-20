@@ -253,6 +253,7 @@ function showImportModal() {
     setTimeout(() => document.getElementById('import-input').focus(), 50);
 }
 
+// 🔥 DE VERNIEUWDE, VEILIGE IMPORT FUNCTIE (MET GEHEUGEN WISSEN EN AUTO-FIX) 🔥
 async function importAccount() {
     const code = document.getElementById('import-input').value.trim().toUpperCase();
     const errEl = document.getElementById('import-error');
@@ -267,21 +268,55 @@ async function importAccount() {
             errEl.textContent = 'Code not found. Make sure you copied it correctly.';
             btn.textContent = '► IMPORT ACCOUNT'; btn.disabled = false; return;
         }
+
+        const cleanName = data.name.trim();
+
+        // 🔥 DE GROTE SCHOONMAAK (De Fix!) 🔥
+        // Dit wist het oude geheugen van álle games!
+        localStorage.clear();
+
+        // Nu zetten we de nieuwe gegevens er weer in
         localStorage.setItem(DEV_KEY, data.deviceId);
-        localStorage.setItem(LB_KEY, data.name);
+        localStorage.setItem(LB_KEY, cleanName);
         localStorage.setItem(ACC_KEY, code);
-        localStorage.setItem('md6_n', data.name);
-        localStorage.setItem('pg_player_name', data.name);
-        await db.ref('nameOwners/' + data.deviceId).set({ name: data.name });
-        await db.ref('accountCodes/' + code).set({ deviceId: data.deviceId, name: data.name });
+        localStorage.setItem('pg_player_name', cleanName);
+        
+        await db.ref('nameOwners/' + data.deviceId).set({ name: cleanName });
+        await db.ref('accountCodes/' + code).set({ deviceId: data.deviceId, name: cleanName });
+
+        // AUTO-FIX: We dwingen de database om eventuele foutjes (zoals spaties) gelijk te trekken
+        const [mdSnap, lgSnap, pfSnap, maSnap, beSnap, daSnap] = await Promise.all([
+            db.ref('scores').once('value'),
+            db.ref('luckyGuyScores').once('value'),
+            db.ref('platformerScores').once('value'),
+            db.ref('miniApocalypseScores').once('value'),
+            db.ref('bugEscapeScores').once('value'),
+            db.ref('dodgingArenaScores').once('value')
+        ]);
+        
+        const fixNameInDB = (dbSnap, path) => {
+            dbSnap.forEach(child => {
+                let n = child.val()?.name;
+                if (n && n.trim().toLowerCase() === cleanName.toLowerCase() && n !== cleanName) {
+                    db.ref(path + '/' + child.key + '/name').set(cleanName).catch(()=>{});
+                }
+            });
+        };
+        
+        fixNameInDB(mdSnap, 'scores');
+        fixNameInDB(lgSnap, 'luckyGuyScores');
+        fixNameInDB(pfSnap, 'platformerScores');
+        fixNameInDB(maSnap, 'miniApocalypseScores');
+        fixNameInDB(beSnap, 'bugEscapeScores');
+        fixNameInDB(daSnap, 'dodgingArenaScores');
+
         document.getElementById('import-modal').classList.add('hidden');
-        document.getElementById('bar-name').textContent = data.name;
+        document.getElementById('bar-name').textContent = cleanName;
         document.getElementById('account-code').textContent = code;
         location.reload(); 
     } catch(e) { errEl.textContent = 'Connection error. Try again.'; console.error(e); }
     btn.textContent = '► IMPORT ACCOUNT'; btn.disabled = false;
 }
-
 document.getElementById('import-modal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden'); });
 document.getElementById('import-input').addEventListener('keydown', e => { if (e.key === 'Enter') importAccount(); });
 
