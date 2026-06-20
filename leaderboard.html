@@ -253,7 +253,7 @@ function showImportModal() {
     setTimeout(() => document.getElementById('import-input').focus(), 50);
 }
 
-// 🔥 DE VERNIEUWDE, VEILIGE IMPORT FUNCTIE (MET GEHEUGEN WISSEN EN AUTO-FIX) 🔥
+// 🔥 DE VERNIEUWDE, VEILIGE IMPORT FUNCTIE (MET MONEY DIGGER FIX) 🔥
 async function importAccount() {
     const code = document.getElementById('import-input').value.trim().toUpperCase();
     const errEl = document.getElementById('import-error');
@@ -271,20 +271,24 @@ async function importAccount() {
 
         const cleanName = data.name.trim();
 
-        // 🔥 DE GROTE SCHOONMAAK (De Fix!) 🔥
-        // Dit wist het oude geheugen van álle games!
+        // 🔥 DE GROTE SCHOONMAAK
         localStorage.clear();
 
-        // Nu zetten we de nieuwe gegevens er weer in
+        // Standaard leaderboard gegevens terugzetten
         localStorage.setItem(DEV_KEY, data.deviceId);
         localStorage.setItem(LB_KEY, cleanName);
         localStorage.setItem(ACC_KEY, code);
         localStorage.setItem('pg_player_name', cleanName);
         
+        // 🚀 DE MONEY DIGGER FIX 🚀
+        // We vertellen Money Digger exact welk apparaat-ID hij moet overnemen
+        localStorage.setItem('md6_device_id', data.deviceId);
+        localStorage.setItem('md6_n', cleanName);
+
         await db.ref('nameOwners/' + data.deviceId).set({ name: cleanName });
         await db.ref('accountCodes/' + code).set({ deviceId: data.deviceId, name: cleanName });
 
-        // AUTO-FIX: We dwingen de database om eventuele foutjes (zoals spaties) gelijk te trekken
+        // AUTO-FIX: We dwingen de database om eventuele foutjes gelijk te trekken
         const [mdSnap, lgSnap, pfSnap, maSnap, beSnap, daSnap] = await Promise.all([
             db.ref('scores').once('value'),
             db.ref('luckyGuyScores').once('value'),
