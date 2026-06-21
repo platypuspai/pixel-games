@@ -456,47 +456,46 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
     let myBestSavedScore = -1;
 
-    if (playerName) {
-        
-        db.orderByChild('name').equalTo(playerName).on('value', snap => {
-            snap.forEach(child => {
-                let dbScore = parseInt(child.val().score, 10);
-                if (!isNaN(dbScore)) {
-                    myBestSavedScore = dbScore; 
-                    // VERANDER HIER DE NAAM VAN DE VARIABELE ALS DIT ANDERS IS DAN 'Record'
-                    setScratchVar('Record', dbScore); 
-                }
-            });
-        });
+if (playerName) {
+          // 🔄 LIVE LUISTEREN: Als de admin of het leaderboard iets aanpast, verandert de game LIVE mee!
+          db.orderByChild('name').equalTo(playerName).on('value', snap => {
+              snap.forEach(child => {
+                  let dbScore = parseInt(child.val().score, 10);
+                  if (!isNaN(dbScore)) {
+                      myBestSavedScore = dbScore; 
+                      // 🌟 FIX: Beide namen staan nu perfect op 'High Score'
+                      setScratchVar('High Score', dbScore); 
+                  }
+              });
+          });
 
-        setInterval(() => {
-            try {
-                // VERANDER HIER DE NAAM VAN DE VARIABELE ALS DIT ANDERS IS DAN 'Record'
-                let currentScore = getScratchVar('High Score'); 
-                
-                if (currentScore !== null && currentScore > myBestSavedScore && currentScore > 0) {
-                    myBestSavedScore = currentScore;
-                    
-                    db.orderByChild('name').equalTo(playerName).once('value').then(snap => {
-                        let keyToUpdate = null;
-                        let dbScore = -1;
-                        
-                        snap.forEach(child => {
-                            keyToUpdate = child.key;
-                            dbScore = child.val().score;
-                        });
+          setInterval(() => {
+              try {
+                  let currentScore = getScratchVar('High Score'); 
+                  
+                  if (currentScore !== null && currentScore > myBestSavedScore && currentScore > 0) {
+                      myBestSavedScore = currentScore;
+                      
+                      db.orderByChild('name').equalTo(playerName).once('value').then(snap => {
+                          let keyToUpdate = null;
+                          let dbScore = -1;
+                          
+                          snap.forEach(child => {
+                              keyToUpdate = child.key;
+                              dbScore = child.val().score;
+                          });
 
-                        if (currentScore > dbScore) {
-                            if (keyToUpdate) {
-                                db.child(keyToUpdate).update({ score: currentScore });
-                            } else {
-                                db.push({ name: playerName, score: currentScore });
-                            }
-                        }
-                    }).catch(()=>{});
-                }
-            } catch(err) {} 
-        }, 3000); 
-    }
+                          if (currentScore > dbScore) {
+                              if (keyToUpdate) {
+                                  db.child(keyToUpdate).update({ score: currentScore });
+                              } else {
+                                  db.push({ name: playerName, score: currentScore });
+                              }
+                          }
+                      }).catch(()=>{});
+                  }
+              } catch(err) {} 
+          }, 3000); 
+      }
   } catch (e) {}
 </script>
