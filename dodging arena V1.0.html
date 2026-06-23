@@ -387,6 +387,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 </script>
 
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
@@ -403,8 +404,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     let playerName = localStorage.getItem('pg_player_name');
     if (playerName === "null") playerName = null;
 
-    // Slimme zoeker: zoekt zelf naar de hoogste score in je hele game!
-    function findHighestScoreInGame() {
+    // 🛑 VUL HIER EXACT DE NAAM VAN JE VARIABELE IN (bijv. "Score", "High Score", "Record") 🛑
+    const JOUW_VARIABELE_NAAM = "Record";
+
+    function getScratchVar(varName) {
         try {
             let targetVm = null;
             if (typeof scaffolding !== 'undefined' && scaffolding.vm) targetVm = scaffolding.vm;
@@ -413,40 +416,63 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
             if (!targetVm) return null;
 
-            let bestScore = -1;
+            let highestValue = null;
             const targets = targetVm.runtime.targets;
-            
             for(let i = 0; i < targets.length; i++) {
                 let vars = targets[i].variables;
                 for(let id in vars) {
-                    if(vars[id].type === '' || !vars[id].type) {
+                    if(vars[id].name.toLowerCase().includes(varName.toLowerCase())) {
                         let val = parseFloat(vars[id].value);
-                        // We pakken gewoon het hoogste getal dat in de game bestaat (dus je topscore/high score)
-                        if (!isNaN(val) && val > bestScore) {
-                            bestScore = val;
+                        if (!isNaN(val) && (highestValue === null || val > highestValue)) {
+                            highestValue = val;
                         }
                     }
                 }
             }
-            return bestScore > -1 ? bestScore : null;
+            return highestValue;
         } catch(e) {}
         return null;
+    }
+
+    function setScratchVar(varName, newValue) {
+        try {
+            let targetVm = null;
+            if (typeof scaffolding !== 'undefined' && scaffolding.vm) targetVm = scaffolding.vm;
+            else if (window.scaffolding && window.scaffolding.vm) targetVm = window.scaffolding.vm;
+            else if (window.vm) targetVm = window.vm;
+
+            if (!targetVm) return;
+
+            const targets = targetVm.runtime.targets;
+            for(let i = 0; i < targets.length; i++) {
+                let vars = targets[i].variables;
+                for(let id in vars) {
+                    if(vars[id].name.toLowerCase().includes(varName.toLowerCase())) {
+                        vars[id].value = newValue;
+                    }
+                }
+            }
+        } catch(e) {}
     }
 
     let myBestSavedScore = -1;
 
     if (playerName) {
-        db.orderByChild('name').equalTo(playerName).once('value', snap => {
+        // 1. LIVE SYNC: Als je Admin paneel iets aanpast, duwt dit het direct je game in!
+        db.orderByChild('name').equalTo(playerName).on('value', snap => {
             snap.forEach(child => {
                 let dbScore = parseInt(child.val().score, 10);
-                if (!isNaN(dbScore)) myBestSavedScore = dbScore; 
+                if (!isNaN(dbScore)) {
+                    myBestSavedScore = dbScore; 
+                    setScratchVar(JOUW_VARIABELE_NAAM, dbScore); 
+                }
             });
         });
 
-        // Elke 3 seconden controleert hij het hoogste getal in je game
+        // 2. SCORES OPSLAAN: Elke 3 seconden checkt hij je score en slaat hem op
         setInterval(() => {
             try {
-                let currentScore = findHighestScoreInGame(); 
+                let currentScore = getScratchVar(JOUW_VARIABELE_NAAM); 
                 
                 if (currentScore !== null && currentScore > myBestSavedScore && currentScore > 0) {
                     myBestSavedScore = currentScore;
@@ -463,10 +489,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
                         if (currentScore > dbScore) {
                             if (keyToUpdate) {
                                 db.child(keyToUpdate).update({ score: currentScore });
-                                console.log("🔥 Dodging Arena Geüpdatet:", currentScore);
                             } else {
                                 db.push({ name: playerName, score: currentScore });
-                                console.log("🔥 Dodging Arena Eerste score:", currentScore);
                             }
                         }
                     }).catch(()=>{});
