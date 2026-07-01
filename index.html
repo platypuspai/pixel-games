@@ -517,12 +517,12 @@
 
 <header>
     <div class="logo-pixel-deco">
-        <svg width="12" height="12" viewBox="0 0 3 3"><rect width="1" height="1" x="1" y="0" fill="#ff44aa"/><rect width="1" height="1" x="0" y="1" fill="#ff44aa"/><rect width="1" height="1" x="2" y="1" fill="#ff44aa"/><rect width="1" height="1" x="1" y="2" fill="#ff44aa"/></svg>
-        <svg width="12" height="12" viewBox="0 0 3 3"><rect width="3" height="3" fill="#00ff88"/></svg>
-        <svg width="12" height="12" viewBox="0 0 3 3"><rect width="1" height="1" x="1" y="0" fill="#4488ff"/><rect width="1" height="1" x="0" y="1" fill="#4488ff"/><rect width="1" height="1" x="2" y="1" fill="#4488ff"/><rect width="1" height="1" x="1" y="2" fill="#4488ff"/></svg>
-        <svg width="12" height="12" viewBox="0 0 3 3"><rect width="1" height="1" x="0" y="0" fill="#ffdd00"/><rect width="1" height="1" x="2" y="0" fill="#ffdd00"/><rect width="1" height="1" x="1" y="1" fill="#ffdd00"/><rect width="1" height="1" x="0" y="2" fill="#ffdd00"/><rect width="1" height="1" x="2" y="2" fill="#ffdd00"/></svg>
-        <svg width="12" height="12" viewBox="0 0 3 3"><rect width="3" height="3" fill="#ff8844"/></svg>
-        <svg width="12" height="12" viewBox="0 0 3 3"><rect width="1" height="1" x="1" y="0" fill="#ff44aa"/><rect width="1" height="1" x="0" y="1" fill="#ff44aa"/><rect width="1" height="1" x="2" y="1" fill="#ff44aa"/><rect width="1" height="1" x="1" y="2" fill="#ff44aa"/></svg>
+        <svg class="pixel-block" width="20" height="20" viewBox="0 0 3 3"><rect width="1" height="1" x="1" y="0" fill="#00ff88"/><rect width="1" height="1" x="0" y="1" fill="#00ff88"/><rect width="1" height="1" x="2" y="1" fill="#00ff88"/><rect width="1" height="1" x="1" y="2" fill="#00ff88"/></svg>
+        <svg class="pixel-block" width="20" height="20" viewBox="0 0 3 3"><rect width="3" height="3" fill="#ff4444"/></svg>
+        <svg class="pixel-block" width="20" height="20" viewBox="0 0 3 3"><rect width="1" height="1" x="1" y="0" fill="#4488ff"/><rect width="1" height="1" x="0" y="1" fill="#4488ff"/><rect width="1" height="1" x="2" y="1" fill="#4488ff"/><rect width="1" height="1" x="1" y="2" fill="#4488ff"/></svg>
+        <svg class="pixel-block" width="20" height="20" viewBox="0 0 3 3"><rect width="1" height="1" x="0" y="0" fill="#ffdd00"/><rect width="1" height="1" x="2" y="0" fill="#ffdd00"/><rect width="1" height="1" x="1" y="1" fill="#ffdd00"/><rect width="1" height="1" x="0" y="2" fill="#ffdd00"/><rect width="1" height="1" x="2" y="2" fill="#ffdd00"/></svg>
+        <svg class="pixel-block" width="20" height="20" viewBox="0 0 3 3"><rect width="3" height="3" fill="#ff8844"/></svg>
+        <svg class="pixel-block" width="20" height="20" viewBox="0 0 3 3"><rect width="1" height="1" x="1" y="0" fill="#ff44aa"/><rect width="1" height="1" x="0" y="1" fill="#ff44aa"/><rect width="1" height="1" x="2" y="1" fill="#ff44aa"/><rect width="1" height="1" x="1" y="2" fill="#ff44aa"/></svg>
     </div>
 
     <div class="logo-container">
@@ -1239,11 +1239,9 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     const gridSize = 20;
     const speed = 110; 
     
-    // Tekst is UIT de hitboxes gehaald! Slang glijdt nu ongestoord over de titel en letters.
-    // Alleen fysieke blokken (knoppen, kaarten en pixel-deco blokjes) zijn nog dodelijk.
+    // .pixel-block is verwijderd uit hitboxes! De slang gaat er nu gewoon doorheen.
     const myHitboxes = [
         ".nav-btn",
-        ".pixel-block",
         ".game-card"
     ];
     
@@ -1259,6 +1257,10 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     let food = null;
     let state = 'sleeping'; 
     let gameLoop = null;
+    let score = 0;
+    let scoreElement = null;
+    let snakeColor = '#ff4444';
+    let foodColor = '#00ff88';
 
     function createBlock(color, zIndex) {
         const block = document.createElement('div');
@@ -1268,7 +1270,6 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     }
 
     function alignSnakeToDOM() {
-        // Sync perfect op de 20px grid
         const reference = document.querySelector('main') || document.querySelector('.navbar');
         if (reference) {
             const rect = reference.getBoundingClientRect();
@@ -1312,9 +1313,20 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         
         container.innerHTML = '';
         snake = [];
+        snakeColor = '#ff4444';
+        foodColor = '#00ff88';
+        score = 0;
+        if (!scoreElement) {
+            scoreElement = document.createElement('div');
+            scoreElement.id = 'snake-score';
+            scoreElement.style.cssText = 'position:fixed; top:20px; right:20px; color:#ffdd00; font-family:"Press Start 2P", "Inconsolata", monospace; font-size:16px; font-weight:bold; pointer-events:none; z-index:10000; text-shadow: 2px 2px 0 #000; display:none;';
+            document.body.appendChild(scoreElement);
+        }
+        scoreElement.innerText = 'SCORE: 0';
+        scoreElement.style.display = 'none';
         
         for(let i=0; i<3; i++) {
-            const block = createBlock('#ff4444', 10);
+            const block = createBlock(snakeColor, 10);
             block.style.left = ((2 - i) * gridSize) + 'px';
             block.style.top = '0px';
             snake.push({x: 2 - i, y: 0, el: block});
@@ -1380,7 +1392,7 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
             }
         }
         
-        const el = createBlock('#00ff88', 5); 
+        const el = createBlock(foodColor, 5); 
         el.style.left = (fx * gridSize) + 'px';
         el.style.top = (fy * gridSize) + 'px';
         el.style.pointerEvents = 'none'; 
@@ -1392,6 +1404,7 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         state = 'playing';
         const hint = document.getElementById('snake-hint');
         if (hint) hint.remove(); 
+        if (scoreElement) scoreElement.style.display = 'block'; 
         
         if (gameLoop) clearInterval(gameLoop);
         gameLoop = setInterval(update, speed);
@@ -1450,11 +1463,56 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
             return;
         }
 
+        // KAMELEON LOGICA: Check of we over een pixel-block zweven
+        const colorBlocks = document.querySelectorAll('.pixel-block');
+        for (let i = 0; i < colorBlocks.length; i++) {
+            const elRect = colorBlocks[i].getBoundingClientRect();
+            const margin = 1; 
+            const isOverlapping = !(
+                headRect.right - margin <= elRect.left ||
+                headRect.left + margin >= elRect.right ||
+                headRect.bottom - margin <= elRect.top ||
+                headRect.top + margin >= elRect.bottom
+            );
+            
+            if (isOverlapping) {
+                // Vind de specifieke vulkleur van DIT blokje
+                const rectEl = colorBlocks[i].querySelector('rect');
+                if (rectEl) {
+                    let fill = rectEl.getAttribute('fill');
+                    if (fill) {
+                        snakeColor = fill; // Update de slangkleur!
+                        snake.forEach(seg => {
+                            seg.el.style.backgroundColor = snakeColor;
+                        });
+                        
+                        // Dynamische appel kleur
+                        if (snakeColor === '#00ff88') {
+                            foodColor = '#ff4444';
+                        } else if (snakeColor === '#ff4444') {
+                            foodColor = '#00ff88';
+                        } else {
+                            // Optioneel: Standaard appel kleur als je een andere kleur raakt, 
+                            // maar je vroeg specifiek om deze wissel. We laten hem anders op groen.
+                            foodColor = '#00ff88';
+                        }
+                        
+                        // Verander de huidige appel ook meteen van kleur
+                        if (food && food.el) {
+                            food.el.style.backgroundColor = foodColor;
+                        }
+                    }
+                }
+            }
+        }
+
         let tail;
         if (nextX === food.x && nextY === food.y) {
-            const el = createBlock('#ff4444', 10);
+            const el = createBlock(snakeColor, 10);
             tail = {x: nextX, y: nextY, el: el};
-            snake.unshift(tail); 
+            snake.unshift(tail);
+            score++;
+            if (scoreElement) scoreElement.innerText = 'SCORE: ' + score;
             spawnFood();
         } else {
             tail = snake.pop();
