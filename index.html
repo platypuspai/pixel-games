@@ -1239,7 +1239,7 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     const gridSize = 20;
     const speed = 110; 
     
-    // .pixel-block is verwijderd uit hitboxes! De slang gaat er nu gewoon doorheen.
+    // Hitboxes (alles behalve tekst is dodelijk)
     const myHitboxes = [
         ".nav-btn",
         ".game-card"
@@ -1257,10 +1257,13 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     let food = null;
     let state = 'sleeping'; 
     let gameLoop = null;
-    let score = 0;
-    let scoreElement = null;
     let snakeColor = '#ff4444';
     let foodColor = '#00ff88';
+    
+    // Score variabelen
+    let score = 0;
+    let scoreElement = null;
+    let highScores = JSON.parse(localStorage.getItem('pixelSnakeLeaderboard')) || [];
 
     function createBlock(color, zIndex) {
         const block = document.createElement('div');
@@ -1275,24 +1278,20 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
             const rect = reference.getBoundingClientRect();
             const absLeft = rect.left + window.scrollX;
             const absTop = rect.top + window.scrollY;
-            
             const offsetX = absLeft % gridSize;
             const offsetY = absTop % gridSize;
-            
             container.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
         }
     }
 
     function isDangerousRect(testRect) {
         if (myHitboxes.length === 0) return false;
-        
         for (let i = 0; i < myHitboxes.length; i++) {
             try {
                 const elements = document.querySelectorAll(myHitboxes[i]);
                 for (let j = 0; j < elements.length; j++) {
                     const elRect = elements[j].getBoundingClientRect();
                     if (elRect.width === 0 || elRect.height === 0) continue; 
-                    
                     const margin = 1; 
                     const isOverlapping = !(
                         testRect.right - margin <= elRect.left ||
@@ -1300,7 +1299,6 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
                         testRect.bottom - margin <= elRect.top ||
                         testRect.top + margin >= elRect.bottom
                     );
-                    
                     if (isOverlapping) return true;
                 }
             } catch(e) {}
@@ -1310,12 +1308,12 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 
     function initSnake() {
         alignSnakeToDOM();
-        
         container.innerHTML = '';
         snake = [];
-        snakeColor = '#ff4444';
-        foodColor = '#00ff88';
+        snakeColor = '#ff4444'; // Terug naar rood!
         score = 0;
+
+        // Maak of reset de score teller
         if (!scoreElement) {
             scoreElement = document.createElement('div');
             scoreElement.id = 'snake-score';
@@ -1323,7 +1321,7 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
             document.body.appendChild(scoreElement);
         }
         scoreElement.innerText = 'SCORE: 0';
-        scoreElement.style.display = 'none';
+        scoreElement.style.display = 'none'; // Verbergen totdat je start
         
         for(let i=0; i<3; i++) {
             const block = createBlock(snakeColor, 10);
@@ -1351,47 +1349,29 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 
     function spawnFood() {
         if (food && food.el) food.el.remove();
-        
         const cols = Math.floor(document.documentElement.scrollWidth / gridSize);
         const rows = Math.floor(document.documentElement.scrollHeight / gridSize);
-        
-        let valid = false;
-        let fx, fy;
-        let attempts = 0;
+        let valid = false; let fx, fy; let attempts = 0;
         
         while(!valid && attempts < 1000) {
             attempts++;
             fx = Math.floor(Math.random() * cols);
-            
             const sTopRows = Math.floor(window.scrollY / gridSize);
             const viewRows = Math.floor(window.innerHeight / gridSize);
             fy = sTopRows + Math.floor(Math.random() * viewRows);
-            
             if (fy >= rows) fy = rows - 1;
             if (fx >= cols) fx = cols - 1;
-
-            valid = true;
-            for(let s of snake) {
-                if(s.x === fx && s.y === fy) valid = false;
-            }
             
+            valid = true;
+            for(let s of snake) { if(s.x === fx && s.y === fy) valid = false; }
             if (valid) {
                 const containerRect = container.getBoundingClientRect();
                 const fLeft = (fx * gridSize) + containerRect.left;
                 const fTop = (fy * gridSize) + containerRect.top;
-                const fRect = {
-                    left: fLeft,
-                    top: fTop,
-                    right: fLeft + gridSize,
-                    bottom: fTop + gridSize
-                };
-
-                if (isDangerousRect(fRect)) {
-                    valid = false;
-                }
+                const fRect = { left: fLeft, top: fTop, right: fLeft + gridSize, bottom: fTop + gridSize };
+                if (isDangerousRect(fRect)) valid = false;
             }
         }
-        
         const el = createBlock(foodColor, 5); 
         el.style.left = (fx * gridSize) + 'px';
         el.style.top = (fy * gridSize) + 'px';
@@ -1404,28 +1384,23 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         state = 'playing';
         const hint = document.getElementById('snake-hint');
         if (hint) hint.remove(); 
-        if (scoreElement) scoreElement.style.display = 'block'; 
+        
+        // Laat de score zien!
+        if (scoreElement) scoreElement.style.display = 'block';
         
         if (gameLoop) clearInterval(gameLoop);
         gameLoop = setInterval(update, speed);
     }
 
-    function stopGame() {
-        state = 'sleeping';
-        if (gameLoop) clearInterval(gameLoop);
-        initSnake();
-    }
-
-    
-    // --- LEADERBOARD LOGICA ---
-    let highScores = JSON.parse(localStorage.getItem('pixelSnakeLeaderboard')) || [];
-
+    // Leaderboard & Firebase Functie
     function checkHighScore(finalScore) {
         if (finalScore > 0) {
+            // Check of de naam al bekend is
             let name = localStorage.getItem('pg_player_name');
-            
             if (!name) {
-                let inputName = prompt(`GEFELICITEERD! SCORE: ${finalScore}\nKies een spelernaam voor op de leaderboards (max 10 letters):`, "SPELER");
+                // Alleen vragen als het een 100% nieuwe speler is
+                let inputName = prompt(`GEFELICITEERD! SCORE: ${finalScore}
+Kies een naam voor op de leaderboards:`, "SPELER");
                 if (inputName) {
                     name = inputName.trim().substring(0, 10).toUpperCase();
                     if(name !== "") {
@@ -1438,7 +1413,7 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
                 }
             }
 
-            // Opslaan op de locale lijst voor het in-game pop-up schermpje
+            // Highscore Lokaal Opslaan (voor de pop-up)
             const lowestScore = highScores.length < 5 ? 0 : highScores[highScores.length - 1].score;
             if (finalScore > lowestScore || highScores.length < 5) {
                 highScores.push({ name: name, score: finalScore });
@@ -1447,13 +1422,17 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
                 localStorage.setItem('pixelSnakeLeaderboard', JSON.stringify(highScores));
             }
             
-            // Voor altijd doorsturen naar de grote Firebase database
-            if (typeof firebase !== 'undefined' && firebase.database) {
-                firebase.database().ref('snakeScores').push({
-                    name: name,
-                    score: finalScore,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
+            // SCORE DOORSTUREN NAAR FIREBASE! (Nu met een try-catch beveiliging)
+            try {
+                if (typeof firebase !== 'undefined' && firebase.database) {
+                    firebase.database().ref('snakeScores').push({
+                        name: name,
+                        score: finalScore,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    });
+                }
+            } catch(e) {
+                console.error("Kon score niet naar Firebase sturen:", e);
             }
         }
         showLeaderboard();
@@ -1462,7 +1441,6 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     function showLeaderboard() {
         const modal = document.getElementById('snake-leaderboard-modal');
         const list = document.getElementById('snake-leaderboard-list');
-        
         if (!modal || !list) return;
         
         list.innerHTML = '';
@@ -1483,19 +1461,14 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         document.getElementById('snake-restart-btn').onclick = () => {
             modal.style.display = 'none';
             initSnake();
-            // Automatisch weer starten
-            setTimeout(() => {
-                const head = snake[0];
-                if(head) head.el.click();
-            }, 100);
+            setTimeout(() => { const head = snake[0]; if(head) head.el.click(); }, 100);
         };
         
         document.getElementById('snake-close-btn').onclick = () => {
             modal.style.display = 'none';
-            initSnake(); // Reset de game in slaapstand
+            initSnake(); // Reset the game!
         };
     }
-    // -------------------------
 
     function update() {
         direction = nextDirection;
@@ -1522,7 +1495,6 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 
         const headPixelY = nextY * gridSize;
         const scrollPadding = 120;
-
         if (headPixelY > window.scrollY + window.innerHeight - scrollPadding) {
             window.scrollTo({ top: headPixelY - window.innerHeight + scrollPadding + gridSize, behavior: 'instant' });
         } else if (headPixelY < window.scrollY + scrollPadding) {
@@ -1530,13 +1502,11 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         }
 
         const containerRect = container.getBoundingClientRect();
-        const hLeft = (nextX * gridSize) + containerRect.left;
-        const hTop = (nextY * gridSize) + containerRect.top;
         const headRect = {
-            left: hLeft,
-            top: hTop,
-            right: hLeft + gridSize,
-            bottom: hTop + gridSize
+            left: (nextX * gridSize) + containerRect.left, 
+            top: (nextY * gridSize) + containerRect.top, 
+            right: (nextX * gridSize) + containerRect.left + gridSize, 
+            bottom: (nextY * gridSize) + containerRect.top + gridSize
         };
 
         if (isDangerousRect(headRect)) {
@@ -1544,54 +1514,13 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
             return;
         }
 
-        // KAMELEON LOGICA: Check of we over een pixel-block zweven
-        const colorBlocks = document.querySelectorAll('.pixel-block');
-        for (let i = 0; i < colorBlocks.length; i++) {
-            const elRect = colorBlocks[i].getBoundingClientRect();
-            const margin = 1; 
-            const isOverlapping = !(
-                headRect.right - margin <= elRect.left ||
-                headRect.left + margin >= elRect.right ||
-                headRect.bottom - margin <= elRect.top ||
-                headRect.top + margin >= elRect.bottom
-            );
-            
-            if (isOverlapping) {
-                // Vind de specifieke vulkleur van DIT blokje
-                const rectEl = colorBlocks[i].querySelector('rect');
-                if (rectEl) {
-                    let fill = rectEl.getAttribute('fill');
-                    if (fill) {
-                        snakeColor = fill; // Update de slangkleur!
-                        snake.forEach(seg => {
-                            seg.el.style.backgroundColor = snakeColor;
-                        });
-                        
-                        // Dynamische appel kleur
-                        if (snakeColor === '#00ff88') {
-                            foodColor = '#ff4444';
-                        } else if (snakeColor === '#ff4444') {
-                            foodColor = '#00ff88';
-                        } else {
-                            // Optioneel: Standaard appel kleur als je een andere kleur raakt, 
-                            // maar je vroeg specifiek om deze wissel. We laten hem anders op groen.
-                            foodColor = '#00ff88';
-                        }
-                        
-                        // Verander de huidige appel ook meteen van kleur
-                        if (food && food.el) {
-                            food.el.style.backgroundColor = foodColor;
-                        }
-                    }
-                }
-            }
-        }
-
         let tail;
         if (nextX === food.x && nextY === food.y) {
             const el = createBlock(snakeColor, 10);
             tail = {x: nextX, y: nextY, el: el};
-            snake.unshift(tail);
+            snake.unshift(tail); 
+            
+            // Score verhogen en updaten
             score++;
             if (scoreElement) scoreElement.innerText = 'SCORE: ' + score;
             spawnFood();
@@ -1612,11 +1541,13 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         state = 'dead';
         if (gameLoop) clearInterval(gameLoop);
         
+        // Maak snake wit als ie dood is
         snake.forEach(seg => {
             seg.el.style.backgroundColor = '#ffffff';
             seg.el.style.boxShadow = 'none'; 
         });
         
+        // 400ms na dood -> check leaderboards (dit reset de snake later via sluiten)
         setTimeout(() => checkHighScore(score), 400); 
     }
 
@@ -1631,24 +1562,17 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         else if (e.key === 'ArrowRight' && direction.x === 0) { nextDirection = {x: 1, y: 0}; directionChangedThisTick = true; }
     });
 
-    let touchStartX = 0;
-    let touchStartY = 0;
-
+    let touchStartX = 0; let touchStartY = 0;
     document.addEventListener('touchstart', (e) => {
-        if (state === 'playing') {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }
+        if (state === 'playing') { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }
     }, {passive: false});
 
     document.addEventListener('touchmove', (e) => {
         if (state === 'playing') {
             e.preventDefault(); 
             if (directionChangedThisTick) return;
-
             const dx = e.touches[0].clientX - touchStartX;
             const dy = e.touches[0].clientY - touchStartY;
-
             if (Math.abs(dx) > 20 || Math.abs(dy) > 20) {
                 if (Math.abs(dx) > Math.abs(dy)) {
                     if (dx > 0 && direction.x === 0) { nextDirection = {x: 1, y: 0}; directionChangedThisTick = true; }
@@ -1663,12 +1587,7 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         }
     }, {passive: false});
 
-    window.addEventListener('resize', () => {
-        if (state === 'playing' || state === 'sleeping') {
-            alignSnakeToDOM();
-        }
-    });
-
+    window.addEventListener('resize', () => { if (state === 'playing' || state === 'sleeping') alignSnakeToDOM(); });
     window.addEventListener('load', initSnake);
     if (document.readyState === 'complete') initSnake();
 })();
