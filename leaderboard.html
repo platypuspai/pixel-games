@@ -416,6 +416,7 @@ async function confirmName() {
         if (window._maData) render('ma-body', 'ma-foot', window._maData, val);
         if (window._beData) render('be-body', 'be-foot', window._beData, val);
         if (window._daData) render('da-body', 'da-foot', window._daData, val);
+            if (window._snakeData) render('snake-body', 'snake-foot', window._snakeData, val);
 
     } catch(e) { showNameError('Connection error. Please try again.'); console.error(e); }
 
