@@ -1416,6 +1416,76 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         initSnake();
     }
 
+    
+    // --- LEADERBOARD LOGICA ---
+    let highScores = JSON.parse(localStorage.getItem('pixelSnakeLeaderboard')) || [];
+
+    function checkHighScore(finalScore) {
+        if (finalScore > 0) {
+            const lowestScore = highScores.length < 5 ? 0 : highScores[highScores.length - 1].score;
+            if (finalScore > lowestScore || highScores.length < 5) {
+                let name = prompt(`GEFELICITEERD! SCORE: ${finalScore}\nVoer je naam in (max 10 letters):`, "SPELER");
+                if (name) {
+                    name = name.substring(0, 10).toUpperCase();
+                    
+                    // Lokaal opslaan
+                    highScores.push({ name: name, score: finalScore });
+                    highScores.sort((a, b) => b.score - a.score);
+                    highScores = highScores.slice(0, 5);
+                    localStorage.setItem('pixelSnakeLeaderboard', JSON.stringify(highScores));
+                    
+                    // Firebase opslaan
+                    if (typeof firebase !== 'undefined' && firebase.database) {
+                        firebase.database().ref('snakeScores').push({
+                            name: name,
+                            score: finalScore,
+                            timestamp: firebase.database.ServerValue.TIMESTAMP
+                        });
+                    }
+                }
+            }
+        }
+        showLeaderboard();
+    }
+
+    function showLeaderboard() {
+        const modal = document.getElementById('snake-leaderboard-modal');
+        const list = document.getElementById('snake-leaderboard-list');
+        
+        if (!modal || !list) return;
+        
+        list.innerHTML = '';
+        if (highScores.length === 0) {
+            list.innerHTML = '<div style="text-align:center; color:#888;">Nog geen scores!</div>';
+        } else {
+            highScores.forEach((entry, index) => {
+                const color = index === 0 ? '#ffdd00' : (index === 1 ? '#c0c0c0' : (index === 2 ? '#cd7f32' : '#fff'));
+                list.innerHTML += `<div style="display:flex; justify-content:space-between; color:${color}; margin-bottom:8px;">
+                    <span>${index + 1}. ${entry.name}</span>
+                    <span>${entry.score}</span>
+                </div>`;
+            });
+        }
+        
+        modal.style.display = 'flex';
+        
+        document.getElementById('snake-restart-btn').onclick = () => {
+            modal.style.display = 'none';
+            initSnake();
+            // Automatisch weer starten
+            setTimeout(() => {
+                const head = snake[0];
+                if(head) head.el.click();
+            }, 100);
+        };
+        
+        document.getElementById('snake-close-btn').onclick = () => {
+            modal.style.display = 'none';
+            initSnake(); // Reset de game in slaapstand
+        };
+    }
+    // -------------------------
+
     function update() {
         direction = nextDirection;
         directionChangedThisTick = false; 
@@ -1536,7 +1606,7 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
             seg.el.style.boxShadow = 'none'; 
         });
         
-        setTimeout(stopGame, 400); 
+        setTimeout(() => checkHighScore(score), 400); 
     }
 
     document.addEventListener('keydown', (e) => {
@@ -1593,6 +1663,19 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 })();
 </script>
 <!-- EINDE SLANG EASTER EGG -->
+
+
+    <!-- LEADERBOARD UI -->
+    <div id="snake-leaderboard-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10001; align-items:center; justify-content:center; flex-direction:column;">
+        <div style="background:var(--card, #0d0d18); border:2px solid var(--accent-green, #00ff88); padding:30px; width:90%; max-width:400px; text-align:center; box-shadow: 0 0 30px rgba(0,255,136,0.3);">
+            <h2 style="font-family:'Press Start 2P', monospace; color:var(--accent-green, #00ff88); font-size:1.2rem; margin-top:0;">TOP 5 SCORES</h2>
+            <div id="snake-leaderboard-list" style="margin:20px 0; text-align:left; font-family:'Press Start 2P', monospace; font-size:0.7rem; line-height:2; color:#fff;">
+                <!-- Scores komen hier -->
+            </div>
+            <button id="snake-restart-btn" style="background:var(--accent-green, #00ff88); color:#000; border:none; padding:12px 20px; font-family:'Press Start 2P', monospace; font-size:0.7rem; cursor:pointer; width:100%;">OPNIEUW SPELEN</button>
+            <button id="snake-close-btn" style="background:transparent; color:var(--text-muted, #888); border:1px solid var(--text-muted, #888); padding:8px 20px; font-family:'Press Start 2P', monospace; font-size:0.5rem; cursor:pointer; width:100%; margin-top:10px;">SLUITEN</button>
+        </div>
+    </div>
 
 </body>
 </html>
