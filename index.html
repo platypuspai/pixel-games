@@ -1422,27 +1422,38 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 
     function checkHighScore(finalScore) {
         if (finalScore > 0) {
+            let name = localStorage.getItem('pg_player_name');
+            
+            if (!name) {
+                let inputName = prompt(`GEFELICITEERD! SCORE: ${finalScore}\nKies een spelernaam voor op de leaderboards (max 10 letters):`, "SPELER");
+                if (inputName) {
+                    name = inputName.trim().substring(0, 10).toUpperCase();
+                    if(name !== "") {
+                        localStorage.setItem('pg_player_name', name);
+                    } else {
+                        name = "SPELER";
+                    }
+                } else {
+                    name = "SPELER";
+                }
+            }
+
+            // Opslaan op de locale lijst voor het in-game pop-up schermpje
             const lowestScore = highScores.length < 5 ? 0 : highScores[highScores.length - 1].score;
             if (finalScore > lowestScore || highScores.length < 5) {
-                let name = prompt(`GEFELICITEERD! SCORE: ${finalScore}\nVoer je naam in (max 10 letters):`, "SPELER");
-                if (name) {
-                    name = name.substring(0, 10).toUpperCase();
-                    
-                    // Lokaal opslaan
-                    highScores.push({ name: name, score: finalScore });
-                    highScores.sort((a, b) => b.score - a.score);
-                    highScores = highScores.slice(0, 5);
-                    localStorage.setItem('pixelSnakeLeaderboard', JSON.stringify(highScores));
-                    
-                    // Firebase opslaan
-                    if (typeof firebase !== 'undefined' && firebase.database) {
-                        firebase.database().ref('snakeScores').push({
-                            name: name,
-                            score: finalScore,
-                            timestamp: firebase.database.ServerValue.TIMESTAMP
-                        });
-                    }
-                }
+                highScores.push({ name: name, score: finalScore });
+                highScores.sort((a, b) => b.score - a.score);
+                highScores = highScores.slice(0, 5);
+                localStorage.setItem('pixelSnakeLeaderboard', JSON.stringify(highScores));
+            }
+            
+            // Voor altijd doorsturen naar de grote Firebase database
+            if (typeof firebase !== 'undefined' && firebase.database) {
+                firebase.database().ref('snakeScores').push({
+                    name: name,
+                    score: finalScore,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
             }
         }
         showLeaderboard();
