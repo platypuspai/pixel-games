@@ -1060,6 +1060,17 @@
          // Footer alleen bij home
          var footer = document.querySelector('footer');
          if (footer) footer.style.display = (name === 'home') ? '' : 'none';
+
+         // Zorg dat de slang alleen op de homepagina leeft
+         var snakeContainer = document.getElementById('snake-container');
+         var snakeScore = document.getElementById('snake-score');
+         if (name === 'home') {
+             if (snakeContainer) snakeContainer.style.display = 'block';
+         } else {
+             if (snakeContainer) snakeContainer.style.display = 'none';
+             if (snakeScore) snakeScore.style.display = 'none';
+             if (window.stopSnakeGame) window.stopSnakeGame();
+         }
          
          window.scrollTo({ top: 0, behavior: 'smooth' });
          if (name === 'leaderboard') { if (window.lbOpen) window.lbOpen(); }
@@ -1293,7 +1304,7 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
                     const elRect = elements[j].getBoundingClientRect();
                     if (elRect.width === 0 || elRect.height === 0) continue; 
                     
-                    const margin = 1; 
+                    const margin = 8; 
                     const isOverlapping = !(
                         testRect.right - margin <= elRect.left ||
                         testRect.left + margin >= elRect.right ||
@@ -1415,6 +1426,7 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         if (gameLoop) clearInterval(gameLoop);
         initSnake();
     }
+    window.stopSnakeGame = stopGame;
 
     function update() {
         direction = nextDirection;
@@ -1466,16 +1478,15 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         // KAMELEON LOGICA: Check of we over een pixel-block zweven
         const colorBlocks = document.querySelectorAll('.pixel-block');
         for (let i = 0; i < colorBlocks.length; i++) {
-            const elRect = colorBlocks[i].getBoundingClientRect();
-            const margin = 1; 
-            const isOverlapping = !(
-                headRect.right - margin <= elRect.left ||
-                headRect.left + margin >= elRect.right ||
-                headRect.bottom - margin <= elRect.top ||
-                headRect.top + margin >= elRect.bottom
-            );
+                        const elRect = colorBlocks[i].getBoundingClientRect();
             
-            if (isOverlapping) {
+            // Nieuwe soepele en vergevingsgezinde Kameleon Check (20px hitbox vanaf het centrum)
+            const blockCenterX = elRect.left + (elRect.width / 2);
+            const blockCenterY = elRect.top + (elRect.height / 2);
+            const headCenterX = headRect.left + 10; // 10 is the center of our 20x20 snake
+            const headCenterY = headRect.top + 10;
+            
+            if (Math.abs(blockCenterX - headCenterX) < 22 && Math.abs(blockCenterY - headCenterY) < 22) {
                 // Vind de specifieke vulkleur van DIT blokje
                 const rectEl = colorBlocks[i].querySelector('rect');
                 if (rectEl) {
