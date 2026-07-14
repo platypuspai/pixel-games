@@ -384,5 +384,180 @@ document.addEventListener("fullscreenchange", () => {
 loadLevel();
 requestAnimationFrame(loop);
 </script>
+
+<!-- ========================================== -->
+<!-- ✨ PREMIUM INFO BUTTON & POPUP (FULLY FIXED) ✨ -->
+<!-- ========================================== -->
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap');
+    
+    #gameInfoContainer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 2147483647 !important;
+    }
+    
+    #gameInfoBtn {
+        position: fixed; 
+        top: 15px; 
+        right: 15px; 
+        width: 45px; 
+        height: 45px;
+        background: #12121a !important; 
+        color: #4488ff !important; 
+        border: 2px solid #4488ff !important; 
+        border-radius: 50% !important;
+        font-family: 'Press Start 2P', monospace !important; 
+        font-size: 18px !important; 
+        cursor: pointer !important;
+        pointer-events: auto !important;
+        box-shadow: 0 0 12px rgba(68, 136, 255, 0.6) !important;
+        display: flex !important; 
+        align-items: center !important; 
+        justify-content: center !important;
+        transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+    #gameInfoBtn:hover {
+        transform: scale(1.1) rotate(15deg) !important; 
+        background: #4488ff !important; 
+        color: #ffffff !important;
+        box-shadow: 0 0 25px rgba(68, 136, 255, 0.9) !important;
+    }
+    #gameInfoModal {
+        display: none; 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 100%;
+        background: rgba(8, 8, 12, 0.94) !important; 
+        pointer-events: auto !important;
+        align-items: center !important; 
+        justify-content: center !important;
+        backdrop-filter: blur(6px) !important;
+        -webkit-backdrop-filter: blur(6px) !important;
+    }
+    #gameInfoContent {
+        background: #0d0d14 !important; 
+        border: 3px solid #4488ff !important; 
+        border-radius: 12px !important;
+        padding: 30px !important; 
+        max-width: 480px !important; 
+        width: 88% !important;
+        box-shadow: 0 0 35px rgba(68, 136, 255, 0.4) !important;
+        font-family: 'Inconsolata', monospace !important; 
+        color: #e2e2ee !important;
+        box-sizing: border-box !important;
+        animation: infoPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+    @keyframes infoPopIn {
+        0% { opacity: 0; transform: scale(0.85) translateY(15px); }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .info-title {
+        font-family: 'Press Start 2P', monospace !important; 
+        color: #00e5ff !important;
+        text-align: center !important; 
+        font-size: 16px !important; 
+        line-height: 1.5 !important; 
+        margin-top: 0 !important;
+        margin-bottom: 22px !important;
+        text-shadow: 0 0 8px rgba(0, 229, 255, 0.3) !important;
+    }
+    .info-visual-box {
+        width: 100% !important;
+        height: 8px !important;
+        background: linear-gradient(90deg, #4488ff, #00e5ff, #00ff88, #ff44aa) !important;
+        border-radius: 4px !important;
+        margin-bottom: 20px !important;
+    }
+    .info-text strong { 
+        color: #00ff88 !important; 
+        font-size: 18px !important; 
+        font-weight: 700 !important;
+        display: inline-block !important;
+        margin-bottom: 4px !important;
+    }
+    .info-text p { 
+        font-size: 15px !important; 
+        line-height: 1.6 !important; 
+        margin-top: 0 !important;
+        margin-bottom: 18px !important; 
+    }
+    #closeInfoBtn {
+        width: 100% !important; 
+        background: transparent !important; 
+        border: 2px solid #ff44aa !important; 
+        color: #ff44aa !important;
+        padding: 12px !important; 
+        border-radius: 8px !important; 
+        font-family: 'Press Start 2P', monospace !important;
+        font-size: 12px !important; 
+        cursor: pointer !important; 
+        transition: all 0.2s ease !important; 
+        margin-top: 8px !important;
+        box-shadow: 0 0 5px rgba(255, 68, 170, 0.2) !important;
+    }
+    #closeInfoBtn:hover { 
+        background: #ff44aa !important; 
+        color: #ffffff !important; 
+        box-shadow: 0 0 20px rgba(255, 68, 170, 0.7) !important;
+        transform: translateY(-2px) !important;
+    }
+</style>
+
+<div id="gameInfoContainer">
+    <button id="gameInfoBtn" title="Game Manual">i</button>
+
+    <div id="gameInfoModal">
+        <div id="gameInfoContent">
+            <h2 class="info-title">MINI PLATFORMER</h2>
+            <div class="info-visual-box"></div>
+            <div class="info-text">
+                <p><strong>💡 What is it?</strong><br>A high-precision, classic 2D browser platformer. Sprint across blocks and reach the yellow exit portal in record time!</p>
+                <p><strong>🎮 Controls:</strong><br>🏃‍♂️ <b>Move Left/Right:</b> Use Left/Right Arrow Keys.<br>🦘 <b>Jump:</b> Up Arrow Key.<br>🔄 <b>Restart Level:</b> Click the restart button at the top if you get stuck.<br>🖥️ <b>Change size:</b> Click the size button at the top at the right to change the size from small to big or from big to small.</p>
+            </div>
+            <button id="closeInfoBtn">LET'S PLAY!</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        function initGameInfo() {
+            const btn = document.getElementById('gameInfoBtn');
+            const modal = document.getElementById('gameInfoModal');
+            const close = document.getElementById('closeInfoBtn');
+            
+            if (btn && modal && close) {
+                btn.onclick = function(e) {
+                    e.stopPropagation();
+                    modal.style.display = 'flex';
+                };
+                close.onclick = function(e) {
+                    e.stopPropagation();
+                    modal.style.display = 'none';
+                };
+                modal.onclick = function(e) {
+                    if (e.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                };
+            }
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initGameInfo);
+        } else {
+            initGameInfo();
+        }
+    })();
+</script>
+<!-- ========================================== -->
 </body>
+
 </html>
