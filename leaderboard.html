@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global Leaderboard & Account Sync - Pixel Games</title>
+    <title>Global Leaderboard - Pixel Games</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -177,7 +177,7 @@
 
     <header>
         <h1>PIXEL-GAMES LEADERBOARD</h1>
-        <p style="color: var(--text-muted); font-size: 0.8rem;">Synchroniseer je scores op andere apparaten met je unieke Account Code!</p>
+        <p style="color: var(--text-muted); font-size: 0.8rem;">Sync your highscores across devices using your unique Account Code!</p>
     </header>
 
     <div class="container">
@@ -186,27 +186,27 @@
             <h2>🔑 ACCOUNT & SYNC CODE</h2>
             <div class="account-box">
                 <div>
-                    <label style="font-size: 0.8rem; color: var(--text-muted);">HUIDIGE SPELERSNAAM:</label>
-                    <input type="text" id="playerNameInput" placeholder="Voer je naam in...">
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">CURRENT PLAYER NAME:</label>
+                    <input type="text" id="playerNameInput" placeholder="Enter your player name...">
                 </div>
 
                 <div>
-                    <label style="font-size: 0.8rem; color: var(--text-muted);">JOUW UNIEKE ACCOUNT CODE:</label>
-                    <div id="displayCodeBox" class="code-badge">Geen code actief</div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">YOUR ACCOUNT CODE:</label>
+                    <div id="displayCodeBox" class="code-badge">No Code Active</div>
                 </div>
 
                 <div class="btn-group">
-                    <button onclick="saveName()">NAAM OPSLAAN</button>
-                    <button class="btn-secondary" onclick="generateNewCode()">NIEUWE CODE</button>
+                    <button onclick="saveName()">SAVE NAME</button>
+                    <button class="btn-secondary" onclick="generateNewCode()">GENERATE NEW CODE</button>
                 </div>
 
                 <hr style="border: 0; border-top: 1px solid var(--border); margin: 15px 0;">
 
                 <div>
-                    <label style="font-size: 0.8rem; color: var(--text-muted);">INLOGGEN MET CODE VAN ANDER APPARAAT:</label>
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">LOGIN WITH CODE FROM OTHER DEVICE:</label>
                     <div style="display: flex; gap: 10px; margin-top: 5px;">
-                        <input type="text" id="codeInput" placeholder="Plak je code hier...">
-                        <button onclick="loginWithCode()" style="white-space: nowrap;">INLADEN</button>
+                        <input type="text" id="codeInput" placeholder="Paste Account Code here...">
+                        <button onclick="loginWithCode()" style="white-space: nowrap;">LOAD ACCOUNT</button>
                     </div>
                 </div>
 
@@ -217,7 +217,7 @@
         <div class="panel">
             <h2>🏆 GLOBAL HIGHSCORES</h2>
             <div style="margin-bottom: 15px;">
-                <label style="font-size: 0.8rem; color: var(--text-muted);">KIES SPEL:</label>
+                <label style="font-size: 0.8rem; color: var(--text-muted);">SELECT GAME:</label>
                 <select id="gameSelect" onchange="loadScores()" style="background: var(--surface); color: var(--accent); border: 1px solid var(--border); padding: 8px; font-family: 'Inconsolata', monospace; font-size: 0.9rem; border-radius: 4px; margin-left: 10px;">
                     <option value="luckyGuyScores">Lucky Guy</option>
                     <option value="snakeScores">Snake Arcade</option>
@@ -233,19 +233,19 @@
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>SPELER</th>
+                        <th>PLAYER</th>
                         <th>SCORE / LEVEL</th>
                     </tr>
                 </thead>
                 <tbody id="scoresTableBody">
-                    <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Leaderboard laden...</td></tr>
+                    <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Loading leaderboard...</td></tr>
                 </tbody>
             </table>
         </div>
 
     </div>
 
-    <a href="index.html" class="back-btn">◀ TERUG NAAR HOME</a>
+    <a href="index.html" class="back-btn">◀ BACK TO HOME</a>
 
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -275,7 +275,7 @@
         });
 
         function initAccount() {
-            let currentName = localStorage.getItem('pg_player_name') || 'Speler_' + Math.floor(Math.random() * 1000);
+            let currentName = localStorage.getItem('pg_player_name') || 'Player_' + Math.floor(Math.random() * 1000);
             let currentCode = localStorage.getItem('pg_player_code');
 
             if (!currentCode) {
@@ -297,31 +297,31 @@
         function saveName() {
             const newName = nameInput.value.trim();
             if (!newName) {
-                showStatus("Voer een geldige naam in!", false);
+                showStatus("Please enter a valid name!", false);
                 return;
             }
             localStorage.setItem('pg_player_name', newName);
-            showStatus("Naam succesvol opgeslagen!", true);
+            showStatus("Name saved successfully!", true);
             updateNameInFirebase(newName);
         }
 
         function generateNewCode() {
-            if (confirm("Weet je het zeker? Dit genereert een NIEUWE accountcode op dit apparaat.")) {
+            if (confirm("Are you sure? This will generate a NEW account code for this device.")) {
                 const newCode = generateRandomCode();
                 localStorage.setItem('pg_player_code', newCode);
                 codeDisplay.innerText = newCode;
-                showStatus("Nieuwe accountcode aangemaakt!", true);
+                showStatus("New account code generated!", true);
             }
         }
 
         async function loginWithCode() {
             const targetCode = codeInput.value.trim().toUpperCase();
             if (!targetCode) {
-                showStatus("Voer een code in om in te laden!", false);
+                showStatus("Please enter a code to load!", false);
                 return;
             }
 
-            showStatus("Zoeken op de server...", true);
+            showStatus("Searching server for code...", true);
 
             const games = ["luckyGuyScores", "snakeScores", "miniApocalypseScores", "bugEscapeScores", "dodgingArenaScores", "scores", "platformerScores"];
             let foundName = null;
@@ -344,17 +344,17 @@
                     nameInput.value = foundName;
                     codeDisplay.innerText = targetCode;
                     codeInput.value = '';
-                    showStatus(`Account ingeladen! Welkom terug, ${foundName}.`, true);
+                    showStatus(`Account loaded! Welcome back, ${foundName}.`, true);
                     loadScores();
                 } else {
                     localStorage.setItem('pg_player_code', targetCode);
                     codeDisplay.innerText = targetCode;
                     codeInput.value = '';
-                    showStatus("Code geactiveerd! Speel spellen om scores aan deze code te koppelen.", true);
+                    showStatus("Code activated! Play games to post scores under this code.", true);
                 }
             } catch (e) {
-                console.error("Fout bij laden code:", e);
-                showStatus("Fout bij ophalen van account vanaf de server.", false);
+                console.error("Error loading code:", e);
+                showStatus("Failed to load account from server.", false);
             }
         }
 
@@ -373,7 +373,7 @@
                         });
                     }
                 } catch(e) {
-                    console.warn("Kon naam niet updaten in tabel:", gameTable);
+                    console.warn("Could not sync name for table:", gameTable);
                 }
             }
             loadScores();
@@ -387,12 +387,12 @@
 
         async function loadScores() {
             const selectedTable = document.getElementById('gameSelect').value;
-            scoresTable.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Laden...</td></tr>';
+            scoresTable.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Loading...</td></tr>';
 
             try {
                 const snap = await db.ref(selectedTable).once('value');
                 if (!snap.exists()) {
-                    scoresTable.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Nog geen scores aanwezig!</td></tr>';
+                    scoresTable.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">No scores recorded yet!</td></tr>';
                     return;
                 }
 
@@ -401,7 +401,7 @@
                     const data = child.val();
                     const scoreVal = data.level || data.score || data.clicks || 0;
                     list.push({
-                        name: data.name || 'Anoniem',
+                        name: data.name || 'Anonymous',
                         score: parseInt(scoreVal, 10),
                         code: data.code || ''
                     });
@@ -418,6 +418,18 @@
                     html += `
                         <tr ${highlightStyle}>
                             <td class="rank">#${index + 1}</td>
-                            <td>${item.name}${isMe ? ' (JIJ)' : ''}</td>
+                            <td>${item.name} ${isMe ? ' (YOU)' : ''}</td>
                             <td>${item.score}</td>
                         </tr>
+                    `;
+                });
+
+                scoresTable.innerHTML = html || '<tr><td colspan="3" style="text-align: center;">No scores found.</td></tr>';
+            } catch(e) {
+                console.error("Error loading scores:", e);
+                scoresTable.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--error);">Error loading leaderboard data.</td></tr>';
+            }
+        }
+    </script>
+</body>
+    </html>
