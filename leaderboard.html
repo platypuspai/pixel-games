@@ -3,586 +3,421 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leaderboard — Pixel-Games</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <title>Global Leaderboard & Account Sync - Pixel Games</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0a0a0f; --surface: #12121a; --card: #1a1a28; --border: #2a2a42;
-            --accent-orange: #ff8844; --accent-green: #00ff88; --accent-cyan: #00e5ff;
-            --accent-pink: #ff44aa; --accent-red: #ff4444; --accent-yellow: #ffdd00;
-            --accent-indigo: #6e44ff; /* Kleur voor Dodging Arena */
-            --text: #e8e8ff; --text-muted: #7777aa;
-            --accent-blue: #4488ff;
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --card: #1a1a28;
+            --border: #2a2a42;
+            --accent: #00e5ff;
+            --text: #e8e8ff;
+            --text-muted: #7777aa;
+            --error: #ff44aa;
+            --success: #00ff88;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inconsolata', monospace; background: var(--bg); color: var(--text); min-height: 100vh; }
-        body::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.10) 2px, rgba(0,0,0,0.10) 4px); pointer-events: none; z-index: 999; }
-        body::after { content: ''; position: fixed; inset: -100%; background-image: linear-gradient(rgba(68,136,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(68,136,255,0.04) 1px, transparent 1px); background-size: 40px 40px; animation: gridMove 20s linear infinite; pointer-events: none; z-index: 0; }
-        @keyframes gridMove { 0% { transform: translate(0,0); } 100% { transform: translate(40px,40px); } }
+        body {
+            font-family: 'Inconsolata', monospace;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-        .stars { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
-        .star { position: absolute; background: white; border-radius: 50%; animation: twinkle var(--d, 3s) ease-in-out infinite var(--delay, 0s); }
-        @keyframes twinkle { 0%,100% { opacity: 0.2; transform: scale(1); } 50% { opacity: 1; transform: scale(1.5); } }
+        header { margin-bottom: 20px; text-align: center; }
 
-        header { position: relative; z-index: 10; text-align: center; padding: 48px 20px 32px; border-bottom: 1px solid var(--border); }
-        .back-link { display: inline-flex; align-items: center; gap: 8px; font-family: 'Press Start 2P', monospace; font-size: 0.45rem; color: var(--text-muted); text-decoration: none; letter-spacing: 0.1em; border: 1px solid var(--border); padding: 8px 14px; transition: all 0.15s; position: absolute; top: 48px; left: 24px; }
-        .back-link:hover { color: var(--accent-green); border-color: var(--accent-green); }
-        h1 { font-family: 'Press Start 2P', monospace; font-size: clamp(0.9rem, 3vw, 1.4rem); color: var(--accent-yellow); letter-spacing: 0.05em; line-height: 1.5; }
-        .subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 12px; letter-spacing: 0.15em; }
-        .subtitle span { color: var(--accent-green); animation: blink 1.2s step-end infinite; }
-        @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+        h1 {
+            font-family: 'Press Start 2P', monospace;
+            color: var(--accent);
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+        }
 
-        .wrap { position: relative; z-index: 10; max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
-        .name-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--accent-yellow); padding: 16px 22px; margin-bottom: 32px; }
-        .name-bar-label { font-family: 'Press Start 2P', monospace; font-size: 0.42rem; color: var(--text-muted); letter-spacing: 0.1em; }
-        .name-bar-value { font-size: 1rem; font-weight: 700; color: var(--accent-yellow); flex: 1; }
-        .change-btn { font-family: 'Press Start 2P', monospace; font-size: 0.38rem; padding: 8px 14px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); cursor: pointer; letter-spacing: 0.08em; transition: all 0.15s; }
-        .change-btn:hover { border-color: var(--accent-yellow); color: var(--accent-yellow); }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 800px;
+            width: 100%;
+        }
 
-        .modal-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .modal-overlay.hidden { display: none; }
-        .modal, .import-modal { background: var(--card); border: 1px solid var(--border); padding: 40px 36px; max-width: 420px; width: 90%; }
-        .modal { border-top: 3px solid var(--accent-yellow); }
-        .import-modal { border-top: 3px solid var(--accent-blue); max-width: 460px; }
-        .modal h3 { font-family: 'Press Start 2P', monospace; font-size: 0.6rem; color: var(--accent-yellow); margin-bottom: 10px; }
-        .import-modal h3 { font-family: 'Press Start 2P', monospace; font-size: 0.6rem; color: var(--accent-blue); margin-bottom: 10px; }
-        .modal p, .import-modal p { color: var(--text-muted); font-size: 0.8rem; line-height: 1.6; margin-bottom: 22px; }
-        .modal input, .import-modal input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'Inconsolata', monospace; font-size: 1rem; padding: 12px 14px; outline: none; transition: border-color 0.15s; margin-bottom: 14px; }
-        .modal input:focus { border-color: var(--accent-yellow); }
-        .import-modal input:focus { border-color: var(--accent-blue); }
-        .modal-btn { font-family: 'Press Start 2P', monospace; font-size: 0.5rem; padding: 14px 20px; background: var(--accent-yellow); color: #000; border: none; cursor: pointer; width: 100%; letter-spacing: 0.1em; transition: filter 0.15s; }
-        .import-btn { font-family: 'Press Start 2P', monospace; font-size: 0.5rem; padding: 14px 20px; background: var(--accent-blue); color: #fff; border: none; cursor: pointer; width: 100%; letter-spacing: 0.1em; transition: filter 0.15s; }
-        .modal-btn:hover, .import-btn:hover { filter: brightness(1.1); }
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
 
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: start; }
-        @media (max-width: 980px) { .grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 650px) { .grid { grid-template-columns: 1fr; } }
+        h2 {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 1rem;
+            color: var(--accent);
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
 
-        .board { background: var(--card); border: 1px solid var(--border); border-radius: 2px; margin-bottom: 10px; }
-        .board-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
-        .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green); animation: pulse 1.5s ease-in-out infinite; flex-shrink: 0; }
-        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
-        .board-title { font-family: 'Press Start 2P', monospace; font-size: 0.45rem; letter-spacing: 0.08em; flex: 1; line-height: 1.6; }
-        .board-meta { font-size: 0.62rem; color: var(--text-muted); white-space: nowrap; }
-        .board-body { max-height: 580px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-        .board-body::-webkit-scrollbar { width: 4px; }
-        .board-body::-webkit-scrollbar-thumb { background: var(--border); }
+        .account-box {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
 
-        .lb-row { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.1s; }
-        .lb-row:hover { background: rgba(255,255,255,0.04); }
-        .lb-row.me { background: rgba(255,221,0,0.07); }
-        .lb-rank { font-family: 'Press Start 2P', monospace; font-size: 0.38rem; color: var(--text-muted); width: 24px; text-align: center; flex-shrink: 0; }
-        .lb-rank.g { color: #ffd700; font-size: 0.65rem; }
-        .lb-rank.s { color: #c0c0c0; font-size: 0.65rem; }
-        .lb-rank.b { color: #cd7f32; font-size: 0.65rem; }
-        .lb-name { flex: 1; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .lb-name.me { color: var(--accent-yellow); font-weight: 700; }
-        .lb-score { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; font-family: 'Inconsolata', monospace; }
-        .lb-empty, .lb-loading { padding: 28px 18px; color: var(--text-muted); font-size: 0.78rem; text-align: center; line-height: 1.7; }
-        .lb-loading::after { content: '...'; animation: blink 1s step-end infinite; }
-        .board-foot { border-top: 1px solid var(--border); padding: 10px 18px; font-size: 0.72rem; color: var(--text-muted); background: rgba(255,221,0,0.04); display: none; }
-        .board-foot span { color: var(--accent-yellow); font-weight: 700; }
+        input[type="text"] {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            color: #fff;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.8rem;
+            padding: 12px;
+            border-radius: 4px;
+            outline: none;
+            width: 100%;
+            box-sizing: border-box;
+        }
 
-        .account-section { background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--accent-blue); padding: 16px 22px; margin-bottom: 32px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-        .account-label { font-family: 'Press Start 2P', monospace; font-size: 0.42rem; color: var(--text-muted); letter-spacing: 0.1em; flex-shrink: 0; }
-        .account-code { font-size: 0.85rem; font-weight: 700; color: var(--accent-blue); letter-spacing: 0.15em; flex: 1; word-break: break-all; }
-        .account-btn { font-family: 'Press Start 2P', monospace; font-size: 0.38rem; padding: 8px 14px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); cursor: pointer; letter-spacing: 0.08em; transition: all 0.15s; white-space: nowrap; }
-        .account-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+        input[type="text"]:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.7rem;
+            padding: 12px 18px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: 0.2s;
+            box-shadow: 0 4px 0 #0099aa;
+        }
+
+        button:hover { background: #fff; }
+        button:active { transform: translateY(3px); box-shadow: none; }
+
+        .btn-secondary {
+            background: #2a2a42;
+            color: var(--text);
+            box-shadow: 0 4px 0 #12121a;
+        }
+
+        .status-msg {
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .success { color: var(--success); }
+        .error { color: var(--error); }
+
+        .code-badge {
+            background: var(--surface);
+            border: 1px dashed var(--accent);
+            padding: 10px;
+            font-family: monospace;
+            word-break: break-all;
+            color: var(--success);
+            font-size: 0.9rem;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px dashed var(--border);
+            font-size: 0.9rem;
+        }
+
+        th {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+        }
+
+        .rank { font-weight: bold; color: var(--success); }
+        
+        .back-btn {
+            margin-top: 20px;
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            text-decoration: none;
+            padding: 10px 20px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.6rem;
+            display: inline-block;
+            border-radius: 4px;
+        }
+        .back-btn:hover { color: #fff; border-color: var(--accent); }
     </style>
 </head>
 <body>
 
-<div class="stars" id="stars"></div>
+    <header>
+        <h1>PIXEL-GAMES LEADERBOARD</h1>
+        <p style="color: var(--text-muted); font-size: 0.8rem;">Synchroniseer je scores op andere apparaten met je unieke Account Code!</p>
+    </header>
 
-<header>
-    <a class="back-link" href="index.html">◀ BACK</a>
-    <h1>🏆 LEADERBOARD</h1>
-    <p class="subtitle">Live rankings &nbsp;·&nbsp; all Pixel-Games &nbsp;·&nbsp; <span>_</span></p>
-</header>
-
-<div class="wrap">
-
-    <div class="name-bar">
-        <span class="name-bar-label">// PLAYER</span>
-        <span class="name-bar-value" id="bar-name">—</span>
-        <button class="change-btn" onclick="showModal()">CHANGE NAME</button>
-    </div>
-
-    <div class="account-section">
-        <span class="account-label">// ACCOUNT CODE</span>
-        <span class="account-code" id="account-code">—</span>
-        <button class="account-btn" onclick="copyCode()">COPY</button>
-        <button class="account-btn" onclick="showImportModal()">IMPORT ON OTHER DEVICE</button>
-    </div>
-
-    <div class="modal-overlay hidden" id="import-modal">
-        <div class="import-modal">
-            <h3>// IMPORT ACCOUNT</h3>
-            <p>Enter the 20-character code from your other device to transfer your account here.</p>
-            <input id="import-input" type="text" maxlength="20" placeholder="XXXXXXXXXXXXXXXXXXXX" autocomplete="off" spellcheck="false">
-            <div id="import-error" style="color:#ff4444;font-size:0.75rem;margin-bottom:12px;min-height:1em;"></div>
-            <button class="import-btn" onclick="importAccount()">► IMPORT ACCOUNT</button>
-            <p style="margin-top:14px;font-size:0.7rem;color:var(--text-muted);">Warning: this will replace the account on this device.</p>
-        </div>
-    </div>
-
-    <div class="modal-overlay hidden" id="modal">
-        <div class="modal">
-            <h3>// CHOOSE YOUR NAME</h3>
-            <p>This name is used to identify you across all leaderboards.</p>
-            <input id="name-input" type="text" maxlength="18" placeholder="Your player name..." autocomplete="off">
-            <button class="modal-btn" onclick="confirmName()">► CONFIRM NAME</button>
-        </div>
-    </div>
-
-    <div class="grid">
-
-        <div class="board" style="border-top: 2px solid var(--accent-orange);">
-            <div class="board-head">
-                <span class="live-dot"></span>
-                <span class="board-title" style="color:var(--accent-orange)">MONEY DIGGER</span>
-                <span class="board-meta">clicks</span>
-            </div>
-            <div class="board-body" id="md-body"><div class="lb-loading">Connecting</div></div>
-            <div class="board-foot" id="md-foot"></div>
-        </div>
-
-        <div class="board" style="border-top: 2px solid var(--accent-green);">
-            <div class="board-head">
-                <span class="live-dot"></span>
-                <span class="board-title" style="color:var(--accent-green)">MINI PLATFORMER</span>
-                <span class="board-meta">best time</span>
-            </div>
-            <div class="board-body" id="pf-body"><div class="lb-loading">Connecting</div></div>
-            <div class="board-foot" id="pf-foot"></div>
-        </div>
-
-        <div class="board" style="border-top: 2px solid var(--accent-cyan);">
-            <div class="board-head">
-                <span class="live-dot"></span>
-                <span class="board-title" style="color:var(--accent-cyan)">LUCKY GUY</span>
-                <span class="board-meta">highest level</span>
-            </div>
-            <div class="board-body" id="lg-body"><div class="lb-loading">Connecting</div></div>
-            <div class="board-foot" id="lg-foot"></div>
-        </div>
-
-        <div class="board" style="border-top: 2px solid var(--accent-pink);">
-            <div class="board-head">
-                <span class="live-dot"></span>
-                <span class="board-title" style="color:var(--accent-pink)">MINI APOCALYPSE</span>
-                <span class="board-meta">score</span>
-            </div>
-            <div class="board-body" id="ma-body"><div class="lb-loading">Connecting</div></div>
-            <div class="board-foot" id="ma-foot"></div>
-        </div>
-
-        <div class="board" style="border-top: 2px solid var(--accent-red);">
-            <div class="board-head">
-                <span class="live-dot"></span>
-                <span class="board-title" style="color:var(--accent-red)">BUG ESCAPE</span>
-                <span class="board-meta">score</span>
-            </div>
-            <div class="board-body" id="be-body"><div class="lb-loading">Connecting</div></div>
-            <div class="board-foot" id="be-foot"></div>
-        </div>
-
-        <div class="board" style="border-top: 2px solid var(--accent-indigo);">
-            <div class="board-head">
-                <span class="live-dot"></span>
-                <span class="board-title" style="color:var(--accent-indigo)">DODGING ARENA</span>
-                <span class="board-meta">score</span>
-            </div>
-            <div class="board-body" id="da-body"><div class="lb-loading">Connecting</div></div>
-            <div class="board-foot" id="da-foot"></div>
-        </div>
-
-        <div class="board" style="border-top: 2px solid var(--accent-green);">
-            <div class="board-head">
-                <span class="live-dot"></span>
-                <span class="board-title" style="color:var(--accent-green)">SNAKE MINIGAME</span>
-                <span class="board-meta">score</span>
-            </div>
-            <div class="board-body" id="snake-body"><div class="lb-loading">Connecting</div></div>
-            <div class="board-foot" id="snake-foot"></div>
-        </div>
-
-
-    </div>
-</div>
-
-<script>
-const starsEl = document.getElementById('stars');
-for (let i = 0; i < 80; i++) {
-    const s = document.createElement('div');
-    s.className = 'star';
-    const sz = Math.random() < 0.7 ? 1 : 2;
-    s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--d:${2+Math.random()*4}s;--delay:-${Math.random()*4}s;`;
-    starsEl.appendChild(s);
-}
-
-const LB_KEY = 'pg_player_name';
-const DEV_KEY = 'pg_device_id';
-function getDeviceId() {
-    let id = localStorage.getItem(DEV_KEY);
-    if (!id) { id = 'lb-' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36); localStorage.setItem(DEV_KEY, id); }
-    return id;
-}
-const MY_DEVICE_ID = getDeviceId();
-function getName() { return localStorage.getItem(LB_KEY) || ''; }
-
-const ACC_KEY = 'pg_account_code';
-function getOrCreateCode() {
-    let code = localStorage.getItem(ACC_KEY);
-    if (!code) {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        code = Array.from({length: 20}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-        localStorage.setItem(ACC_KEY, code);
-    }
-    return code;
-}
-const MY_ACCOUNT_CODE = getOrCreateCode();
-document.getElementById('account-code').textContent = MY_ACCOUNT_CODE;
-
-function copyCode() {
-    navigator.clipboard.writeText(MY_ACCOUNT_CODE).then(() => {
-        const el = document.getElementById('account-code');
-        el.style.color = 'var(--accent-green)';
-        el.textContent = 'COPIED!';
-        setTimeout(() => { el.style.color = ''; el.textContent = MY_ACCOUNT_CODE; }, 1500);
-    }).catch(() => { prompt('Copy your account code:', MY_ACCOUNT_CODE); });
-}
-
-function showImportModal() {
-    document.getElementById('import-modal').classList.remove('hidden');
-    document.getElementById('import-input').value = '';
-    document.getElementById('import-error').textContent = '';
-    setTimeout(() => document.getElementById('import-input').focus(), 50);
-}
-
-// 🔥 DE VERNIEUWDE, VEILIGE IMPORT FUNCTIE (MET PERFECTE MONEY DIGGER FIX) 🔥
-async function importAccount() {
-    const code = document.getElementById('import-input').value.trim().toUpperCase();
-    const errEl = document.getElementById('import-error');
-    if (code.length !== 20) { errEl.textContent = 'Code must be exactly 20 characters.'; return; }
-    const btn = document.querySelector('.import-btn');
-    btn.textContent = '⏳ Looking up...'; btn.disabled = true; errEl.textContent = '';
-    try {
-        const db = fbApp.database();
-        const snap = await db.ref('accountCodes/' + code).once('value');
-        const data = snap.val();
-        if (!data || !data.deviceId || !data.name) {
-            errEl.textContent = 'Code not found. Make sure you copied it correctly.';
-            btn.textContent = '► IMPORT ACCOUNT'; btn.disabled = false; return;
-        }
-
-        const cleanName = data.name.trim();
-
-        // 🚀 NIEUW: Haal eerst alle data op (vooral voor de slimme Money Digger check)
-        const [mdSnap, lgSnap, pfSnap, maSnap, beSnap, daSnap] = await Promise.all([
-            db.ref('scores').once('value'),
-            db.ref('luckyGuyScores').once('value'),
-            db.ref('platformerScores').once('value'),
-            db.ref('miniApocalypseScores').once('value'),
-            db.ref('bugEscapeScores').once('value'),
-            db.ref('dodgingArenaScores').once('value')
-        ]);
-
-        // 🚀 NIEUW: Zoek de ECHTE Money Digger ID op basis van de naam in de cloud!
-        let trueMdDeviceId = data.deviceId; 
-        mdSnap.forEach(child => {
-            let n = child.val()?.name;
-            if (n && n.trim().toLowerCase() === cleanName.toLowerCase()) {
-                trueMdDeviceId = child.key; // Gevonden! We stelen de originele 'dev-...' sleutel
-            }
-        });
-
-        // 🔥 DE GROTE SCHOONMAAK
-        localStorage.clear();
-
-        // Standaard leaderboard gegevens terugzetten
-        localStorage.setItem(DEV_KEY, data.deviceId);
-        localStorage.setItem(LB_KEY, cleanName);
-        localStorage.setItem(ACC_KEY, code);
-        localStorage.setItem('pg_player_name', cleanName);
+    <div class="container">
         
-        // 🚀 DE ECHTE MONEY DIGGER FIX 🚀
-        // Zet de correcte sleutel in md6_did (en NIET md6_device_id!)
-        localStorage.setItem('md6_did', trueMdDeviceId);
-        localStorage.setItem('md6_n', cleanName);
+        <div class="panel">
+            <h2>🔑 ACCOUNT & SYNC CODE</h2>
+            <div class="account-box">
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">HUIDIGE SPELERSNAAM:</label>
+                    <input type="text" id="playerNameInput" placeholder="Voer je naam in...">
+                </div>
 
-        await db.ref('nameOwners/' + data.deviceId).set({ name: cleanName });
-        await db.ref('accountCodes/' + code).set({ deviceId: data.deviceId, name: cleanName });
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">JOUW UNIEKE ACCOUNT CODE:</label>
+                    <div id="displayCodeBox" class="code-badge">Geen code actief</div>
+                </div>
 
-        // AUTO-FIX: We dwingen de database om eventuele foutjes gelijk te trekken
-        const fixNameInDB = (dbSnap, path) => {
-            dbSnap.forEach(child => {
-                let n = child.val()?.name;
-                if (n && n.trim().toLowerCase() === cleanName.toLowerCase() && n !== cleanName) {
-                    db.ref(path + '/' + child.key + '/name').set(cleanName).catch(()=>{});
-                }
-            });
+                <div class="btn-group">
+                    <button onclick="saveName()">NAAM OPSLAAN</button>
+                    <button class="btn-secondary" onclick="generateNewCode()">NIEUWE CODE</button>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 15px 0;">
+
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">INLOGGEN MET CODE VAN ANDER APPARAAT:</label>
+                    <div style="display: flex; gap: 10px; margin-top: 5px;">
+                        <input type="text" id="codeInput" placeholder="Plak je code hier...">
+                        <button onclick="loginWithCode()" style="white-space: nowrap;">INLADEN</button>
+                    </div>
+                </div>
+
+                <div id="statusMessage" class="status-msg"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>🏆 GLOBAL HIGHSCORES</h2>
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 0.8rem; color: var(--text-muted);">KIES SPEL:</label>
+                <select id="gameSelect" onchange="loadScores()" style="background: var(--surface); color: var(--accent); border: 1px solid var(--border); padding: 8px; font-family: 'Inconsolata', monospace; font-size: 0.9rem; border-radius: 4px; margin-left: 10px;">
+                    <option value="luckyGuyScores">Lucky Guy</option>
+                    <option value="snakeScores">Snake Arcade</option>
+                    <option value="miniApocalypseScores">Mini Apocalypse</option>
+                    <option value="bugEscapeScores">Bug Escape</option>
+                    <option value="dodgingArenaScores">Dodging Arena</option>
+                    <option value="scores">Money Digger</option>
+                    <option value="platformerScores">Mini Platformer</option>
+                </select>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>SPELER</th>
+                        <th>SCORE / LEVEL</th>
+                    </tr>
+                </thead>
+                <tbody id="scoresTableBody">
+                    <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Leaderboard laden...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <a href="index.html" class="back-btn">◀ TERUG NAAR HOME</a>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+            authDomain: "money-digger-9b05e.firebaseapp.com",
+            databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "money-digger-9b05e",
+            storageBucket: "money-digger-9b05e.firebasestorage.app",
+            messagingSenderId: "883506536944",
+            appId: "1:883506536944:web:921b342dff76154fcbbd35"
         };
-        
-        fixNameInDB(mdSnap, 'scores');
-        fixNameInDB(lgSnap, 'luckyGuyScores');
-        fixNameInDB(pfSnap, 'platformerScores');
-        fixNameInDB(maSnap, 'miniApocalypseScores');
-        fixNameInDB(beSnap, 'bugEscapeScores');
-        fixNameInDB(daSnap, 'dodgingArenaScores');
 
-        document.getElementById('import-modal').classList.add('hidden');
-        document.getElementById('bar-name').textContent = cleanName;
-        document.getElementById('account-code').textContent = code;
-        location.reload(); 
-    } catch(e) { errEl.textContent = 'Connection error. Try again.'; console.error(e); }
-    btn.textContent = '► IMPORT ACCOUNT'; btn.disabled = false;
-}
-document.getElementById('import-modal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden'); });
-document.getElementById('import-input').addEventListener('keydown', e => { if (e.key === 'Enter') importAccount(); });
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-function showModal() {
-    document.getElementById('modal').classList.remove('hidden');
-    const inp = document.getElementById('name-input');
-    inp.value = getName();
-    setTimeout(() => inp.focus(), 50);
-}
+        const nameInput = document.getElementById('playerNameInput');
+        const codeDisplay = document.getElementById('displayCodeBox');
+        const codeInput = document.getElementById('codeInput');
+        const statusMsg = document.getElementById('statusMessage');
+        const scoresTable = document.getElementById('scoresTableBody');
 
-function showNameError(msg) {
-    let el = document.getElementById('name-error');
-    if (!el) {
-        el = document.createElement('p'); el.id = 'name-error';
-        el.style.cssText = 'color:#ff4444;font-size:0.75rem;margin-bottom:12px;min-height:1em;';
-        const btn = document.querySelector('.modal-btn');
-        btn.parentNode.insertBefore(el, btn);
-    }
-    el.textContent = msg;
-}
-function clearNameError() { const el = document.getElementById('name-error'); if (el) el.textContent = ''; }
+        window.addEventListener('DOMContentLoaded', () => {
+            initAccount();
+            loadScores();
+        });
 
-async function confirmName() {
-    const val = document.getElementById('name-input').value.trim();
-    if (!val) { document.getElementById('name-input').focus(); return; }
-    clearNameError();
-    const oldName = getName();
-    const valLow = val.toLowerCase();
-    if (oldName && oldName.toLowerCase() === valLow) { document.getElementById('modal').classList.add('hidden'); return; }
-    
-    const btn = document.querySelector('.modal-btn');
-    btn.textContent = '⏳ Checking...'; btn.disabled = true;
+        function initAccount() {
+            let currentName = localStorage.getItem('pg_player_name') || 'Speler_' + Math.floor(Math.random() * 1000);
+            let currentCode = localStorage.getItem('pg_player_code');
 
-    try {
-        const db = fbApp.database();
-        const nameSnap = await db.ref('nameOwners').once('value');
-        const owners = nameSnap.val() || {};
-        const conflict = Object.entries(owners).find(([devId, v]) => devId !== MY_DEVICE_ID && v.name && v.name.toLowerCase() === valLow);
-        if (conflict) { showNameError('Name already taken. Choose a different name.'); btn.textContent = '► CONFIRM NAME'; btn.disabled = false; return; }
-
-        await db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: val });
-        await db.ref('accountCodes/' + MY_ACCOUNT_CODE).set({ deviceId: MY_DEVICE_ID, name: val });
-        localStorage.setItem(LB_KEY, val);
-        document.getElementById('bar-name').textContent = val;
-
-        if (oldName && oldName.toLowerCase() !== valLow) {
-            const [mdSnap, lgSnap, pfSnap, maSnap, beSnap, daSnap] = await Promise.all([
-                db.ref('scores').once('value'),
-                db.ref('luckyGuyScores').once('value'),
-                db.ref('platformerScores').once('value'),
-                db.ref('miniApocalypseScores').once('value'),
-                db.ref('bugEscapeScores').once('value'),
-                db.ref('dodgingArenaScores').once('value')
-            ]);
-            
-            const lgSave = localStorage.getItem('luckyGuySaveData');
-            if (lgSave) {
-                try { const d = JSON.parse(lgSave); if (d.name && d.name.toLowerCase() === oldName.toLowerCase()) { d.name = val; localStorage.setItem('luckyGuySaveData', JSON.stringify(d)); } } catch(e) {}
+            if (!currentCode) {
+                currentCode = generateRandomCode();
+                localStorage.setItem('pg_player_code', currentCode);
             }
-            mdSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('scores/' + child.key + '/name').set(val).catch(()=>{}); });
-            lgSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('luckyGuyScores/' + child.key + '/name').set(val).catch(()=>{}); });
-            pfSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('platformerScores/' + child.key + '/name').set(val).catch(()=>{}); });
-            maSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('miniApocalypseScores/' + child.key + '/name').set(val).catch(()=>{}); });
-            beSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('bugEscapeScores/' + child.key + '/name').set(val).catch(()=>{}); });
-            daSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('dodgingArenaScores/' + child.key + '/name').set(val).catch(()=>{}); });
+
+            localStorage.setItem('pg_player_name', currentName);
+            nameInput.value = currentName;
+            codeDisplay.innerText = currentCode;
         }
 
-        document.getElementById('modal').classList.add('hidden');
-        if (window._mdData) render('md-body', 'md-foot', window._mdData, val);
-        if (window._pfData) render('pf-body', 'pf-foot', window._pfData, val);
-        if (window._lgData) render('lg-body', 'lg-foot', window._lgData, val);
-        if (window._maData) render('ma-body', 'ma-foot', window._maData, val);
-        if (window._beData) render('be-body', 'be-foot', window._beData, val);
-        if (window._daData) render('da-body', 'da-foot', window._daData, val);
-            if (window._snakeData) render('snake-body', 'snake-foot', window._snakeData, val);
+        function generateRandomCode() {
+            let array = new Uint8Array(16);
+            window.crypto.getRandomValues(array);
+            return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('').toUpperCase();
+        }
 
-    } catch(e) { showNameError('Connection error. Please try again.'); console.error(e); }
+        function saveName() {
+            const newName = nameInput.value.trim();
+            if (!newName) {
+                showStatus("Voer een geldige naam in!", false);
+                return;
+            }
+            localStorage.setItem('pg_player_name', newName);
+            showStatus("Naam succesvol opgeslagen!", true);
+            updateNameInFirebase(newName);
+        }
 
-    btn.textContent = '► CONFIRM NAME'; btn.disabled = false;
-}
+        function generateNewCode() {
+            if (confirm("Weet je het zeker? Dit genereert een NIEUWE accountcode op dit apparaat.")) {
+                const newCode = generateRandomCode();
+                localStorage.setItem('pg_player_code', newCode);
+                codeDisplay.innerText = newCode;
+                showStatus("Nieuwe accountcode aangemaakt!", true);
+            }
+        }
 
-document.getElementById('name-input').addEventListener('keydown', e => { if (e.key === 'Enter') confirmName(); });
-document.getElementById('name-input').addEventListener('input', () => clearNameError());
-document.getElementById('modal').addEventListener('click', e => { if (e.target === e.currentTarget && getName()) e.currentTarget.classList.add('hidden'); });
+        async function loginWithCode() {
+            const targetCode = codeInput.value.trim().toUpperCase();
+            if (!targetCode) {
+                showStatus("Voer een code in om in te laden!", false);
+                return;
+            }
 
-const initName = getName();
-document.getElementById('bar-name').textContent = initName || '—';
-if (!initName) { showModal(); } 
-else {
-    setTimeout(() => {
-        const db = fbApp.database();
-        Promise.all([
-            db.ref('nameOwners/' + MY_DEVICE_ID).once('value'),
-            db.ref('accountCodes/' + MY_ACCOUNT_CODE).once('value'),
-        ]).then(([ownerSnap, codeSnap]) => {
-            const ownerOk = ownerSnap.val() && ownerSnap.val().name && ownerSnap.val().name.toLowerCase() === initName.toLowerCase();
-            const codeOk  = codeSnap.val() && codeSnap.val().deviceId === MY_DEVICE_ID;
-            if (!ownerOk) db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: initName }).catch(()=>{});
-            if (!codeOk)  db.ref('accountCodes/' + MY_ACCOUNT_CODE).set({ deviceId: MY_DEVICE_ID, name: initName }).catch(()=>{});
-        });
-    }, 2000);
-}
+            showStatus("Zoeken op de server...", true);
 
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function medal(i) { return i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1); }
-function medalCls(i) { return i===0?'g':i===1?'s':i===2?'b':''; }
+            const games = ["luckyGuyScores", "snakeScores", "miniApocalypseScores", "bugEscapeScores", "dodgingArenaScores", "scores", "platformerScores"];
+            let foundName = null;
 
-function render(bodyId, footId, rows, me) {
-    const body = document.getElementById(bodyId);
-    const foot = document.getElementById(footId);
-    if (!body) return;
-    if (!rows || !rows.length) { body.innerHTML = '<div class="lb-empty">No scores yet.</div>'; if (foot) foot.style.display = 'none'; return; }
-    const low = (me || '').toLowerCase();
-    let html = '', pos = -1;
-    for (let i = 0; i < rows.length; i++) {
-        const r = rows[i];
-        const isMe = low && r.name.toLowerCase() === low;
-        if (isMe) pos = i;
-        html += `<div class="lb-row${isMe?' me':''}">
-            <span class="lb-rank ${medalCls(i)}">${medal(i)}</span>
-            <span class="lb-name${isMe?' me':''}">${esc(r.name)}</span>
-            <span class="lb-score">${esc(r.score)}</span>
-        </div>`;
-    }
-    body.innerHTML = html;
-    if (foot) {
-        if (me && pos >= 0) { foot.innerHTML = `Jouw rang: <span>#${pos+1}</span> · ${esc(rows[pos].score)}`; foot.style.display = ''; } 
-        else if (me) { foot.innerHTML = 'You are not in this ranking yet.'; foot.style.display = ''; } 
-        else { foot.style.display = 'none'; }
-    }
-}
+            try {
+                for (let gameTable of games) {
+                    const snap = await db.ref(gameTable).orderByChild('code').equalTo(targetCode).once('value');
+                    if (snap.exists()) {
+                        snap.forEach(child => {
+                            const val = child.val();
+                            if (val.name) foundName = val.name;
+                        });
+                        if (foundName) break;
+                    }
+                }
 
-const FB_CFG = {
-    apiKey: 'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',
-    authDomain: 'money-digger-9b05e.firebaseapp.com',
-    databaseURL: 'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app',
-    projectId: 'money-digger-9b05e',
-    storageBucket: 'money-digger-9b05e.firebasestorage.app',
-    messagingSenderId: '883506536944',
-    appId: '1:883506536944:web:921b342dff76154fcbbd35'
-};
+                if (foundName) {
+                    localStorage.setItem('pg_player_code', targetCode);
+                    localStorage.setItem('pg_player_name', foundName);
+                    nameInput.value = foundName;
+                    codeDisplay.innerText = targetCode;
+                    codeInput.value = '';
+                    showStatus(`Account ingeladen! Welkom terug, ${foundName}.`, true);
+                    loadScores();
+                } else {
+                    localStorage.setItem('pg_player_code', targetCode);
+                    codeDisplay.innerText = targetCode;
+                    codeInput.value = '';
+                    showStatus("Code geactiveerd! Speel spellen om scores aan deze code te koppelen.", true);
+                }
+            } catch (e) {
+                console.error("Fout bij laden code:", e);
+                showStatus("Fout bij ophalen van account vanaf de server.", false);
+            }
+        }
 
-let fbApp;
-try { fbApp = firebase.app('lb'); } catch(e) { fbApp = firebase.initializeApp(FB_CFG, 'lb'); }
-function formatNum(n) { return Number(n).toLocaleString('en-US'); }
+        async function updateNameInFirebase(newName) {
+            const currentCode = localStorage.getItem('pg_player_code');
+            if (!currentCode) return;
 
-// Money Digger
-let mdOff = null;
-(function loadMD() {
-    const body = document.getElementById('md-body'); const foot = document.getElementById('md-foot');
-    body.innerHTML = '<div class="lb-loading">Connecting</div>';
-    if (mdOff) { mdOff(); mdOff = null; }
-    const ref = fbApp.database().ref('scores');
-    function onVal(snap) {
-        const rows = []; let totalBillsSum = 0; 
-        snap.forEach(child => { const d = child.val(); if (!d) return; const c = d.clicks || 0; totalBillsSum += c; rows.push({ name: d.name || child.key, score: formatNum(c), v: c }); });
-        rows.sort((a,b) => b.v - a.v);
-        const cleaned = rows.map(r => ({ name: r.name, score: r.score })); window._mdData = cleaned; render('md-body', 'md-foot', cleaned, getName());
-        if (foot) { foot.style.display = 'block'; foot.innerHTML = `TOTALE GELDSTAPEL: <span style="color: var(--accent-orange);">${formatNum(totalBillsSum)}</span>`; }
-    }
-    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
-    mdOff = () => ref.off('value', onVal);
-})();
+            const games = ["luckyGuyScores", "snakeScores", "miniApocalypseScores", "bugEscapeScores", "dodgingArenaScores", "scores", "platformerScores"];
+            
+            for (let gameTable of games) {
+                try {
+                    const snap = await db.ref(gameTable).orderByChild('code').equalTo(currentCode).once('value');
+                    if (snap.exists()) {
+                        snap.forEach(child => {
+                            child.ref.update({ name: newName });
+                        });
+                    }
+                } catch(e) {
+                    console.warn("Kon naam niet updaten in tabel:", gameTable);
+                }
+            }
+            loadScores();
+        }
 
-// Mini Platformer
-function ts(ms) { const s = Math.floor(ms/1000), m = Math.floor(s/60), t = Math.floor((ms%1000)/100); return m > 0 ? m+'m '+(s%60)+'.'+t+'s' : s+'.'+t+'s'; }
-let pfOff = null;
-(function loadPF() {
-    const body = document.getElementById('pf-body'); body.innerHTML = '<div class="lb-loading">Connecting</div>';
-    if (pfOff) { pfOff(); pfOff = null; }
-    const ref = fbApp.database().ref('platformerScores');
-    function onVal(snap) {
-        const byName = {}; 
-        snap.forEach(child => { const d = child.val(); if (!d || !d.name || d.time == null) return; if (!byName[d.name] || d.time < byName[d.name]) byName[d.name] = d.time; });
-        const rows = Object.entries(byName).map(([name, time]) => ({ name, score: ts(time), v: time })).sort((a, b) => a.v - b.v);
-        const cleaned = rows.map(r => ({ name: r.name, score: r.score })); window._pfData = cleaned; render('pf-body', 'pf-foot', cleaned, getName());
-    }
-    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
-    pfOff = () => ref.off('value', onVal);
-})();
+        function showStatus(text, isSuccess) {
+            statusMsg.innerText = text;
+            statusMsg.className = "status-msg " + (isSuccess ? "success" : "error");
+            setTimeout(() => { statusMsg.innerText = ""; }, 4000);
+        }
 
-// Lucky Guy
-let lgOff = null;
-(function loadLG() {
-    const body = document.getElementById('lg-body'); body.innerHTML = '<div class="lb-loading">Connecting</div>';
-    if (lgOff) { lgOff(); lgOff = null; }
-    const ref = fbApp.database().ref('luckyGuyScores');
-    function onVal(snap) {
-        const rows = [];
-        snap.forEach(child => { const d = child.val(); if (!d) return; rows.push({ name: d.name || child.key, score: 'Level ' + (d.level||0), v: d.level||0 }); });
-        rows.sort((a,b) => b.v - a.v); const cleaned = rows.map(r => ({ name: r.name, score: r.score })); window._lgData = cleaned; render('lg-body', 'lg-foot', cleaned, getName());
-    }
-    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
-    lgOff = () => ref.off('value', onVal);
-})();
+        async function loadScores() {
+            const selectedTable = document.getElementById('gameSelect').value;
+            scoresTable.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Laden...</td></tr>';
 
-// Mini Apocalypse
-let maOff = null;
-(function loadMA() {
-    const body = document.getElementById('ma-body'); body.innerHTML = '<div class="lb-loading">Connecting</div>';
-    if (maOff) { maOff(); maOff = null; }
-    const ref = fbApp.database().ref('miniApocalypseScores');
-    function onVal(snap) {
-        const rows = [];
-        snap.forEach(child => { const d = child.val(); if (!d) return; rows.push({ name: d.name || child.key, score: formatNum(d.score || 0), v: d.score || 0 }); });
-        rows.sort((a,b) => b.v - a.v); const cleaned = rows.map(r => ({ name: r.name, score: r.score })); window._maData = cleaned; render('ma-body', 'ma-foot', cleaned, getName());
-    }
-    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
-    maOff = () => ref.off('value', onVal);
-})();
+            try {
+                const snap = await db.ref(selectedTable).once('value');
+                if (!snap.exists()) {
+                    scoresTable.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Nog geen scores aanwezig!</td></tr>';
+                    return;
+                }
 
-// Bug Escape
-let beOff = null;
-(function loadBE() {
-    const body = document.getElementById('be-body'); body.innerHTML = '<div class="lb-loading">Connecting</div>';
-    if (beOff) { beOff(); beOff = null; }
-    const ref = fbApp.database().ref('bugEscapeScores');
-    function onVal(snap) {
-        const rows = [];
-        snap.forEach(child => { const d = child.val(); if (!d) return; rows.push({ name: d.name || child.key, score: formatNum(d.score || 0), v: d.score || 0 }); });
-        rows.sort((a,b) => b.v - a.v); const cleaned = rows.map(r => ({ name: r.name, score: r.score })); window._beData = cleaned; render('be-body', 'be-foot', cleaned, getName());
-    }
-    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
-    beOff = () => ref.off('value', onVal);
-})();
+                let list = [];
+                snap.forEach(child => {
+                    const data = child.val();
+                    const scoreVal = data.level || data.score || data.clicks || 0;
+                    list.push({
+                        name: data.name || 'Anoniem',
+                        score: parseInt(scoreVal, 10),
+                        code: data.code || ''
+                    });
+                });
 
-// Dodging Arena (NIEUW!)
-let daOff = null;
-(function loadDA() {
-    const body = document.getElementById('da-body'); const foot = document.getElementById('da-foot');
-    body.innerHTML = '<div class="lb-loading">Connecting</div>';
-    if (daOff) { daOff(); daOff = null; }
-    const ref = fbApp.database().ref('dodgingArenaScores');
-    function onVal(snap) {
-        const rows = [];
-        snap.forEach(child => { const d = child.val(); if (!d) return; rows.push({ name: d.name || child.key, score: formatNum(d.score || 0), v: d.score || 0 }); });
-        rows.sort((a,b) => b.v - a.v); const cleaned = rows.map(r => ({ name: r.name, score: r.score })); window._daData = cleaned; render('da-body', 'da-foot', cleaned, getName());
-    }
-    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
-    daOff = () => ref.off('value', onVal);
-})();
-</script>
-</body>
-</html>
+                list.sort((a, b) => b.score - a.score);
+
+                let html = '';
+                const myCode = localStorage.getItem('pg_player_code');
+
+                list.slice(0, 10).forEach((item, index) => {
+                    const isMe = item.code && item.code === myCode;
+                    const highlightStyle = isMe ? 'style="color: var(--accent); font-weight: bold;"' : '';
+                    html += `
+                        <tr ${highlightStyle}>
+                            <td class="rank">#${index + 1}</td>
+                            <td>${item.name}${isMe ? ' (JIJ)' : ''}</td>
+                            <td>${item.score}</td>
+                        </tr>
