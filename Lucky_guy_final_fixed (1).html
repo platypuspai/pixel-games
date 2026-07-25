@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucky Guy v4.3 - Pixel-Games (Online)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --card: #1a1a28;
+            --border: #2a2a42;
+            --accent: #00e5ff;
+            --text: #e8e8ff;
+            --text-muted: #7777aa;
+            --error: #ff44aa;
+            --success: #00ff88;
+        }
+
+        body {
+            font-family: 'Inconsolata', monospace;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header { margin-bottom: 20px; text-align: center; }
+
+        h1 {
+            font-family: 'Press Start 2P', monospace;
+            color: var(--accent);
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+        }
+
+        .version-tag {
+            background: var(--accent);
+            color: #000;
+            padding: 2px 6px;
+            font-size: 0.6rem;
+            border-radius: 4px;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 950px;
+            width: 100%;
+        }
+
+        .play-area {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 30px;
+            border-top: 3px solid var(--accent);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .wheel-wrapper {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            margin: 20px 0 30px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; height: 0; 
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 35px solid #fff;
+            z-index: 10;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.8));
+        }
+
+        .pointer::after {
+            content: '';
+            position: absolute;
+            top: -35px;
+            left: -10px;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 25px solid var(--accent);
+        }
+
+        .wheel-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.3));
+        }
+
+        .level-display {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 1.5rem;
+            color: #fff;
+            margin: 10px 0;
+            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+        }
+
+        .info-text { color: var(--text-muted); margin-bottom: 15px; font-size: 0.9rem; }
+
+        input[type="number"], input[type="text"] {
+            width: 80%; background: var(--surface);
+            border: 2px solid var(--border); color: var(--accent);
+            font-family: 'Press Start 2P', monospace; font-size: 1rem;
+            padding: 15px; text-align: center; margin-bottom: 20px; outline: none; transition: 0.2s;
+        }
+
+        input:focus { border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 229, 255, 0.2); }
+
+        button {
+            font-family: 'Press Start 2P', monospace; font-size: 0.8rem;
+            padding: 15px 20px; background: var(--accent); color: #000;
+            border: none; cursor: pointer; letter-spacing: 0.1em;
+            transition: 0.2s; width: 80%; box-shadow: 0 4px 0 #0099aa;
+        }
+
+        button:active { transform: translateY(4px); box-shadow: 0 0 0 #0099aa; }
+        button:disabled { background: var(--border); color: var(--text-muted); box-shadow: 0 4px 0 #1a1a28; cursor: not-allowed; transform: none; }
+
+        .result-box { margin-top: 25px; min-height: 40px; font-weight: bold; font-size: 1.1rem; text-shadow: 0 0 5px rgba(255,255,255,0.2); }
+
+
+        .global-badge { font-size: 0.6rem; color: var(--success); margin-bottom: 20px; letter-spacing: 0.1em; }
+
+        .score-list { list-style: none; padding: 0; margin: 0; text-align: left; width: 100%; }
+        .score-list li { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed var(--border); font-size: 0.9rem; }
+        .score-list li span:last-child { color: var(--accent); font-weight: bold; }
+
+        .back-btn { margin-top: 40px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); text-decoration: none; padding: 10px 20px; font-family: 'Press Start 2P', monospace; font-size: 0.6rem; transition: 0.3s; }
+        .back-btn:hover { color: #fff; border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
+
+        #save-status { font-size: 0.6rem; color: var(--success); margin-top: 10px; font-family: 'Press Start 2P', monospace; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>LUCKY GUY <span class="version-tag">v4.3 ONLINE</span></h1>
+        <p style="color: var(--text-muted); font-size: 0.8rem;">Pure chaos mode. Pick your number.</p>
+    </header>
+
+    <div class="game-container">
+        <div class="play-area" id="start-ui">
+            <h2 style="font-family: 'Press Start 2P'; font-size: 1.2rem; color: var(--accent); margin-bottom: 20px;">LUCKY GUY</h2>
+            <p class="info-text">Spelen als: <strong id="display-name" style="color:var(--accent)">—</strong></p>
+            <p class="info-text" id="save-status" style="font-size:0.75rem; margin-top:6px; opacity:0.6;"></p>
+            <button onclick="startGame()" style="margin-top:20px;">START GAME</button>
+        </div>
+
+        <div class="play-area" id="game-ui" style="display: none;">
+            <div class="info-text">CURRENT LEVEL</div>
+            <div class="level-display" id="level-text">1</div>
+            <p class="info-text" id="instruction">Pick a number between 1 and 1</p>
+            
+            <div class="wheel-wrapper">
+                <div class="pointer"></div>
+                <canvas id="wheel-canvas" class="wheel-canvas" width="600" height="600"></canvas>
+            </div>
+
+            <input type="number" id="guess-input" min="1" placeholder="Your number?">
+            <button id="spin-btn" onclick="spinWheel()">SPIN THE WHEEL</button>
+
+            <div class="result-box" id="result-message"></div>
+        </div>
+
+
+    </div>
+
+    <a href="index.html" class="back-btn">◀ BACK TO HOME</a>
+
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+            authDomain: "money-digger-9b05e.firebaseapp.com",
+            databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "money-digger-9b05e",
+            storageBucket: "money-digger-9b05e.firebasestorage.app",
+            messagingSenderId: "883506536944",
+            appId: "1:883506536944:web:921b342dff76154fcbbd35"
+        };
+
+        const lgApp = firebase.initializeApp(firebaseConfig, 'lucky-guy-app');
+        const db = lgApp.database().ref('luckyGuyScores');
+
+        window.currentPlayerName = "";
+        window.currentLevel = 1;
+        window.isSpinning = false;
+        window.currentRotation = Math.floor(Math.random() * 360); 
+        
+        const wheelColors = ['#00e5ff', '#ff44aa', '#00ff88', '#ffdd00', '#ff8844', '#b344ff'];
+
+        const startUI = document.getElementById('start-ui');
+        const gameUI = document.getElementById('game-ui');
+        const levelText = document.getElementById('level-text');
+        const instruction = document.getElementById('instruction');
+        const guessInput = document.getElementById('guess-input');
+        const resultMessage = document.getElementById('result-message');
+        const spinBtn = document.getElementById('spin-btn');
+        const canvas = document.getElementById('wheel-canvas');
+        const ctx = canvas.getContext('2d');
+        const displayNameEl = document.getElementById('display-name');
+
+        canvas.style.transform = `rotate(${window.currentRotation}deg)`;
+
+        // Actieve naam en code ophalen uit localStorage
+        let finalName = localStorage.getItem('pg_player_name') || localStorage.getItem('pixel_games_username') || 'Speler';
+        let userCode = localStorage.getItem('pg_account_code') || localStorage.getItem('pg_account_code');
+
+        if (displayNameEl) displayNameEl.textContent = finalName;
+
+        window.startGame = async function() {
+            // Update actieve naam en code opnieuw
+            finalName = localStorage.getItem('pg_player_name') || localStorage.getItem('pixel_games_username') || 'Speler';
+            userCode = localStorage.getItem('pg_account_code') || '';
+            if (displayNameEl) displayNameEl.textContent = finalName;
+
+            window.currentPlayerName = finalName;
+            
+            // Haal lokale opslag op
+            let personalSave = null;
+            try { personalSave = JSON.parse(localStorage.getItem('luckyGuySaveData')); } catch(e){}
+
+            let startingLevel = 1;
+            if (personalSave && personalSave.level) {
+                startingLevel = personalSave.level;
+            }
+
+            const startBtn = document.querySelector('#start-ui button') || document.getElementById('start-btn');
+            const oldText = startBtn ? startBtn.innerText : "START GAME";
+            if (startBtn) { startBtn.innerText = "SERVER CHECKEN..."; startBtn.disabled = true; }
+
+            try {
+                let highestLevel = 0;
+                
+                // 1. Kijken op de server via ACCOUNT CODE
+                if (userCode) {
+                    const codeSnap = await db.orderByChild('code').equalTo(userCode).once('value');
+                    if (codeSnap.exists()) {
+                        codeSnap.forEach(child => {
+                            const val = child.val();
+                            if (val && val.level && val.level > highestLevel) highestLevel = val.level;
+                        });
+                    }
+                }
+
+                // 2. Als er niks via code was, kijken via SPELERSNAAM
+                if (highestLevel === 0 && finalName) {
+                    const nameSnap = await db.orderByChild('name').equalTo(finalName).once('value');
+                    if (nameSnap.exists()) {
+                        nameSnap.forEach(child => {
+                            const val = child.val();
+                            if (val && val.level && val.level > highestLevel) highestLevel = val.level;
+                        });
+                    }
+                }
+
+                // Server heeft altijd gelijk als het level daar hoger is!
+                if (highestLevel > startingLevel) {
+                    startingLevel = highestLevel;
+                }
+            } catch (e) {
+                console.warn("Kon Firebase niet bereiken, we gebruiken de lokale save.", e);
+            }
+
+            window.currentLevel = startingLevel;
+            savePersonalProgress();
+
+            if (startBtn) { startBtn.innerText = oldText; startBtn.disabled = false; }
+            startUI.style.display = 'none';
+            gameUI.style.display = 'flex';
+            updateUI();
+        };
+
+        function savePersonalProgress() {
+            const saveData = { name: window.currentPlayerName, level: window.currentLevel, code: userCode };
+            localStorage.setItem('luckyGuySaveData', JSON.stringify(saveData));
+        }
+
+        function getSecureRandomNumber(maxNumber) {
+            const randomBuffer = new Uint32Array(1);
+            window.crypto.getRandomValues(randomBuffer);
+            return (randomBuffer[0] % maxNumber) + 1;
+        }
+
+        function drawWheel() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2 - 10; 
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const sliceAngle = (2 * Math.PI) / window.currentLevel;
+
+            for (let i = 0; i < window.currentLevel; i++) {
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, i * sliceAngle, (i + 1) * sliceAngle);
+                ctx.fillStyle = wheelColors[i % wheelColors.length];
+                ctx.fill();
+                
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "#12121a";
+                ctx.stroke();
+
+                if (window.currentLevel <= 80) {
+                    ctx.save();
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(i * sliceAngle + sliceAngle / 2);
+                    ctx.textAlign = "right";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = "#000"; 
+                    const fontSize = Math.max(12, 35 - (window.currentLevel / 2));
+                    ctx.font = `bold ${fontSize}px Arial`;
+                    ctx.fillText(i + 1, radius - 20, 0);
+                    ctx.restore();
+                }
+            }
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
+            ctx.fillStyle = "#1a1a28";
+            ctx.fill();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = "#00e5ff";
+            ctx.stroke();
+        }
+
+        function updateUI() {
+            levelText.innerText = window.currentLevel;
+            instruction.innerText = `Pick a number between 1 and ${window.currentLevel}`;
+            guessInput.value = '';
+            guessInput.max = window.currentLevel;
+            resultMessage.innerText = '';
+            drawWheel();
+        }
+
+        window.spinWheel = function() {
+            if (window.isSpinning) return;
+
+            const guess = parseInt(guessInput.value);
+            
+            if (isNaN(guess) || guess < 1 || guess > window.currentLevel) {
+                resultMessage.style.color = 'var(--error)';
+                resultMessage.innerText = 'Enter a valid number!';
+                return;
+            }
+
+            window.isSpinning = true;
+            spinBtn.disabled = true;
+            resultMessage.style.color = '#fff';
+            resultMessage.innerText = 'Spinning...';
+            
+            const winningNumber = getSecureRandomNumber(window.currentLevel);
+            
+            const sliceAngleDeg = 360 / window.currentLevel;
+            const middleAngle = (winningNumber - 1 + 0.5) * sliceAngleDeg;
+            
+            const randomOffset = (Math.random() * 0.8 - 0.4) * sliceAngleDeg;
+            const targetDegree = 270 - middleAngle + randomOffset;
+
+            const spinRounds = Math.floor(Math.random() * 8) + 5;
+            const extraSpins = spinRounds * 360; 
+            
+            const currentMod = window.currentRotation % 360;
+            let diff = targetDegree - currentMod;
+            if (diff < 0) diff += 360; 
+
+            window.currentRotation += extraSpins + diff;
+            
+            const spinDuration = Math.random() * 3.5 + 4;
+            
+            canvas.style.transition = `transform ${spinDuration}s cubic-bezier(0.15, 0.85, 0.1, 1)`;
+            canvas.style.transform = `rotate(${window.currentRotation}deg)`;
+
+            setTimeout(() => {
+                checkResult(guess, winningNumber);
+            }, spinDuration * 1000);
+        };
+
+        function checkResult(guess, winningNumber) {
+            if (guess === winningNumber) {
+                resultMessage.style.color = 'var(--success)';
+                resultMessage.innerText = `BINGO! It was ${winningNumber}.`;
+                
+                // Verhoog level EN sla direct lokaal + op Firebase op!
+                window.currentLevel++;
+                savePersonalProgress();
+                saveScoreToFirebase(window.currentLevel);
+
+                setTimeout(() => {
+                    updateUI();
+                    window.isSpinning = false;
+                    spinBtn.disabled = false;
+                }, 2000);
+
+            } else {
+                resultMessage.style.color = 'var(--error)';
+                resultMessage.innerText = `WRONG! It was ${winningNumber}. Try again!`;
+                
+                setTimeout(() => {
+                    window.currentRotation = Math.floor(Math.random() * 360);
+                    canvas.style.transition = 'none'; 
+                    canvas.style.transform = `rotate(${window.currentRotation}deg)`;
+                    
+                    updateUI();
+                    window.isSpinning = false;
+                    spinBtn.disabled = false;
+                }, 2500);
+            }
+        }
+
+        // --- ALLESOMVATTENDE SCORE OPSLAAN FUNCTIE ---
+        async function saveScoreToFirebase(levelReached) {
+            let currentName = localStorage.getItem('pg_player_name') || localStorage.getItem('pixel_games_username') || window.currentPlayerName;
+            let accountCode = localStorage.getItem('pg_account_code') || localStorage.getItem('pg_account_code');
+
+            if (!currentName || currentName === "null") return; 
+
+            try {
+                let snap = null;
+
+                // 1. Zoek op ACCOUNT CODE
+                if (accountCode) {
+                    snap = await db.orderByChild('code').equalTo(accountCode).once('value');
+                }
+
+                // 2. Zoek op SPELERSNAAM als er via code niks gevonden werd
+                if (!snap || !snap.exists()) {
+                    snap = await db.orderByChild('name').equalTo(currentName).once('value');
+                }
+
+                if (snap && snap.exists()) {
+                    // Bestaande rij bijwerken
+                    snap.forEach(child => {
+                        const existing = child.val();
+                        const oldLvl = existing.level || 0;
+                        const newLvl = Math.max(levelReached, oldLvl);
+
+                        child.ref.update({
+                            level: newLvl,
+                            name: currentName,
+                            code: accountCode || existing.code || ""
+                        });
+                        console.log("🔥 Firebase record bijgewerkt:", currentName, "Level:", newLvl);
+                    });
+                } else {
+                    // Nieuwe rij aanmaken voor deze speler/code
+                    await db.push({ 
+                        name: currentName, 
+                        level: levelReached,
+                        code: accountCode || "" 
+                    });
+                    console.log("🔥 Nieuwe score in Firebase gezet:", currentName, "Level:", levelReached);
+                }
+            } catch (e) {
+                console.error("Fout bij opslaan in Firebase: ", e);
+            }
+        }
+
+        window.saveScoreToFirebase = saveScoreToFirebase;
+    </script>
+
+</body>
+</html>
