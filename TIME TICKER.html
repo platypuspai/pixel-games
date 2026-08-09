@@ -57,6 +57,8 @@
             gap: 15px;
             align-items: center;
             font-size: 0.9rem;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .user-bar span {
@@ -68,10 +70,11 @@
             background: transparent;
             border: 1px solid var(--border);
             color: var(--text-muted);
-            padding: 4px 8px;
+            padding: 6px 10px;
             font-family: 'Press Start 2P', monospace;
             font-size: 0.5rem;
             cursor: pointer;
+            transition: 0.2s;
         }
         .btn-change:hover { color: #fff; border-color: #fff; }
 
@@ -112,22 +115,23 @@
             align-items: center;
             justify-content: center;
             z-index: 1000;
+            backdrop-filter: blur(4px);
         }
 
         .modal {
             background: var(--card);
-            border: 2px solid var(--accent-blue);
+            border: 2px solid var(--accent-yellow);
             padding: 30px;
-            max-width: 400px;
+            max-width: 420px;
             width: 90%;
-            border-radius: 6px;
+            border-radius: 4px;
             text-align: center;
         }
 
         .modal h2 {
             font-family: 'Press Start 2P', monospace;
             font-size: 0.8rem;
-            color: var(--accent-blue);
+            color: var(--accent-yellow);
             margin-bottom: 15px;
         }
 
@@ -135,11 +139,12 @@
             font-size: 0.85rem;
             color: var(--text-muted);
             margin-bottom: 20px;
+            line-height: 1.5;
         }
 
         .modal input {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             margin-bottom: 12px;
             background: var(--bg);
             border: 1px solid var(--border);
@@ -147,20 +152,22 @@
             font-family: 'Inconsolata', monospace;
             font-size: 1rem;
             outline: none;
+            transition: border-color 0.2s;
         }
 
-        .modal input:focus { border-color: var(--accent-blue); }
+        .modal input:focus { border-color: var(--accent-yellow); }
 
         .modal button {
             width: 100%;
-            padding: 12px;
-            background: var(--accent-blue);
+            padding: 14px;
+            background: var(--accent-yellow);
             color: #000;
             border: none;
             font-family: 'Press Start 2P', monospace;
             font-size: 0.6rem;
             cursor: pointer;
             transition: filter 0.2s;
+            margin-top: 10px;
         }
 
         .modal button:hover { filter: brightness(1.2); }
@@ -171,7 +178,9 @@
             text-decoration: none;
             font-family: 'Press Start 2P', monospace;
             font-size: 0.6rem;
+            transition: color 0.2s;
         }
+        .back-link:hover { color: var(--accent-green); }
     </style>
 </head>
 <body>
@@ -181,15 +190,15 @@
 </header>
 
 <div class="user-bar">
-    <div>SPELER: <span id="disp-name">-</span></div>
-    <div>CODE: <span id="disp-code">-</span></div>
-    <button class="btn-change" onclick="showAuthModal()">WIJZIGEN</button>
+    <div>SPELER: <span id="disp-name">—</span></div>
+    <div>CODE: <span id="disp-code">—</span></div>
+    <button class="btn-change" onclick="showAuthModal()">NAAM / CODE WIJZIGEN</button>
 </div>
 
 <div class="notebook">
     <div class="notebook-line">
-        <span>⏱️ Verstreken tijd:</span>
-        <span class="ticker-val" id="val-seconds">0s</span>
+        <span>⏱️ Tijdscore (score):</span>
+        <span class="ticker-val" id="val-seconds">0</span>
     </div>
     <div class="notebook-line">
         <span>💓 Hartslagen wereldwijd:</span>
@@ -208,13 +217,13 @@
 <a class="back-link" href="index.html">◄ TERUG NAAR HOME</a>
 
 <!-- AUTH MODAL -->
-<div class="modal-overlay" id="auth-modal">
+<div class="modal-overlay" id="auth-modal" style="display:none;">
     <div class="modal">
-        <h2>LOGIN / REGISTREER</h2>
-        <p>Voer je naam en je persoonlijke koppelcode in om je voortgang op te slaan in Firebase.</p>
-        <input type="text" id="inp-name" placeholder="Jouw Spelernaam" maxlength="16" autocomplete="off">
-        <input type="password" id="inp-code" placeholder="Koppelcode (bijv. 1234)" maxlength="10" autocomplete="off">
-        <button onclick="saveUserAndConnect()">VERBINDEN MET FIREBASE</button>
+        <h2>LOGIN / LEADERBOARD INFO</h2>
+        <p>Voer je algemene leaderboard-naam in en de vereiste 20-cijferige code om je tijdscore op te slaan.</p>
+        <input type="text" id="inp-name" placeholder="Jouw Spelernaam (max 18)" maxlength="18" autocomplete="off">
+        <input type="text" id="inp-code" placeholder="20-cijferige code" maxlength="20" autocomplete="off">
+        <button onclick="saveUserAndConnect()">► BEVESTIGEN</button>
     </div>
 </div>
 
@@ -226,21 +235,22 @@
         databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app"
     };
 
-    // Firebase Initialiseren
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
     const db = firebase.database();
 
-    // 2. Variabelen & State
-    let playerName = localStorage.getItem('tt_player_name') || '';
-    let playerCode = localStorage.getItem('tt_player_code') || '';
-    let secondsActive = 0;
-    let syncInterval = null;
+    // 2. Variabelen & State (gebruikt dezelfde key als de andere games)
+    const LB_KEY = 'pg_player_name';
+    const CODE_KEY = 'pg_player_code';
+    
+    let playerName = localStorage.getItem(LB_KEY) || '';
+    let playerCode = localStorage.getItem(CODE_KEY) || '';
+    let scoreTime = 0; 
 
-    // 3. User Authentication & Modal
+    // 3. Authenticatie en Weergave
     function checkUserAuth() {
-        if (!playerName || !playerCode) {
+        if (!playerName || playerCode.length !== 20) {
             showAuthModal();
         } else {
             hideAuthModal();
@@ -263,16 +273,21 @@
         const nameInput = document.getElementById('inp-name').value.trim();
         const codeInput = document.getElementById('inp-code').value.trim();
 
-        if (!nameInput || !codeInput) {
-            alert('Vul a.u.b. zowel een naam als een koppelcode in!');
+        if (!nameInput) {
+            alert('Voer een geldige spelernaam in!');
+            return;
+        }
+        
+        if (codeInput.length !== 20 || !/^\d+$/.test(codeInput)) {
+            alert('De code moet exact 20 cijfers bevatten!');
             return;
         }
 
-        playerName = nameInput.replace(/[^a-zA-Z0-9_-]/g, ""); // Veilige karakters
+        playerName = nameInput.substring(0, 18);
         playerCode = codeInput;
 
-        localStorage.setItem('tt_player_name', playerName);
-        localStorage.setItem('tt_player_code', playerCode);
+        localStorage.setItem(LB_KEY, playerName);
+        localStorage.setItem(CODE_KEY, playerCode);
 
         updateUserBar();
         hideAuthModal();
@@ -281,27 +296,26 @@
 
     function updateUserBar() {
         document.getElementById('disp-name').innerText = playerName;
-        document.getElementById('disp-code').innerText = '****';
+        // Maskeer de code gedeeltelijk voor de netheid, of toon hem volledig.
+        document.getElementById('disp-code').innerText = playerCode.substring(0,4) + '...';
     }
 
-    // Unieke Firebase-sleutel op basis van Naam + Code
     function getUserDbRef() {
-        // Maak een unieke hash/padcombinatie van naam en code
-        const userKey = `${playerName.toLowerCase()}_${playerCode}`;
-        return db.ref('scores/timeTicker/' + userKey);
+        // We slaan de score op basis van de 20-cijferige code
+        return db.ref('scores/timeTicker/' + playerCode);
     }
 
-    // 4. Data Laden & Opslaan via Firebase
+    // 4. Data Laden & Opslaan naar Firebase leaderboard stijl
     function loadProgressFromFirebase() {
         const userRef = getUserDbRef();
 
         userRef.once('value').then((snapshot) => {
             if (snapshot.exists()) {
                 const data = snapshot.val();
-                secondsActive = data.secondsActive || 0;
+                scoreTime = data.score || 0;
             } else {
-                secondsActive = 0;
-                saveProgressToFirebase(); // Maak nieuw profiel aan
+                scoreTime = 0;
+                saveProgressToFirebase(); 
             }
             updateUI();
         }).catch((err) => {
@@ -310,39 +324,41 @@
     }
 
     function saveProgressToFirebase() {
-        if (!playerName || !playerCode) return;
+        if (!playerName || playerCode.length !== 20) return;
 
         const userRef = getUserDbRef();
+        // Sla het op met de eigenschappen "name" en "score" zodat een algemeen leaderboard dit soepel kan lezen.
         userRef.set({
             name: playerName,
-            secondsActive: secondsActive,
+            score: scoreTime,
+            code: playerCode,
             lastUpdated: Date.now()
         });
     }
 
-    // 5. Game Loop & Ticker Logica
+    // 5. De "Game" / Ticker Loop
     setInterval(() => {
-        if (playerName && playerCode && document.getElementById('auth-modal').style.display === 'none') {
-            secondsActive++;
+        if (playerName && playerCode.length === 20 && document.getElementById('auth-modal').style.display === 'none') {
+            scoreTime++;
             updateUI();
             
-            // Sla elke 5 seconden op naar Firebase om de server niet te overbelasten
-            if (secondsActive % 5 === 0) {
+            // Sla elke 3 seconden op naar Firebase 
+            if (scoreTime % 3 === 0) {
                 saveProgressToFirebase();
             }
         }
     }, 1000);
 
     function updateUI() {
-        document.getElementById('val-seconds').innerText = secondsActive + 's';
-        document.getElementById('val-heartbeats').innerText = (secondsActive * 80).toLocaleString();
-        document.getElementById('val-lightning').innerText = (secondsActive * 44).toLocaleString();
-        document.getElementById('val-pizza').innerText = Math.floor(secondsActive * 4.5).toLocaleString();
+        document.getElementById('val-seconds').innerText = scoreTime;
+        document.getElementById('val-heartbeats').innerText = (scoreTime * 80).toLocaleString('nl-NL');
+        document.getElementById('val-lightning').innerText = (scoreTime * 44).toLocaleString('nl-NL');
+        document.getElementById('val-pizza').innerText = Math.floor(scoreTime * 4.5).toLocaleString('nl-NL');
     }
 
-    // Initialiseren bij opstarten
+    // Start
     window.onload = checkUserAuth;
 </script>
 
 </body>
-    </html>
+        </html>
