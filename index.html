@@ -528,7 +528,7 @@
     <div class="logo-container">
         <h1><span class="title-pixel">PIXEL</span><span class="title-dash">-</span><span class="title-games">GAMES</span></h1>
     </div>
-    <p class="subtitle">8 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span></p>
+    <p class="subtitle">9 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span></p>
 
     <nav class="navbar">
         <button class="nav-btn active" onclick="showPage('home', this)">▶ HOME</button>
@@ -890,6 +890,35 @@
         </div>
     </div>
 
+    <!-- NIEUWE TIME TICKER GAME CARD -->
+    <div class="game-card" style="--card-accent: #4488ff;">
+        <div class="badge-new">NEW</div>
+        <div class="card-corner tl"></div>
+        <div class="card-corner br"></div>
+        <div class="card-preview" style="--preview-bg: #fffdfa;">
+            <svg width="80" height="80" viewBox="0 0 40 40" style="image-rendering:pixelated;">
+                <!-- notebook page preview -->
+                <rect x="6" y="4" width="28" height="32" fill="#fffdfa" stroke="#0f172a" stroke-width="1.5" rx="1"/>
+                <line x1="12" y1="4" x2="12" y2="36" stroke="#ef4444" stroke-width="1"/>
+                <line x1="6" y1="12" x2="34" y2="12" stroke="#cbd5e1" stroke-width="1"/>
+                <line x1="6" y1="18" x2="34" y2="18" stroke="#cbd5e1" stroke-width="1"/>
+                <line x1="6" y1="24" x2="34" y2="24" stroke="#cbd5e1" stroke-width="1"/>
+                <line x1="6" y1="30" x2="34" y2="30" stroke="#cbd5e1" stroke-width="1"/>
+                <circle cx="9" cy="10" r="1.5" fill="#d1d5db"/>
+                <circle cx="9" cy="30" r="1.5" fill="#d1d5db"/>
+                <text x="23" y="17" font-family="sans-serif" font-size="8" font-weight="bold" fill="#1e3a8a" text-anchor="middle">⏳</text>
+            </svg>
+        </div>
+        <div class="card-body">
+            <span class="card-tag" style="color:#4488ff;">// 09 · idle &amp; facts</span>
+            <h2 class="card-title">Time Ticker</h2>
+            <p class="card-desc">Watch real-time facts count up second by second in notebook style!</p>
+            <div class="card-actions">
+                <a class="btn btn-play" href="time-ticker.html" style="background:#4488ff; color:#fff;">▶ PLAY</a>
+            </div>
+        </div>
+    </div>
+
 </main>
 </div><div id="page-contact" class="page" style="display:none;">
     <div class="contact-wrap">
@@ -927,7 +956,7 @@
         </div>
         <div class="info-block">
             <h3>// THE GAMES</h3>
-            <p>There are currently 7 games available: Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger and Lucky Guy. All games are playable directly in your browser.</p>
+            <p>There are currently 8 games available: Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy and Time Ticker. All games are playable directly in your browser.</p>
             <div class="info-tag-list">
                 <span class="info-tag">DINO WORLD</span>
                 <span class="info-tag">MINI PLATFORMER</span>
@@ -937,6 +966,7 @@
                 <span class="info-tag">MONEY DIGGER</span>
                 <span class="info-tag">LUCKY GUY</span>
                 <span class="info-tag">Mini Apocalypse</span>
+                <span class="info-tag">TIME TICKER</span>
             </div>
         </div>
         <div class="info-block">
@@ -1503,8 +1533,6 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
                         } else if (snakeColor === '#ff4444') {
                             foodColor = '#00ff88';
                         } else {
-                            // Optioneel: Standaard appel kleur als je een andere kleur raakt, 
-                            // maar je vroeg specifiek om deze wissel. We laten hem anders op groen.
                             foodColor = '#00ff88';
                         }
                         
