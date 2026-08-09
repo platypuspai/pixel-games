@@ -192,7 +192,7 @@
 <div class="user-bar">
     <div>SPELER: <span id="disp-name">—</span></div>
     <div>CODE: <span id="disp-code">—</span></div>
-    <button class="btn-change" onclick="showAuthModal()">NAAM / CODE WIJZIGEN</button>
+    <button class="btn-change" onclick="showAuthModal()">WIJZIGEN</button>
 </div>
 
 <div class="notebook">
@@ -220,9 +220,9 @@
 <div class="modal-overlay" id="auth-modal" style="display:none;">
     <div class="modal">
         <h2>LOGIN / LEADERBOARD INFO</h2>
-        <p>Voer je algemene leaderboard-naam in en de vereiste 20-cijferige code om je tijdscore op te slaan.</p>
+        <p>Voer je algemene leaderboard-naam in en je persoonlijke code om je tijdscore op te slaan.</p>
         <input type="text" id="inp-name" placeholder="Jouw Spelernaam (max 18)" maxlength="18" autocomplete="off">
-        <input type="text" id="inp-code" placeholder="20-cijferige code" maxlength="20" autocomplete="off">
+        <input type="text" id="inp-code" placeholder="Jouw unieke code" autocomplete="off">
         <button onclick="saveUserAndConnect()">► BEVESTIGEN</button>
     </div>
 </div>
@@ -240,9 +240,9 @@
     }
     const db = firebase.database();
 
-    // 2. Variabelen & State (gebruikt dezelfde key als de andere games)
+    // 2. Variabelen (We lezen precies dezelfde keys af als je andere games)
     const LB_KEY = 'pg_player_name';
-    const CODE_KEY = 'pg_player_code';
+    const CODE_KEY = 'pg_player_code'; 
     
     let playerName = localStorage.getItem(LB_KEY) || '';
     let playerCode = localStorage.getItem(CODE_KEY) || '';
@@ -250,7 +250,9 @@
 
     // 3. Authenticatie en Weergave
     function checkUserAuth() {
-        if (!playerName || playerCode.length !== 20) {
+        // We kijken nu ALleen of de speler een naam heeft ingesteld in localStorage.
+        // Geen irritante pop-ups als de code toevallig korter of langer is.
+        if (!playerName) {
             showAuthModal();
         } else {
             hideAuthModal();
@@ -277,15 +279,11 @@
             alert('Voer een geldige spelernaam in!');
             return;
         }
-        
-        if (codeInput.length !== 20 || !/^\d+$/.test(codeInput)) {
-            alert('De code moet exact 20 cijfers bevatten!');
-            return;
-        }
 
         playerName = nameInput.substring(0, 18);
         playerCode = codeInput;
 
+        // Opslaan in de browser zodat alle games dit kunnen lezen
         localStorage.setItem(LB_KEY, playerName);
         localStorage.setItem(CODE_KEY, playerCode);
 
@@ -296,16 +294,22 @@
 
     function updateUserBar() {
         document.getElementById('disp-name').innerText = playerName;
-        // Maskeer de code gedeeltelijk voor de netheid, of toon hem volledig.
-        document.getElementById('disp-code').innerText = playerCode.substring(0,4) + '...';
+        
+        // We laten de eerste paar tekens van de code zien, of een '—' als er geen is.
+        if(playerCode) {
+            document.getElementById('disp-code').innerText = playerCode.substring(0,5) + '...';
+        } else {
+            document.getElementById('disp-code').innerText = '—';
+        }
     }
 
     function getUserDbRef() {
-        // We slaan de score op basis van de 20-cijferige code
-        return db.ref('scores/timeTicker/' + playerCode);
+        // Firebase linkt de score aan de unieke code (of naam als fallback)
+        let safeKey = playerCode ? playerCode : playerName.replace(/[^a-zA-Z0-9]/g, "");
+        return db.ref('scores/timeTicker/' + safeKey);
     }
 
-    // 4. Data Laden & Opslaan naar Firebase leaderboard stijl
+    // 4. Data Laden & Opslaan
     function loadProgressFromFirebase() {
         const userRef = getUserDbRef();
 
@@ -324,10 +328,9 @@
     }
 
     function saveProgressToFirebase() {
-        if (!playerName || playerCode.length !== 20) return;
+        if (!playerName) return;
 
         const userRef = getUserDbRef();
-        // Sla het op met de eigenschappen "name" en "score" zodat een algemeen leaderboard dit soepel kan lezen.
         userRef.set({
             name: playerName,
             score: scoreTime,
@@ -336,9 +339,10 @@
         });
     }
 
-    // 5. De "Game" / Ticker Loop
+    // 5. De Ticker Loop
     setInterval(() => {
-        if (playerName && playerCode.length === 20 && document.getElementById('auth-modal').style.display === 'none') {
+        // Telt alleen als de pop-up weg is en er een naam is
+        if (playerName && document.getElementById('auth-modal').style.display === 'none') {
             scoreTime++;
             updateUI();
             
@@ -356,7 +360,7 @@
         document.getElementById('val-pizza').innerText = Math.floor(scoreTime * 4.5).toLocaleString('nl-NL');
     }
 
-    // Start
+    // Start direct met checken!
     window.onload = checkUserAuth;
 </script>
 
