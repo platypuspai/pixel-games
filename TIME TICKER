@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TIME TICKER — Lined Notebook Edition</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --paper-bg: #fffdfa;
+            --line-color: #cbd5e1;
+            --margin-line: #ef4444;
+            --ink-blue: #1e3a8a;
+            --ink-black: #0f172a;
+            --ink-pencil: #475569;
+            --hand-font: 'Caveat', cursive, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: var(--hand-font);
+            background-color: #d1d5db;
+            color: var(--ink-black);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 16px;
+            overflow-x: hidden;
+        }
+
+        .notebook-page {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--paper-bg);
+            background-image: linear-gradient(var(--line-color) 1px, transparent 1px);
+            background-size: 100% 28px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15), 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+            padding: 40px 30px 40px 90px;
+            border-left: 1px solid #e5e7eb;
+        }
+
+        .notebook-page::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 75px;
+            width: 2px;
+            background-color: var(--margin-line);
+            z-index: 2;
+        }
+
+        .hole {
+            position: absolute;
+            left: 20px;
+            width: 26px;
+            height: 26px;
+            background-color: #d1d5db;
+            border-radius: 50%;
+            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.4), inset -1px -1px 2px rgba(255,255,255,0.8);
+            z-index: 3;
+        }
+        .hole-top { top: 10%; }
+        .hole-bottom { bottom: 10%; }
+
+        .wrap {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        .hero-banner {
+            text-align: center;
+            padding-bottom: 12px;
+            position: relative;
+        }
+
+        .game-title {
+            font-size: clamp(3.2rem, 8vw, 5rem);
+            font-weight: 700;
+            color: var(--ink-blue);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            line-height: 1.1;
+            text-decoration: underline double var(--ink-blue);
+        }
+
+        .clock-container {
+            display: inline-block;
+            margin: 16px 0 8px;
+            padding: 4px 16px;
+            border: 2px dashed var(--ink-pencil);
+            border-radius: 6px;
+            background: rgba(254, 240, 138, 0.4);
+        }
+
+        .clock-text {
+            font-size: clamp(2.4rem, 6vw, 3.8rem);
+            font-weight: 700;
+            color: var(--ink-black);
+            line-height: 1;
+        }
+
+        .player-badge {
+            font-size: 1.5rem;
+            color: var(--ink-pencil);
+        }
+
+        .player-name-val {
+            color: var(--ink-blue);
+            font-weight: 700;
+        }
+
+        .masonry-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 28px 24px;
+        }
+
+        @media (max-width: 680px) {
+            .masonry-grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            position: relative;
+            padding-bottom: 8px;
+            border-bottom: 1.5px dashed var(--line-color);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            line-height: 1;
+        }
+
+        .card-title {
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: var(--ink-blue);
+        }
+
+        .anim-box {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 70px;
+            height: 50px;
+            perspective: 400px;
+        }
+
+        .card-value {
+            font-size: clamp(2rem, 3.5vw, 2.7rem);
+            font-weight: 700;
+            color: var(--ink-black);
+            line-height: 1.1;
+            word-break: break-word;
+        }
+
+        .card-desc {
+            font-size: 1.3rem;
+            color: var(--ink-pencil);
+            line-height: 1.1;
+        }
+
+        /* ANIMATIES */
+        .anim-btc-hyper {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            border: 2px solid var(--ink-blue);
+            background: #fef9c3;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; font-weight: 700; color: var(--ink-blue);
+            animation: btc-spin 2.5s linear infinite;
+        }
+        @keyframes btc-spin { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(360deg); } }
+
+        .anim-brain-normal { font-size: 34px; animation: brain-pulse 1.6s ease-in-out infinite alternate; }
+        @keyframes brain-pulse { 0% { transform: scale(0.9); } 100% { transform: scale(1.1); } }
+
+        .anim-lego-hyper { position: relative; width: 44px; height: 44px; }
+        .lego-sketch {
+            position: absolute; width: 36px; height: 14px; border: 2px solid var(--ink-black);
+            border-radius: 2px; left: 4px;
+        }
+        .ls-1 { background: #fecaca; bottom: 0; }
+        .ls-2 { background: #bfdbfe; bottom: 16px; animation: lego-drop 2s infinite; }
+        @keyframes lego-drop {
+            0% { transform: translateY(-24px); opacity: 0; }
+            30%, 80% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(0); opacity: 0; }
+        }
+
+        .anim-pizza-mega { position: relative; font-size: 38px; }
+        .bite-mark { position: absolute; background: var(--paper-bg); border-radius: 50%; z-index: 2; transform: scale(0); }
+        .bite-1 { width: 18px; height: 18px; top: 4px; right: 0px; animation: chomp 3s infinite; }
+        @keyframes chomp { 0%, 10% { transform: scale(0); } 25%, 90% { transform: scale(1); } 100% { transform: scale(0); } }
+
+        .anim-hair-hyper {
+            position: relative; width: 40px; height: 46px; display: flex; flex-direction: column; align-items: center;
+        }
+        .avatar-head {
+            width: 22px; height: 22px; background: #fed7aa; border: 1.5px solid var(--ink-black); border-radius: 50%;
+            position: relative; z-index: 2; margin-top: 6px;
+        }
+        .avatar-hair-cap { position: absolute; top: 2px; width: 24px; height: 10px; background: #451a03; border-radius: 10px 10px 0 0; z-index: 3; }
+        .avatar-hair-flow {
+            position: absolute; top: 8px; width: 26px; background: #451a03;
+            border-radius: 2px 2px 8px 8px; z-index: 1; animation: hair-grow-smooth 2.5s ease-in-out infinite;
+        }
+        @keyframes hair-grow-smooth { 0% { height: 8px; } 75% { height: 32px; } 100% { height: 8px; } }
+
+        .anim-yt-mega { position: relative; width: 100%; height: 100%; }
+        .yt-icon {
+            position: absolute; width: 28px; height: 18px; background: #ef4444; border: 1.5px solid var(--ink-black); border-radius: 4px;
+            display: flex; align-items: center; justify-content: center; opacity: 0;
+        }
+        .yt-icon::before { content: ''; width: 0; height: 0; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 6px solid #fff; }
+        .yt-1 { top: 14px; left: 6px; animation: yt-pop 2s infinite; }
+        .yt-2 { top: 2px; right: 2px; transform: scale(0.7); animation: yt-pop 2s infinite 0.6s; }
+        @keyframes yt-pop { 0% { transform: scale(0); opacity: 0; } 40% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+
+        .anim-sun-mega { font-size: 34px; animation: sun-spin 6s linear infinite; }
+        @keyframes sun-spin { 100% { transform: rotate(360deg); } }
+
+        .anim-sneezes-three { display: flex; gap: 2px; font-size: 20px; }
+        .sneeze-item { animation: sn-pop 1.4s infinite alternate; }
+        .sn-1 { animation-delay: 0s; } .sn-2 { animation-delay: 0.2s; } .sn-3 { animation-delay: 0.4s; }
+        @keyframes sn-pop { 0% { transform: translateY(0); } 100% { transform: translateY(-5px); } }
+
+        .anim-ants-march { position: relative; width: 60px; height: 24px; overflow: hidden; border-bottom: 1.5px dashed var(--ink-pencil); }
+        .ant-runner { position: absolute; bottom: 0; font-size: 16px; transform: scaleX(-1); animation: ant-walk 2s linear infinite; }
+        .ant-1 { animation-delay: 0s; } .ant-2 { animation-delay: 0.6s; }
+        @keyframes ant-walk { 0% { left: -16px; } 100% { left: 64px; } }
+
+        .anim-coffee-mega { position: relative; font-size: 34px; }
+        .steam-line { position: absolute; width: 3px; background: rgba(0,0,0,0.4); border-radius: 2px; top: -2px; animation: steam-rise 1.5s infinite ease-out; }
+        .s1 { left: 18px; height: 10px; animation-delay: 0s; } .s2 { left: 26px; height: 14px; animation-delay: 0.4s; }
+        @keyframes steam-rise { 0% { transform: translateY(0); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }
+
+        .anim-drops-emojis { display: flex; gap: 2px; font-size: 20px; }
+        .drop-emoji { animation: drop-fall 1.5s linear infinite; }
+        .de-1 { animation-delay: 0s; } .de-2 { animation-delay: 0.4s; } .de-3 { animation-delay: 0.8s; }
+        @keyframes drop-fall { 0% { transform: translateY(-6px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(18px); opacity: 0; } }
+
+        .anim-straws-detail { display: flex; gap: 3px; align-items: flex-end; height: 32px; }
+        .straw-body { width: 5px; height: 28px; border-radius: 2px; border: 1px solid var(--ink-black); animation: lay-straw 2s infinite ease-out; opacity: 0; }
+        .st-1 { background: #f43f5e; animation-delay: 0.1s; } .st-2 { background: #eab308; animation-delay: 0.5s; } .st-3 { background: #10b981; animation-delay: 0.9s; }
+        @keyframes lay-straw { 0% { transform: translateY(-20px); opacity: 0; } 30%, 80% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(0); opacity: 0; } }
+
+        .anim-tp-upright-stack { position: relative; width: 38px; height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+        .tp-upright-roll {
+            width: 28px; height: 16px; background: #fff; border: 1.5px solid var(--ink-black); border-radius: 3px; position: relative;
+        }
+        .tp-upright-roll::before {
+            content: ''; position: absolute; top: -3px; left: 0; width: 25px; height: 5px;
+            background: #d1d5db; border: 1px solid var(--ink-black); border-radius: 50%;
+        }
+        .tpu-top { position: absolute; bottom: 14px; animation: tp-drop 2.2s ease-out infinite; }
+        @keyframes tp-drop { 0% { transform: translateY(-30px); opacity: 0; } 30%, 85% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(0); opacity: 0; } }
+
+        .anim-sandwich-build { position: relative; width: 38px; height: 38px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+        .bread-bottom { width: 34px; height: 7px; background: #d97706; border: 1px solid var(--ink-black); border-radius: 3px; }
+        .avocado-layer { width: 28px; height: 5px; background: #65a30d; border-radius: 2px; }
+        .bread-top { width: 34px; height: 8px; background: #f59e0b; border: 1px solid var(--ink-black); border-radius: 5px 5px 2px 2px; animation: stack-bread 1.8s infinite; }
+        @keyframes stack-bread { 0% { transform: translateY(-20px); opacity: 0; } 40%, 85% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(0); opacity: 0; } }
+
+        .anim-cat-sleeping { font-size: 34px; animation: cat-snore 2s infinite ease-in-out; }
+        @keyframes cat-snore { 0%, 100% { transform: scale(0.95); } 50% { transform: scale(1.08); } }
+
+        .anim-battery-charge { width: 20px; height: 32px; border: 2px solid var(--ink-black); border-radius: 4px; padding: 2px; display: flex; flex-direction: column-reverse; gap: 2px; }
+        .bat-bar { width: 100%; height: 7px; background: #22c55e; border-radius: 1px; opacity: 0; animation: fill-bar 1.8s infinite; }
+        .b1 { animation-delay: 0.2s; } .b2 { animation-delay: 0.5s; } .b3 { animation-delay: 0.8s; }
+        @keyframes fill-bar { 0% { opacity: 0; } 30%, 90% { opacity: 1; } 100% { opacity: 0; } }
+
+        .anim-denture-emoji { font-size: 34px; animation: chomp-teeth 1.5s infinite alternate; }
+        @keyframes chomp-teeth { 0% { transform: rotate(-5deg); } 100% { transform: rotate(5deg) scale(1.1); } }
+
+        .anim-marsh-soft {
+            width: 28px; height: 26px; background: #fff; border: 1.5px solid var(--ink-black); border-radius: 8px;
+            animation: soft-marsh 1.1s infinite;
+        }
+        @keyframes soft-marsh { 0%, 100% { transform: scaleY(0.7) scaleX(1.1); } 50% { transform: scaleY(1.1) scaleX(0.9); } }
+    </style>
+</head>
+<body>
+
+<div class="notebook-page">
+    <div class="hole hole-top"></div>
+    <div class="hole hole-bottom"></div>
+
+    <div class="wrap">
+        <div class="hero-banner">
+            <div class="game-title">Time Ticker</div>
+            <div class="clock-container">
+                <div class="clock-text" id="clock-display">00d 00h 00m 00s</div>
+            </div>
+            <div class="player-badge">NAME: <span class="player-name-val" id="player-name">...</span></div>
+        </div>
+
+        <div class="masonry-grid" id="facts-grid"></div>
+    </div>
+</div>
+
+<script>
+const FB_CFG = {
+    apiKey: 'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',
+    authDomain: 'money-digger-9b05e.firebaseapp.com',
+    databaseURL: 'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app',
+    projectId: 'money-digger-9b05e',
+    storageBucket: 'money-digger-9b05e.firebasestorage.app',
+    messagingSenderId: '883506536944',
+    appId: '1:883506536944:web:921b342dff76154fcbbd35'
+};
+if (!firebase.apps.length) firebase.initializeApp(FB_CFG);
+const db = firebase.database();
+
+const playerName = localStorage.getItem('pg_player_name') || 'Player';
+const accountCode = localStorage.getItem('pg_account_code') || '';
+document.getElementById('player-name').textContent = playerName.toUpperCase();
+
+let totalSeconds = parseInt(localStorage.getItem('time_ticker_seconds')) || 0;
+
+const factDefs = [
+    { id: 'btc', icon: '🪙', animHtml: '<div class="anim-btc-hyper">฿</div>', title: 'Bitcoin Value', desc: 'Worth of 1 BTC bought at $0.0009 rate back in 2009.', calc: s => '$' + (60000 + (s * 0.05)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
+    { id: 'brain_power', icon: '⚡', animHtml: '<div class="anim-brain-normal">🧠</div>', title: 'Brain Power', desc: 'Bio-electrical energy produced continuously by your brain (20W).', calc: s => (s * 20 < 1000) ? (s * 20) + ' Joules' : ((s * 20) / 1000).toFixed(2) + ' kJ' },
+    { id: 'lego', icon: '🧱', animHtml: '<div class="anim-lego-hyper"><div class="lego-sketch ls-1"></div><div class="lego-sketch ls-2"></div></div>', title: 'Lego Spire', desc: 'Height of a tower built by stacking 1 brick every single second.', calc: s => (s * 0.0096 < 1000) ? (s * 0.0096).toFixed(2) + ' m' : ((s * 0.0096) / 1000).toFixed(3) + ' km' },
+    { id: 'pizza_slices', icon: '🍕', animHtml: '<div class="anim-pizza-mega">🍕<div class="bite-mark bite-1"></div></div>', title: 'Pizza Slices', desc: 'Slices eaten worldwide (~350/s) & total weight in kilograms.', calc: s => { const sl = Math.floor(s * 350); return sl.toLocaleString('en-US') + ' slices (' + Math.floor(sl * 0.107).toLocaleString('en-US') + ' kg)'; } },
+    { id: 'hair_growth', icon: '💇', animHtml: '<div class="anim-hair-hyper"><div class="avatar-hair-cap"></div><div class="avatar-hair-flow"></div><div class="avatar-head"></div></div>', title: 'Hair Growth', desc: 'Combined length grown across all 8 billion people on Earth.', calc: s => Math.floor(s * 12000).toLocaleString('en-US') + ' km' },
+    { id: 'youtube_watchtime', icon: '📺', animHtml: '<div class="anim-yt-mega"><div class="yt-icon yt-1"></div><div class="yt-icon yt-2"></div></div>', title: 'YouTube Streamed', desc: 'Combined years of video watched by humanity continuously.', calc: s => ((s * 11574) / 365.25).toFixed(2) + ' video yrs' },
+    { id: 'sun_energy', icon: '☀️', animHtml: '<div class="anim-sun-mega">☀️</div>', title: 'Sun Energy', desc: 'Energy radiated into deep space by the Sun in Megatons TNT.', calc: s => Math.floor(s * 91000000000).toLocaleString('en-US') + ' MT' },
+    { id: 'sneezes', icon: '🤧', animHtml: '<div class="anim-sneezes-three"><span class="sneeze-item sn-1">🤧</span><span class="sneeze-item sn-2">🤧</span><span class="sneeze-item sn-3">🤧</span></div>', title: 'Global Sneezes', desc: 'Human sneezes happening across the world population.', calc: s => Math.floor(s * 9300).toLocaleString('en-US') },
+    { id: 'ants', icon: '🐜', animHtml: '<div class="anim-ants-march"><div class="ant-runner ant-1">🐜</div><div class="ant-runner ant-2">🐜</div></div>', title: 'Ants Born', desc: 'New ant eggs hatching around the globe right now.', calc: s => Math.floor(s * 3200000).toLocaleString('en-US') },
+    { id: 'coffee_cups', icon: '☕', animHtml: '<div class="anim-coffee-mega">☕<div class="steam-line s1"></div><div class="steam-line s2"></div></div>', title: 'Coffee Cups', desc: 'Cups of coffee freshly consumed worldwide.', calc: s => Math.floor(s * 25000).toLocaleString('en-US') + ' cups' },
+    { id: 'olympic_tears', icon: '💧', animHtml: '<div class="anim-drops-emojis"><span class="drop-emoji de-1">💧</span><span class="drop-emoji de-2">💧</span><span class="drop-emoji de-3">💧</span></div>', title: 'Tear Pool Fill', desc: 'Olympic pools filled if every human cried 1 tear per second.', calc: s => (s * 0.16).toFixed(2) + ' pools' },
+    { id: 'boba_straw', icon: '🧋', animHtml: '<div class="anim-straws-detail"><div class="straw-body st-1"></div><div class="straw-body st-2"></div><div class="straw-body st-3"></div></div>', title: 'Infinite Straw', desc: 'Length of a pipe made by joining all Bubble Tea straws used globally.', calc: s => (s * 125 < 1000) ? Math.floor(s * 125).toLocaleString('en-US') + ' m' : ((s * 125) / 1000).toFixed(2) + ' km' },
+    { id: 'toilet_paper_moon', icon: '🧻', animHtml: '<div class="anim-tp-upright-stack"><div class="tp-upright-roll tpu-top"></div><div class="tp-upright-roll"></div></div>', title: 'Paper to Moon', desc: '% of distance to Moon reached by unrolling 1 toilet paper roll/sec.', calc: s => (((s * 0.00005 / 384400) * 100)).toFixed(6) + ' %' },
+    { id: 'avocado_toast', icon: '🥑', animHtml: '<div class="anim-sandwich-build"><div class="bread-top"></div><div class="avocado-layer"></div><div class="bread-bottom"></div></div>', title: 'Avocado Toast', desc: 'Avocado toasts prepared globally and total money spent ($8 each).', calc: s => { const t = Math.floor(s * 120); return t.toLocaleString('en-US') + ' ($' + (t * 8).toLocaleString('en-US') + ')'; } },
+    { id: 'cat_purrs', icon: '🐱', animHtml: '<div class="anim-cat-sleeping">
