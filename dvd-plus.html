@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DVD+ - Pixel Games</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --card: #1a1a28;
+            --border: #2a2a42;
+            --accent-blue: #4488ff;
+            --accent-yellow: #ffdd00;
+            --accent-green: #00ff88;
+            --accent-pink: #ff44aa;
+            --accent-purple: #9944ff;
+            --text: #e8e8ff;
+            --text-muted: #7777aa;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+        body {
+            font-family: 'Inconsolata', monospace;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px);
+            pointer-events: none; z-index: 1000;
+        }
+
+        header { text-align: center; margin-bottom: 20px; position: relative; z-index: 10;}
+        h1 { font-family: 'Press Start 2P', monospace; font-size: 1.8rem; color: var(--accent-pink); margin-bottom: 5px; text-shadow: 2px 2px 0px rgba(255, 68, 170, 0.3); }
+        .subtitle { font-size: 0.8rem; color: var(--text-muted); letter-spacing: 0.1em; }
+
+        .top-bar {
+            width: 100%; max-width: 1050px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px; position: relative; z-index: 10; gap: 10px; flex-wrap: wrap;
+        }
+        
+        .currency-wrapper { display: flex; gap: 10px; }
+
+        .money-display, .dvdp-display {
+            background: var(--card); border: 2px solid var(--accent-green);
+            padding: 10px 15px; border-radius: 4px;
+            font-family: 'Press Start 2P', monospace; color: var(--accent-green);
+            font-size: 1rem; box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+        }
+        .dvdp-display { border-color: var(--accent-purple); color: var(--accent-purple); box-shadow: 0 0 15px rgba(153, 68, 255, 0.2); }
+
+        .btn-back {
+            background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+            padding: 8px 12px; font-family: 'Press Start 2P', monospace; font-size: 0.6rem;
+            cursor: pointer; text-decoration: none; transition: 0.2s;
+        }
+        .btn-back:hover { color: #fff; border-color: #fff; }
+
+        .game-layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            width: 100%; max-width: 1050px;
+            position: relative; z-index: 10;
+        }
+
+        .main-col { display: flex; flex-direction: column; gap: 10px; }
+
+        .canvas-wrap {
+            background: #000;
+            border: 4px solid var(--border);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            aspect-ratio: 16/10;
+            width: 100%;
+        }
+
+        canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+
+        .level-bar-container {
+            background: var(--card); border: 2px solid var(--border);
+            border-radius: 6px; padding: 12px 15px; display: flex; align-items: center; gap: 15px;
+            width: 100%;
+        }
+        .level-badge {
+            font-family: 'Press Start 2P', monospace; font-size: 0.6rem; color: var(--accent-yellow); white-space: nowrap;
+        }
+        .progress-track-h {
+            flex: 1; height: 18px; background: #000; border: 1px solid var(--border);
+            border-radius: 4px; overflow: hidden; position: relative;
+            display: flex; align-items: center;
+        }
+        .progress-fill-h {
+            height: 100%; width: 0%; background: var(--accent-yellow); transition: width 0.1s ease-out;
+        }
+        .progress-text-h {
+            font-family: 'Press Start 2P', monospace; font-size: 0.5rem; color: var(--text-muted); white-space: nowrap;
+        }
+
+        .pause-overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.8);
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Press Start 2P', monospace; font-size: 1rem; color: var(--accent-yellow);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 500;
+        }
+        .pause-overlay.active { opacity: 1; }
+
+        .corner-flash {
+            position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none;
+            transition: opacity 0.5s;
+        }
+        .corner-flash.active { opacity: 0.4; transition: opacity 0.05s; }
+
+        .panel {
+            background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+            display: flex; flex-direction: column; height: 614px;
+        }
+
+        .tabs { display: flex; border-bottom: 1px solid var(--border); }
+        .tab {
+            flex: 1; padding: 12px 0; text-align: center; font-family: 'Press Start 2P', monospace;
+            font-size: 0.5rem; cursor: pointer; background: rgba(0,0,0,0.2);
+            color: var(--text-muted); transition: 0.2s; border: none; outline: none;
+        }
+        .tab.active { background: transparent; color: var(--accent-yellow); border-bottom: 2px solid var(--accent-yellow); }
+        .tab:hover:not(.active) { color: #fff; }
+
+        .tab-content { padding: 15px; overflow-y: auto; flex: 1; display: none; }
+        .tab-content.active { display: block; }
+        .tab-content::-webkit-scrollbar { width: 6px; }
+        .tab-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .shop-item {
+            background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+            padding: 10px; margin-bottom: 10px; border-radius: 4px;
+            display: flex; justify-content: space-between; align-items: center; gap: 10px;
+        }
+        .shop-info { flex: 1; }
+        .shop-title { font-family: 'Press Start 2P', monospace; font-size: 0.55rem; color: var(--text); margin-bottom: 4px; line-height: 1.4; }
+        .shop-desc { font-size: 0.7rem; color: var(--text-muted); }
+        .shop-btn {
+            background: var(--accent-blue); color: #000; border: none;
+            padding: 8px 10px; font-family: 'Press Start 2P', monospace; font-size: 0.5rem;
+            border-radius: 2px; cursor: pointer; transition: 0.2s; white-space: nowrap;
+        }
+        .shop-btn:hover:not(:disabled) { filter: brightness(1.2); }
+        .shop-btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+        
+        .skin-btn { background: var(--accent-purple); color: #fff; }
+        .skin-btn.equipped { background: var(--accent-green); color: #000; pointer-events: none; }
+
+        .predictor-box {
+            text-align: center; padding: 15px; background: rgba(0,0,0,0.3);
+            border: 1px dashed var(--accent-yellow); border-radius: 4px; margin-bottom: 15px;
+        }
+        .predictor-status { font-family: 'Press Start 2P', monospace; font-size: 0.6rem; color: var(--accent-yellow); margin-bottom: 10px; line-height: 1.5; }
+        .btn-predict { background: var(--accent-yellow); width: 100%; font-size: 0.6rem; padding: 12px; }
+
+        .notification {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,255,136,0.1); border: 1px solid var(--accent-green); color: var(--accent-green);
+            padding: 10px 20px; border-radius: 4px; font-family: 'Press Start 2P', monospace; font-size: 0.6rem;
+            z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s; text-align: center; line-height: 1.5;
+        }
+        .notification.show { opacity: 1; }
+
+        @media (max-width: 850px) {
+            .game-layout { grid-template-columns: 1fr; }
+            .panel { height: auto; max-height: 500px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>DVD+</h1>
+    <div class="subtitle">Will it hit the corner?</div>
+</header>
+
+<div class="top-bar">
+    <a href="index.html" class="btn-back">◄ BACK</a>
+    <div class="currency-wrapper">
+        <div class="money-display">$ <span id="money">0</span></div>
+        <div class="dvdp-display">DVDp <span id="dvdp">0</span></div>
+    </div>
+</div>
+
+<div class="game-layout">
+    <div class="main-col">
+        <div class="canvas-wrap">
+            <canvas id="gameCanvas" width="1000" height="625"></canvas>
+            <div id="cornerFlash" class="corner-flash"></div>
+            <div id="pauseOverlay" class="pause-overlay">GAME PAUSED (TAB OUT)</div>
+        </div>
+
+        <div class="level-bar-container">
+            <div class="level-badge" id="level-label">LVL 1</div>
+            <div class="progress-track-h">
+                <div class="progress-fill-h" id="progressFill"></div>
+            </div>
+            <div class="progress-text-h" id="progress-pct">0%</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('upgrades')">UPGRADES</button>
+            <button class="tab" onclick="switchTab('skins')">SKINS</button>
+            <button class="tab" onclick="switchTab('predictor')">PREDICT</button>
+        </div>
+
+        <div id="tab-upgrades" class="tab-content active">
+            <div id="upgrades-container"></div>
+        </div>
+
+        <div id="tab-skins" class="tab-content">
+            <h3 style="font-family:'Press Start 2P', monospace; font-size:0.5rem; color:var(--text-muted); margin-bottom:10px;">BASIC & DVD SKINS</h3>
+            <div id="skins-basic-container"></div>
+            
+            <h3 style="font-family:'Press Start 2P', monospace; font-size:0.5rem; color:var(--text-muted); margin: 20px 0 10px;">WORLD FLAGS</h3>
+            <div id="skins-flag-container"></div>
+
+            <h3 style="font-family:'Press Start 2P', monospace; font-size:0.5rem; color:var(--text-muted); margin: 20px 0 10px;">SUPER EXPENSIVE SKINS</h3>
+            <div id="skins-expensive-container"></div>
+        </div>
+
+        <div id="tab-predictor" class="tab-content">
+            <div class="predictor-box">
+                <div class="predictor-status" id="predict-status">READY TO PREDICT!</div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 10px;">
+                    Select a DVD on the screen. If it hits a corner before time runs out, you get a massive payout!
+                </div>
+                <button class="shop-btn btn-predict" id="btn-activate-predict" onclick="activatePredictor()">START PREDICTION</button>
+            </div>
+            
+            <h3 style="font-family:'Press Start 2P', monospace; font-size:0.5rem; color:var(--text-muted); margin-bottom:10px;">PREDICTOR UPGRADES</h3>
+            <div id="predict-upgrades-container"></div>
+        </div>
+    </div>
+</div>
+
+<div id="notification" class="notification"></div>
+
+<script>
+    // 1. Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+        authDomain: "money-digger-9b05e.firebaseapp.com",
+        databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.database();
+
+    // Read player info directly from standard leaderboard localStorage keys (name + 20-digit code)
+    const LB_KEY = 'pg_player_name';
+    const CODE_KEY = 'pg_player_code'; 
+    
+    let playerName = localStorage.getItem(LB_KEY) || 'Guest';
+    let playerCode = localStorage.getItem(CODE_KEY) || '00000000000000000000';
+
+    let money = 0;
+    let dvdp = 0; 
+    let level = 1;
+    let levelProgress = 0; 
+    
+    let dvds = [];
+    let lastTime = 0;
+    let isPaused = false;
+    
+    let stats = {
+        moneyPerBounce: 1,
+        cornerMultiplier: 50,
+        speedMultiplier: 1,
+        dvdCount: 1,
+        predictRewardMult: 1000,
+        predictDurationSec: 30,
+        predictCooldownSec: 120
+    };
+
+    let predictState = { status: 'ready', targetId: null, timer: 0, cooldownTimer: 0 };
+    let unlockedSkins = ['#4488ff']; 
+    let currentSkin = '#4488ff';
+
+    // Automatically load data from Firebase using name and code format
+    function loadProgressFromFirebase() {
+        let safeKey = playerCode ? playerCode : playerName.replace(/[^a-zA-Z0-9]/g, "");
+        const userRef = db.ref('scores/dvdPlus/' + safeKey);
+        
+        userRef.once('value').then((snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                money = data.money || 0;
+                dvdp = data.dvdp || 0;
+                level = data.level || 1;
+                levelProgress = data.levelProgress || 0;
+            } else {
+                saveProgressToFirebase();
+            }
+            updateCurrencies();
+            updateLevelUI();
+        }).catch((err) => {
+            console.error("Error loading Firebase data:", err);
+        });
+    }
+
+    function saveProgressToFirebase() {
+        if (!playerName) return;
+        let safeKey = playerCode ? playerCode : playerName.replace(/[^a-zA-Z0-9]/g, "");
+        const userRef = db.ref('scores/dvdPlus/' + safeKey);
+        
+        userRef.set({
+            name: playerName,
+            money: money,
+            dvdp: dvdp,
+            level: level,
+            levelProgress: levelProgress,
+            lastUpdated: Date.now()
+        });
+    }
+
+    document.addEventListener("visibilitychange", () => {
+        const overlay = document.getElementById('pauseOverlay');
+        if (document.hidden) {
+            isPaused = true;
+            overlay.classList.add('active');
+        } else {
+            isPaused = false;
+            overlay.classList.remove('active');
+            lastTime = 0;
+        }
+    });
+
+    const upgradesData = [
+        { id: 'bounce', title: 'Better Bounces', desc: 'Increases base money per wall hit.', baseCost: 10, costMult: 1.5, stat: 'moneyPerBounce', increase: 1 },
+        { id: 'speed', title: 'Overclock', desc: 'Increases DVD movement speed.', baseCost: 50, costMult: 1.8, stat: 'speedMultiplier', increase: 0.2 },
+        { id: 'dvd', title: 'Extra DVD', desc: 'Spawns another bouncing DVD (merges at 5!).', baseCost: 100, costMult: 2.5, stat: 'dvdCount', increase: 1, onBuy: handleBuyDVD },
+        { id: 'corner', title: 'Corner Magic', desc: 'Increases the corner hit multiplier.', baseCost: 200, costMult: 1.6, stat: 'cornerMultiplier', increase: 10 }
+    ];
+
+    const predictUpgradesData = [
+        { id: 'p_reward', title: 'High Stakes', desc: 'Increases predict success multiplier.', baseCost: 500, costMult: 2.0, stat: 'predictRewardMult', increase: 500 },
+        { id: 'p_time', title: 'Patience', desc: 'Adds +5 seconds to prediction window.', baseCost: 300, costMult: 1.5, stat: 'predictDurationSec', increase: 5 },
+        { id: 'p_cool', title: 'Fast Forward', desc: 'Reduces predict cooldown by 10s.', baseCost: 400, costMult: 1.7, stat: 'predictCooldownSec', increase: -10 }
+    ];
+
+    let upgradeLevels = {}; 
+    const allFlags = ['🇧🇪', '🇳🇱', '🇫🇷', '🇩🇪', '🇺🇸', '🇯🇵', '🇬🇧', '🇧🇷', '🇮🇹', '🇪🇸', '🇨🇦', '🇦🇺', '🇲🇽', '🇸🇪', '🇳🇴'];
+    let currentFlagIdx = 0;
+
+    const skinsData = {
+        basic: [
+            { id: '#4488ff', name: 'Blue Classic', cost: 0, type: 'color', val: '#4488ff' },
+            { id: '#ff4444', name: 'Red Alert', cost: 15, type: 'color', val: '#ff4444' },
+            { id: '#00ff88', name: 'Neon Green', cost: 30, type: 'color', val: '#00ff88' },
+            { id: '#ffdd00', name: 'Golden', cost: 50, type: 'color', val: '#ffdd00' }
+        ],
+        flagSkin: [
+            { id: 'flag_all', name: 'World Flag (Choose)', cost: 150, type: 'flag', val: '🇧🇪' }
+        ],
+        expensive: [
+            { id: '#ff00ff', name: 'Cyberpunk Neon', cost: 1000, type: 'color', val: '#ff00ff' },
+            { id: '#00ffff', name: 'Holographic Ice', cost: 2500, type: 'color', val: '#00ffff' },
+            { id: 'diamond', name: 'Diamond Block', cost: 5000, type: 'emoji', val: '💎' },
+            { id: 'fire', name: 'Inferno Core', cost: 10000, type: 'emoji', val: '🔥' }
+        ]
+    };
+
+    const logoCache = {};
+    function getDVDCanvas(color, isSuper = false) {
+        const cacheKey = color + (isSuper ? '_super' : '');
+        if (logoCache[cacheKey]) return logoCache[cacheKey];
+        
+        const offscreen = document.createElement('canvas');
+        offscreen.width = 90;
+        offscreen.height = 42;
+        const octx = offscreen.getContext('2d');
+        
+        octx.strokeStyle = color;
+        octx.lineWidth = isSuper ? 3 : 2;
+        octx.strokeRect(1, 1, 88, 40);
+        octx.fillStyle = color;
+        
+        octx.save();
+        octx.translate(10, 0);
+        octx.transform(1, 0, -0.26, 1, 0, 0);
+        octx.font = '900 34px "Arial Black", Impact, sans-serif';
+        octx.textAlign = 'center';
+        octx.fillText('DVD', 40, 28);
+        octx.restore();
+        
+        octx.beginPath();
+        octx.ellipse(45, 34, 42, 7, 0, 0, Math.PI * 2);
+        octx.fill();
+        
+        octx.globalCompositeOperation = 'destination-out';
+        octx.beginPath();
+        octx.ellipse(45, 34, 14, 2.5, 0, 0, Math.PI * 2);
+        octx.fill();
+        
+        octx.globalCompositeOperation = 'source-over';
+        octx.fillStyle = color;
+        octx.font = '900 7px "Arial Black", Impact, sans-serif';
+        octx.textAlign = 'center';
+        octx.fillText('V I D E O', 45, 37);
+        
+        logoCache[cacheKey] = offscreen;
+        return offscreen;
+    }
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const flashEl = document.getElementById('cornerFlash');
+
+    function resizeCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class DVD {
+        constructor(id, isSuper = false, forceX, forceY) {
+            this.id = id;
+            this.w = 90; 
+            this.h = 42;  
+            this.isSuper = isSuper;
+            this.x = forceX !== undefined ? forceX : Math.random() * (canvas.width - this.w);
+            this.y = forceY !== undefined ? forceY : Math.random() * (canvas.height - this.h);
+            const angle = Math.random() * Math.PI * 2;
+            this.baseSpeed = 150; 
+            this.vx = Math.cos(angle) * this.baseSpeed;
+            this.vy = Math.sin(angle) * this.baseSpeed;
+        }
+
+        update(dt) {
+            const currentSpeedX = this.vx * stats.speedMultiplier;
+            const currentSpeedY = this.vy * stats.speedMultiplier;
+            this.x += currentSpeedX * dt;
+            this.y += currentSpeedY * dt;
+
+            let hitX = false;
+            let hitY = false;
+
+            if (this.x <= 0) { this.x = 0; this.vx *= -1; hitX = true; } 
+            else if (this.x + this.w >= canvas.width) { this.x = canvas.width - this.w; this.vx *= -1; hitX = true; }
+
+            if (this.y <= 0) { this.y = 0; this.vy *= -1; hitY = true; } 
+            else if (this.y + this.h >= canvas.height) { this.y = canvas.height - this.h; this.vy *= -1; hitY = true; }
+
+            if (hitX || hitY) {
+                addProgress(1); 
+                if (hitX && hitY) handleCornerHit(this);
+                else handleWallHit(this);
+            }
+        }
+
+        draw() {
+            if (predictState.status === 'active' && predictState.targetId === this.id) {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ffdd00';
+                ctx.strokeStyle = '#ffdd00';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(this.x - 2, this.y - 2, this.w + 4, this.h + 4);
+            } else {
+                ctx.shadowBlur = 0;
+            }
+
+            let skinObj = findSkinObj(currentSkin);
+            if (skinObj.type === 'color') {
+                const imgCanvas = getDVDCanvas(skinObj.val, this.isSuper);
+                ctx.drawImage(imgCanvas, this.x, this.y, this.w, this.h);
+            } else if (skinObj.type === 'flag') {
+                ctx.strokeStyle = '#ffdd00';
+                ctx.lineWidth = this.isSuper ? 3 : 2;
+                ctx.strokeRect(this.x, this.y, this.w, this.h);
+                ctx.font = '35px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(allFlags[currentFlagIdx], this.x + this.w/2, this.y + this.h/2 + 2);
+            } else if (skinObj.type === 'emoji') {
+                ctx.strokeStyle = '#4488ff'; ctx.lineWidth = this.isSuper ? 3 : 2;
+                ctx.strokeRect(this.x, this.y, this.w, this.h);
+                ctx.font = '35px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(skinObj.val, this.x + this.w/2, this.y + this.h/2 + 2);
+            }
+        }
+    }
+
+    function findSkinObj(id) {
+        for(let key in skinsData) {
+            let found = skinsData[key].find(s => s.id === id);
+            if(found) return found;
+        }
+        return skinsData.basic[0];
+    }
+
+    function spawnDVD(isSuper = false, forceX, forceY) {
+        if (!isSuper && dvds.length >= 5) { mergeDVDs(); return; }
+        const shouldBeSuper = isSuper || (dvds.length > 0 && dvds[0].isSuper);
+        dvds.push(new DVD(Date.now() + Math.random(), shouldBeSuper, forceX, forceY));
+    }
+
+    function handleBuyDVD() {
+        const hasSuper = dvds.length > 0 && dvds[0].isSuper;
+        spawnDVD(hasSuper);
+        if (!hasSuper && dvds.length >= 5) mergeDVDs();
+    }
+
+    function mergeDVDs() {
+        if (dvds.length < 5) return;
+        dvds = [];
+        spawnDVD(true); 
+        showNotification("⚡ MERGED! 5 DVDs combined into 1 Super DVD (3x Value)!");
+        saveProgressToFirebase();
+    }
+
+    function addProgress(amount) {
+        let req = 100 + (level - 1) * 25; 
+        levelProgress += amount;
+        
+        if (levelProgress >= req) {
+            levelProgress = 0;
+            levelUp();
+        }
+        updateLevelUI();
+        saveProgressToFirebase();
+    }
+
+    function levelUp() {
+        level++;
+        const bonusMoney = level * 300;
+        const bonusDvdp = level * 3;
+        money += bonusMoney;
+        dvdp += bonusDvdp;
+        showNotification(`🎉 LEVEL UP! Lvl ${level}! +$${bonusMoney.toLocaleString()}, +${bonusDvdp} DVDp`);
+        updateCurrencies();
+        updateUIButtons();
+        saveProgressToFirebase();
+    }
+
+    function updateLevelUI() {
+        let req = 100 + (level - 1) * 25;
+        let pct = Math.min(100, Math.floor((levelProgress / req) * 100));
+        
+        document.querySelector('.progress-fill-h').style.width = pct + '%';
+        document.getElementById('progress-pct').innerText = pct + '%';
+        document.getElementById('level-label').innerText = 'LVL ' + level;
+    }
+
+    function handleWallHit(dvd) {
+        const mult = dvd.isSuper ? 3 : 1;
+        addMoney(stats.moneyPerBounce * mult);
+    }
+
+    function handleCornerHit(dvd) {
+        const mult = dvd.isSuper ? 3 : 1;
+        const reward = stats.moneyPerBounce * stats.cornerMultiplier * mult;
+        addMoney(reward);
+        triggerCornerFlash();
+        showNotification(`CORNER HIT! +$${reward.toLocaleString()}`);
+
+        if (predictState.status === 'active' && predictState.targetId === dvd.id) {
+            const jackpot = stats.moneyPerBounce * stats.predictRewardMult * mult;
+            addMoney(jackpot);
+            showNotification(`🎯 PREDICTION SUCCESS! JACKPOT +$${jackpot.toLocaleString()}`);
+            predictState.status = 'cooldown';
+            predictState.cooldownTimer = stats.predictCooldownSec;
+            updatePredictUI();
+        }
+    }
+
+    function addMoney(amount) { 
+        money += amount; 
+        updateCurrencies(); 
+        saveProgressToFirebase();
+    }
+
+    function updateCurrencies() {
+        document.getElementById('money').innerText = Math.floor(money).toLocaleString('en-US');
+        document.getElementById('dvdp').innerText = dvdp.toLocaleString('en-US');
+        updateUIButtons();
+    }
+
+    function triggerCornerFlash() {
+        flashEl.classList.add('active');
+        setTimeout(() => flashEl.classList.remove('active'), 100);
+    }
+
+    canvas.addEventListener('click', (e) => {
+        if (predictState.status !== 'selecting') return;
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        for (let dvd of dvds) {
+            if (clickX >= dvd.x && clickX <= dvd.x + dvd.w && clickY >= dvd.y && clickY <= dvd.y + dvd.h) {
+                predictState.status = 'active';
+                predictState.targetId = dvd.id;
+                predictState.timer = stats.predictDurationSec;
+                updatePredictUI();
+                break;
+            }
+        }
+    });
+
+    function activatePredictor() { if (predictState.status === 'ready') { predictState.status = 'selecting'; updatePredictUI(); } }
+
+    function updatePredictorLogic(dt) {
+        if (predictState.status === 'active') {
+            predictState.timer -= dt;
+            if (predictState.timer <= 0) {
+                predictState.status = 'cooldown';
+                predictState.cooldownTimer = stats.predictCooldownSec;
+                showNotification("Prediction failed. Try again later!");
+            }
+            updatePredictUI();
+        } else if (predictState.status === 'cooldown') {
+            predictState.cooldownTimer -= dt;
+            if (predictState.cooldownTimer <= 0) predictState.status = 'ready';
+            updatePredictUI();
+        }
+    }
+
+    function updatePredictUI() {
+        const btn = document.getElementById('btn-activate-predict');
+        const statusText = document.getElementById('predict-status');
+        if (predictState.status === 'ready') {
+            btn.disabled = false; btn.innerText = "START PREDICTION"; statusText.innerText = "READY TO PREDICT!"; statusText.style.color = "var(--accent-yellow)";
+        } else if (predictState.status === 'selecting') {
+            btn.disabled = true; btn.innerText = "SELECT A DVD..."; statusText.innerText = "CLICK A DVD ON SCREEN!"; statusText.style.color = "var(--accent-pink)";
+        } else if (predictState.status === 'active') {
+            btn.disabled = true; btn.innerText = "PREDICTION ACTIVE"; statusText.innerText = `TIME LEFT: ${Math.ceil(predictState.timer)}s`; statusText.style.color = "var(--accent-green)";
+        } else if (predictState.status === 'cooldown') {
+            btn.disabled = true; btn.innerText = "COOLING DOWN..."; statusText.innerText = `WAIT: ${Math.ceil(predictState.cooldownTimer)}s`; statusText.style.color = "var(--text-muted)";
+        }
+    }
+
+    function initShop() {
+        const upContainer = document.getElementById('upgrades-container');
+        upgradesData.forEach(up => {
+            upgradeLevels[up.id] = 0;
+            const div = document.createElement('div');
+            div.className = 'shop-item';
+            div.innerHTML = `
+                <div class="shop-info">
+                    <div class="shop-title">${up.title} <span style="color:var(--text-muted)">Lvl <span id="lvl-${up.id}">0</span></span></div>
+                    <div class="shop-desc">${up.desc}</div>
+                </div>
+                <button class="shop-btn" id="btn-up-${up.id}" onclick="buyUpgrade('${up.id}', 'general')">$${up.baseCost}</button>
+            `;
+            upContainer.appendChild(div);
+        });
+
+        const pContainer = document.getElementById('predict-upgrades-container');
+        predictUpgradesData.forEach(up => {
+            upgradeLevels[up.id] = 0;
+            const div = document.createElement('div');
+            div.className = 'shop-item';
+            div.innerHTML = `
+                <div class="shop-info">
+                    <div class="shop-title">${up.title} <span style="color:var(--text-muted)">Lvl <span id="lvl-${up.id}">0</span></span></div>
+                    <div class="shop-desc">${up.desc}</div>
+                </div>
+                <button class="shop-btn" id="btn-up-${up.id}" onclick="buyUpgrade('${up.id}', 'predict')">$${up.baseCost}</button>
+            `;
+            pContainer.appendChild(div);
+        });
+
+        buildSkinCategory(skinsData.basic, 'skins-basic-container');
+        buildSkinCategory(skinsData.flagSkin, 'skins-flag-container');
+        buildSkinCategory(skinsData.expensive, 'skins-expensive-container');
+    }
+
+    function buildSkinCategory(skinList, containerId) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        skinList.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'shop-item';
+            
+            let btnHtml = '';
+            if (s.type === 'flag') {
+                const unlocked = unlockedSkins.includes(s.id);
+                btnHtml = unlocked ? 
+                    `<button class="shop-btn skin-btn" id="btn-skin-${s.id}" onclick="equipSkin('${s.id}')">EQUIP</button><button class="shop-btn" onclick="cycleFlag()">FLAG</button>` : 
+                    `<button class="shop-btn skin-btn" id="btn-skin-${s.id}" onclick="buySkin('${s.id}')">${s.cost} DVDp</button>`;
+            } else {
+                const unlocked = unlockedSkins.includes(s.id);
+                if (unlocked) {
+                    btnHtml = `<button class="shop-btn skin-btn" id="btn-skin-${s.id}" onclick="equipSkin('${s.id}')">EQUIP</button>`;
+                } else {
+                    btnHtml = `<button class="shop-btn skin-btn" id="btn-skin-${s.id}" onclick="buySkin('${s.id}')">${s.cost} DVDp</button>`;
+                }
+            }
+
+            div.innerHTML = `
+                <div class="shop-info">
+                    <div class="shop-title">${s.name}</div>
+                    <div class="shop-desc">${s.type === 'flag' ? 'Current: ' + allFlags[currentFlagIdx] : s.val}</div>
+                </div>
+                ${btnHtml}
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function cycleFlag() {
+        currentFlagIdx = (currentFlagIdx + 1) % allFlags.length;
+        buildSkinCategory(skinsData.flagSkin, 'skins-flag-container');
+        showNotification(`Flag changed to ${allFlags[currentFlagIdx]}`);
+    }
+
+    function getUpgradeCost(upData) {
+        const lvl = upgradeLevels[upData.id];
+        return Math.floor(upData.baseCost * Math.pow(upData.costMult, lvl));
+    }
+
+    function buyUpgrade(id, type) {
+        const list = type === 'general' ? upgradesData : predictUpgradesData;
+        const upData = list.find(u => u.id === id);
+        if (!upData) return;
+        const cost = getUpgradeCost(upData);
+        if (money >= cost) {
+            money -= cost;
+            upgradeLevels[id]++;
+            if (upData.id === 'p_cool') stats[upData.stat] = Math.max(10, stats[upData.stat] + upData.increase); 
+            else stats[upData.stat] += upData.increase;
+            if (upData.onBuy) upData.onBuy();
+            document.getElementById(`lvl-${id}`).innerText = upgradeLevels[id];
+            document.getElementById(`btn-up-${id}`).innerText = `$${getUpgradeCost(upData).toLocaleString()}`;
+            updateCurrencies(); 
+            saveProgressToFirebase();
+        }
+    }
+
+    function buySkin(id) {
+        let skin = findSkinObj(id);
+        if (dvdp >= skin.cost && !unlockedSkins.includes(id)) {
+            dvdp -= skin.cost;
+            unlockedSkins.push(id);
+            updateCurrencies();
+            let cat = Object.keys(skinsData).find(k => skinsData[k].find(s => s.id === id));
+            buildSkinCategory(skinsData[cat], `skins-${cat === 'basic' ? 'basic-container' : (cat === 'flagSkin' ? 'flag-container' : 'expensive-container')}`);
+            equipSkin(id);
+            saveProgressToFirebase();
+        } else {
+            showNotification("Not enough DVDp!");
+        }
+    }
+
+    function equipSkin(id) {
+        if (!unlockedSkins.includes(id)) return;
+        currentSkin = id;
+        document.querySelectorAll('.skin-btn').forEach(btn => {
+            if (btn.innerText === 'EQUIPPED') btn.innerText = 'EQUIP';
+            btn.classList.remove('equipped');
+        });
+        const activeBtn = document.getElementById(`btn-skin-${id}`);
+        if (activeBtn) {
+            activeBtn.innerText = 'EQUIPPED';
+            activeBtn.classList.add('equipped');
+        }
+    }
+
+    function updateUIButtons() {
+        upgradesData.forEach(up => {
+            const btn = document.getElementById(`btn-up-${up.id}`);
+            if (btn) btn.disabled = money < getUpgradeCost(up);
+        });
+        predictUpgradesData.forEach(up => {
+            const btn = document.getElementById(`btn-up-${up.id}`);
+            if (btn) btn.disabled = money < getUpgradeCost(up);
+        });
+        for(let key in skinsData) {
+            skinsData[key].forEach(s => {
+                const btn = document.getElementById(`btn-skin-${s.id}`);
+                if (btn && !unlockedSkins.includes(s.id)) btn.disabled = dvdp < s.cost;
+            });
+        }
+    }
+
+    function showNotification(msg) {
+        const el = document.getElementById('notification');
+        el.innerText = msg;
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    window.switchTab = function(tabName) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+    }
+
+    function gameLoop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const dt = (timestamp - lastTime) / 1000; 
+        lastTime = timestamp;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!isPaused) {
+            dvds.forEach(dvd => { dvd.update(dt); dvd.draw(); });
+            updatePredictorLogic(dt);
+        } else {
+            dvds.forEach(dvd => { dvd.draw(); });
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    window.onload = () => {
+        spawnDVD();
+        initShop();
+        equipSkin('#4488ff');
+        updateUIButtons();
+        updateLevelUI();
+        loadProgressFromFirebase(); // Automatically loads using the leaderboard login data
+        requestAnimationFrame(gameLoop);
+    };
+</script>
+</body>
+</html>
