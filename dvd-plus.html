@@ -296,12 +296,14 @@
     };
 
     let upgradeLevels = {}; 
-    let dvdTiers = [0]; // Slaat de tier van elke actieve DVD op (0 = normaal, 1 = Super, 2 = Super Super, enz.)
+    let dvdTiers = [0]; 
+
+    const tierNames = ['Normal', 'Super', 'Super Super', 'Super Super Super', 'Ultra Super', 'Mega Super'];
 
     const upgradesData = [
         { id: 'bounce', title: 'Better Bounces', desc: 'Increases base money per wall hit.', baseCost: 10, costMult: 1.5, stat: 'moneyPerBounce', increase: 1 },
         { id: 'speed', title: 'Overclock', desc: 'Increases DVD movement speed.', baseCost: 50, costMult: 1.8, stat: 'speedMultiplier', increase: 0.2 },
-        { id: 'dvd', title: 'Extra DVD', desc: 'Spawns another bouncing DVD (merges at 5!).', baseCost: 100, costMult: 2.5, stat: 'dvdCount', increase: 1, onBuy: handleBuyDVD },
+        { id: 'dvd', title: 'Extra DVD', desc: 'Spawns another DVD of your highest unlocked tier.', baseCost: 100, costMult: 2.5, stat: 'dvdCount', increase: 1, onBuy: handleBuyDVD },
         { id: 'corner', title: 'Corner Magic', desc: 'Increases the corner hit multiplier.', baseCost: 200, costMult: 1.6, stat: 'cornerMultiplier', increase: 10 }
     ];
 
@@ -352,7 +354,7 @@
                 upgradeLevels = data.upgradeLevels || {};
                 unlockedSkins = data.unlockedSkins || ['#4488ff'];
                 currentSkin = data.currentSkin || '#4488ff';
-                dvdTiers = data.dvdTiers || [0]; // Laad alle opgeslagen tiers
+                dvdTiers = data.dvdTiers || [0]; 
 
                 reapplyUpgrades();
             } else {
@@ -372,8 +374,6 @@
 
     function saveProgressToFirebase() {
         if (!playerName) return;
-        
-        // Update dvdTiers array op basis van de actieve objecten in het spel
         dvdTiers = dvds.map(d => d.tier);
 
         const userRef = getUserDbRef();
@@ -386,7 +386,7 @@
             upgradeLevels: upgradeLevels,
             unlockedSkins: unlockedSkins,
             currentSkin: currentSkin,
-            dvdTiers: dvdTiers, // Sla de exacte lijst van alle tiers voor altijd op
+            dvdTiers: dvdTiers, 
             lastUpdated: Date.now()
         });
     }
@@ -441,7 +441,7 @@
         offscreen.height = 42;
         const octx = offscreen.getContext('2d');
         
-        let lineWidth = 2 + tier; // Dikkere rand naarmate de tier hoger wordt
+        let lineWidth = 2 + tier; 
         octx.strokeStyle = color;
         octx.lineWidth = lineWidth;
         octx.strokeRect(1, 1, 88, 40);
@@ -469,7 +469,8 @@
         octx.font = '900 7px "Arial Black", Impact, sans-serif';
         octx.textAlign = 'center';
         
-        let subText = tier === 0 ? 'V I D E O' : `TIER ${tier + 1} (${Math.pow(3, tier)}X)`;
+        let tierLabel = tierNames[tier] || `Tier ${tier + 1}`;
+        let subText = tier === 0 ? 'V I D E O' : `${tierLabel} (${Math.pow(3, tier)}X)`;
         octx.fillText(subText, 45, 37);
         
         logoCache[cacheKey] = offscreen;
@@ -493,7 +494,7 @@
             this.id = id;
             this.w = 90; 
             this.h = 42;  
-            this.tier = tier; // 0 = normaal, 1 = Super, 2 = Super Super, enz.
+            this.tier = tier; 
             this.x = forceX !== undefined ? forceX : Math.random() * (canvas.width - this.w);
             this.y = forceY !== undefined ? forceY : Math.random() * (canvas.height - this.h);
             const angle = Math.random() * Math.PI * 2;
@@ -562,37 +563,54 @@
         return skinsData.basic[0];
     }
 
+    function getHighestUnlockedTier() {
+        if (!dvds || dvds.length === 0) return 0;
+        let maxTier = 0;
+        dvds.forEach(d => {
+            if (d.tier > maxTier) maxTier = d.tier;
+        });
+        return maxTier;
+    }
+
     function spawnDVD(tier = 0, forceX, forceY) {
-        // Check of er van deze specifieke tier inmiddels 5 of meer zijn om te mergen
-        let sameTierList = dvds.filter(d => d.tier === tier);
-        if (sameTierList.length >= 5) {
-            mergeDVDs(tier);
-            return;
-        }
         dvds.push(new DVD(Date.now() + Math.random(), tier, forceX, forceY));
+        checkAndMerge(tier);
         saveProgressToFirebase();
+        initShop(); // Update shop descriptions
     }
 
     function handleBuyDVD() {
-        spawnDVD(0); // Kopen levert altijd een Tier 0 (normale) DVD op
+        // Kopen koopt automatisch de hoogst ontgrendelde soort (tier) die je hebt bereikt door te mergen!
+        let highestTier = getHighestUnlockedTier();
+        spawnDVD(highestTier); 
     }
 
-    function mergeDVDs(tier) {
+    function checkAndMerge(tier) {
         let sameTierList = dvds.filter(d => d.tier === tier);
-        if (sameTierList.length < 5) return;
         
-        // Verwijder 5 DVD's van deze tier
-        for (let i = 0; i < 5; i++) {
-            let idx = dvds.findIndex(d => d.tier === tier);
-            if (idx > -1) dvds.splice(idx, 1);
-        }
+        while (sameTierList.length >= 5) {
+            let removedCount = 0;
+            dvds = dvds.filter(d => {
+                if (d.tier === tier && removedCount < 5) {
+                    removedCount++;
+                    return false;
+                }
+                return true;
+            });
 
-        let nextTier = tier + 1;
-        let multiplier = Math.pow(3, nextTier);
-        dvds.push(new DVD(Date.now() + Math.random(), nextTier));
-        
-        showNotification(`⚡ MERGED! 5x Tier ${tier + 1} gecombineerd naar Tier ${nextTier + 1} (${multiplier}x Waarde)!`);
+            let nextTier = tier + 1;
+            let multiplier = Math.pow(3, nextTier);
+            let nameDesc = tierNames[nextTier] || `Tier ${nextTier + 1}`;
+            
+            dvds.push(new DVD(Date.now() + Math.random(), nextTier));
+            
+            showNotification(`⚡ MERGED! 5x gecombineerd naar ${nameDesc} (${multiplier}x Waarde)!`);
+            
+            tier = nextTier;
+            sameTierList = dvds.filter(d => d.tier === tier);
+        }
         saveProgressToFirebase();
+        initShop();
     }
 
     function addProgress(amount) {
@@ -718,14 +736,25 @@
     function initShop() {
         const upContainer = document.getElementById('upgrades-container');
         upContainer.innerHTML = '';
+        
+        let highestTier = getHighestUnlockedTier();
+        let currentMultiplier = Math.pow(3, highestTier);
+        let tierLabelName = tierNames[highestTier] || `Tier ${highestTier + 1}`;
+
         upgradesData.forEach(up => {
             if (upgradeLevels[up.id] === undefined) upgradeLevels[up.id] = 0;
+            
+            let descText = up.desc;
+            if (up.id === 'dvd') {
+                descText = `Spawns a new ${tierLabelName} DVD (x${currentMultiplier} value, merges at 5!).`;
+            }
+
             const div = document.createElement('div');
             div.className = 'shop-item';
             div.innerHTML = `
                 <div class="shop-info">
                     <div class="shop-title">${up.title} <span style="color:var(--text-muted)">Lvl <span id="lvl-${up.id}">${upgradeLevels[up.id]}</span></span></div>
-                    <div class="shop-desc">${up.desc}</div>
+                    <div class="shop-desc">${descText}</div>
                 </div>
                 <button class="shop-btn" id="btn-up-${up.id}" onclick="buyUpgrade('${up.id}', 'general')">$${getUpgradeCost(up).toLocaleString()}</button>
             `;
