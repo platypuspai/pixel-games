@@ -297,6 +297,7 @@
     };
 
     let upgradeLevels = {}; 
+    let isSuperDVD = false; // Opgeslagen status of je een Super DVD hebt door merge
 
     const upgradesData = [
         { id: 'bounce', title: 'Better Bounces', desc: 'Increases base money per wall hit.', baseCost: 10, costMult: 1.5, stat: 'moneyPerBounce', increase: 1 },
@@ -353,8 +354,8 @@
                 upgradeLevels = data.upgradeLevels || {};
                 unlockedSkins = data.unlockedSkins || ['#4488ff'];
                 currentSkin = data.currentSkin || '#4488ff';
+                isSuperDVD = data.isSuperDVD || false; // Laad de merge status
 
-                // Herbereken stats op basis van geladen upgrade levels
                 reapplyUpgrades();
             } else {
                 saveProgressToFirebase();
@@ -383,12 +384,12 @@
             upgradeLevels: upgradeLevels,
             unlockedSkins: unlockedSkins,
             currentSkin: currentSkin,
+            isSuperDVD: isSuperDVD, // Sla de merge status op
             lastUpdated: Date.now()
         });
     }
 
     function reapplyUpgrades() {
-        // Reset stats naar basis
         stats.moneyPerBounce = 1;
         stats.cornerMultiplier = 50;
         stats.speedMultiplier = 1;
@@ -397,7 +398,6 @@
         stats.predictDurationSec = 30;
         stats.predictCooldownSec = 120;
 
-        // Pas upgrades toe op basis van opgeslagen levels
         upgradesData.forEach(up => {
             let lvl = upgradeLevels[up.id] || 0;
             stats[up.stat] += lvl * up.increase;
@@ -411,9 +411,14 @@
 
     function rebuildDVDsFromStats() {
         dvds = [];
-        let count = stats.dvdCount;
-        for (let i = 0; i < count; i++) {
-            spawnDVD(false);
+        // Als isSuperDVD true is, starten we direct met 1 Super DVD, anders bouwen we op basis van dvdCount of isSuperDVD
+        if (isSuperDVD) {
+            spawnDVD(true);
+        } else {
+            let count = stats.dvdCount;
+            for (let i = 0; i < count; i++) {
+                spawnDVD(false);
+            }
         }
     }
 
@@ -559,12 +564,12 @@
 
     function spawnDVD(isSuper = false, forceX, forceY) {
         if (!isSuper && dvds.length >= 5) { mergeDVDs(); return; }
-        const shouldBeSuper = isSuper || (dvds.length > 0 && dvds[0].isSuper);
+        const shouldBeSuper = isSuper || isSuperDVD || (dvds.length > 0 && dvds[0].isSuper);
         dvds.push(new DVD(Date.now() + Math.random(), shouldBeSuper, forceX, forceY));
     }
 
     function handleBuyDVD() {
-        const hasSuper = dvds.length > 0 && dvds[0].isSuper;
+        const hasSuper = isSuperDVD || (dvds.length > 0 && dvds[0].isSuper);
         spawnDVD(hasSuper);
         if (!hasSuper && dvds.length >= 5) mergeDVDs();
     }
@@ -572,9 +577,10 @@
     function mergeDVDs() {
         if (dvds.length < 5) return;
         dvds = [];
+        isSuperDVD = true; // Markeer dat we nu een Super DVD hebben
         spawnDVD(true); 
         showNotification("⚡ MERGED! 5 DVDs combined into 1 Super DVD (3x Value)!");
-        saveProgressToFirebase();
+        saveProgressToFirebase(); // Sla de merge direct op!
     }
 
     function addProgress(amount) {
@@ -825,6 +831,7 @@
             activeBtn.innerText = 'EQUIPPED';
             activeBtn.classList.add('equipped');
         }
+        saveProgressStatus = true;
         saveProgressToFirebase();
     }
 
@@ -877,7 +884,7 @@
     }
 
     window.onload = () => {
-        loadProgressFromFirebase(); // Laadt automatisch level, geld, DVDp en alle upgrades op basis van je leaderboard-gegevens
+        loadProgressFromFirebase();
         requestAnimationFrame(gameLoop);
     };
 </script>
