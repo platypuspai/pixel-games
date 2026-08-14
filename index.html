@@ -528,7 +528,7 @@
     <div class="logo-container">
         <h1><span class="title-pixel">PIXEL</span><span class="title-dash">-</span><span class="title-games">GAMES</span></h1>
     </div>
-    <p class="subtitle">9 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span></p>
+    <p class="subtitle">10 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span></p>
 
     <nav class="navbar">
         <button class="nav-btn active" onclick="showPage('home', this)">▶ HOME</button>
@@ -540,6 +540,26 @@
 
 <div id="page-home" class="page active" style="display:block;">
 <main>
+
+    <!-- DVD+ Game Card -->
+    <div class="game-card" style="--card-accent: #ff44aa;">
+        <div class="card-corner tl"></div>
+        <div class="card-corner br"></div>
+        <div class="card-preview" style="--preview-bg: #1a0011;">
+            <svg class="animate-bob" width="80" height="80" viewBox="0 0 32 32" style="image-rendering:pixelated;">
+                <rect x="4" y="8" width="24" height="16" fill="none" stroke="#ff44aa" stroke-width="2"/>
+                <text x="16" y="20" font-family="sans-serif" font-size="10" font-weight="bold" fill="#ff44aa" text-anchor="middle">DVD</text>
+            </svg>
+        </div>
+        <div class="card-body">
+            <span class="card-tag" style="color:#ff44aa;">// 10 · simulation &amp; idle</span>
+            <h2 class="card-title">DVD+</h2>
+            <p class="card-desc">The ultimate DVD bouncing simulator with upgrades, skins, and predictions!</p>
+            <div class="card-actions">
+                <a class="btn btn-play" href="dvd-plus.html" style="background:#ff44aa;">▶ PLAY</a>
+            </div>
+        </div>
+    </div>
 
     <div class="game-card" style="--card-accent: #00ff88;">
         <div class="card-corner tl"></div>
@@ -890,9 +910,8 @@
         </div>
     </div>
 
-    <!-- TIME TICKER GAME CARD MET DIREKTE LINK NAAR HET BESTAND -->
+    <!-- TIME TICKER GAME CARD -->
     <div class="game-card" style="--card-accent: #4488ff;">
-        <div class="badge-new">NEW</div>
         <div class="card-corner tl"></div>
         <div class="card-corner br"></div>
         <div class="card-preview" style="--preview-bg: #fffdfa;">
@@ -956,8 +975,9 @@
         </div>
         <div class="info-block">
             <h3>// THE GAMES</h3>
-            <p>There are currently 8 games available: Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy and Time Ticker. All games are playable directly in your browser.</p>
+            <p>There are currently 10 games available: DVD+, Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse and Time Ticker. All games are playable directly in your browser.</p>
             <div class="info-tag-list">
+                <span class="info-tag">DVD+</span>
                 <span class="info-tag">DINO WORLD</span>
                 <span class="info-tag">MINI PLATFORMER</span>
                 <span class="info-tag">ONE SQUARE</span>
@@ -1633,180 +1653,5 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 </script>
 <!-- EINDE SLANG EASTER EGG -->
 
-
-<!-- ========================================== -->
-<!-- ✨ PREMIUM INFO BUTTON & POPUP (FULLY FIXED) ✨ -->
-<!-- ========================================== -->
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap');
-    
-    #gameInfoContainer {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 2147483647 !important;
-    }
-    
-    #gameInfoBtn {
-        position: fixed; 
-        top: 15px; 
-        right: 15px; 
-        width: 45px; 
-        height: 45px;
-        background: #12121a !important; 
-        color: #4488ff !important; 
-        border: 2px solid #4488ff !important; 
-        border-radius: 50% !important;
-        font-family: 'Press Start 2P', monospace !important; 
-        font-size: 18px !important; 
-        cursor: pointer !important;
-        pointer-events: auto !important;
-        box-shadow: 0 0 12px rgba(68, 136, 255, 0.6) !important;
-        display: flex !important; 
-        align-items: center !important; 
-        justify-content: center !important;
-        transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-    }
-    #gameInfoBtn:hover {
-        transform: scale(1.1) rotate(15deg) !important; 
-        background: #4488ff !important; 
-        color: #ffffff !important;
-        box-shadow: 0 0 25px rgba(68, 136, 255, 0.9) !important;
-    }
-    #gameInfoModal {
-        display: none; 
-        position: fixed; 
-        top: 0; 
-        left: 0; 
-        width: 100%; 
-        height: 100%;
-        background: rgba(8, 8, 12, 0.94) !important; 
-        pointer-events: auto !important;
-        align-items: center !important; 
-        justify-content: center !important;
-        backdrop-filter: blur(6px) !important;
-        -webkit-backdrop-filter: blur(6px) !important;
-    }
-    #gameInfoContent {
-        background: #0d0d14 !important; 
-        border: 3px solid #4488ff !important; 
-        border-radius: 12px !important;
-        padding: 30px !important; 
-        max-width: 480px !important; 
-        width: 88% !important;
-        box-shadow: 0 0 35px rgba(68, 136, 255, 0.4) !important;
-        font-family: 'Inconsolata', monospace !important; 
-        color: #e2e2ee !important;
-        box-sizing: border-box !important;
-        animation: infoPopIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-    }
-    @keyframes infoPopIn {
-        0% { opacity: 0; transform: scale(0.85) translateY(15px); }
-        100% { opacity: 1; transform: scale(1) translateY(0); }
-    }
-    .info-title {
-        font-family: 'Press Start 2P', monospace !important; 
-        color: #00e5ff !important;
-        text-align: center !important; 
-        font-size: 16px !important; 
-        line-height: 1.5 !important; 
-        margin-top: 0 !important;
-        margin-bottom: 22px !important;
-        text-shadow: 0 0 8px rgba(0, 229, 255, 0.3) !important;
-    }
-    .info-visual-box {
-        width: 100% !important;
-        height: 8px !important;
-        background: linear-gradient(90deg, #4488ff, #00e5ff, #00ff88, #ff44aa) !important;
-        border-radius: 4px !important;
-        margin-bottom: 20px !important;
-    }
-    .info-text strong { 
-        color: #00ff88 !important; 
-        font-size: 18px !important; 
-        font-weight: 700 !important;
-        display: inline-block !important;
-        margin-bottom: 4px !important;
-    }
-    .info-text p { 
-        font-size: 15px !important; 
-        line-height: 1.6 !important; 
-        margin-top: 0 !important;
-        margin-bottom: 18px !important; 
-    }
-    #closeInfoBtn {
-        width: 100% !important; 
-        background: transparent !important; 
-        border: 2px solid #ff44aa !important; 
-        color: #ff44aa !important;
-        padding: 12px !important; 
-        border-radius: 8px !important; 
-        font-family: 'Press Start 2P', monospace !important;
-        font-size: 12px !important; 
-        cursor: pointer !important; 
-        transition: all 0.2s ease !important; 
-        margin-top: 8px !important;
-        box-shadow: 0 0 5px rgba(255, 68, 170, 0.2) !important;
-    }
-    #closeInfoBtn:hover { 
-        background: #ff44aa !important; 
-        color: #ffffff !important; 
-        box-shadow: 0 0 20px rgba(255, 68, 170, 0.7) !important;
-        transform: translateY(-2px) !important;
-    }
-</style>
-
-<div id="gameInfoContainer">
-    <button id="gameInfoBtn" title="Game Manual">i</button>
-
-    <div id="gameInfoModal">
-        <div id="gameInfoContent">
-            <h2 class="info-title">SNAKE Arcade</h2>
-            <div class="info-visual-box"></div>
-            <div class="info-text">
-                <p><strong>💡 What is it?</strong><br>Welcome to the main hub of Pixel-Games! Right here, you can play the legendary, timeless classic Snake game. Eat the glowing green pixel apples to grow longer, score points, and submit your ultimate score to the Firebase global leaderboard.</p>
-                <p><strong>🎮 Controls:</strong><br>⌨️ <b>PC Controls:</b> Press Arrow Keys or [W],[A],[S],[D] to navigate.<br>📱 <b>Mobile Controls:</b> Swipe your finger up, down, left, or right across the game screen.<br>⚠️ <b>Rule:</b> Do not crash into the walls or into your own growing tail!</p>
-            </div>
-            <button id="closeInfoBtn">LET'S PLAY!</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    (function() {
-        function initGameInfo() {
-            const btn = document.getElementById('gameInfoBtn');
-            const modal = document.getElementById('gameInfoModal');
-            const close = document.getElementById('closeInfoBtn');
-            
-            if (btn && modal && close) {
-                btn.onclick = function(e) {
-                    e.stopPropagation();
-                    modal.style.display = 'flex';
-                };
-                close.onclick = function(e) {
-                    e.stopPropagation();
-                    modal.style.display = 'none';
-                };
-                modal.onclick = function(e) {
-                    if (e.target === modal) {
-                        modal.style.display = 'none';
-                    }
-                };
-            }
-        }
-        
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initGameInfo);
-        } else {
-            initGameInfo();
-        }
-    })();
-</script>
-<!-- ========================================== -->
 </body>
-
 </html>
