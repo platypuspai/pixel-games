@@ -259,7 +259,6 @@
 <div id="notification" class="notification"></div>
 
 <script>
-    // 1. Firebase Configuration
     const firebaseConfig = {
         apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
         authDomain: "money-digger-9b05e.firebaseapp.com",
@@ -297,7 +296,7 @@
     };
 
     let upgradeLevels = {}; 
-    let superDvdCount = 0; // Houdt het totale aantal actieve Super DVD's bij
+    let dvdTiers = [0]; // Slaat de tier van elke actieve DVD op (0 = normaal, 1 = Super, 2 = Super Super, enz.)
 
     const upgradesData = [
         { id: 'bounce', title: 'Better Bounces', desc: 'Increases base money per wall hit.', baseCost: 10, costMult: 1.5, stat: 'moneyPerBounce', increase: 1 },
@@ -336,7 +335,6 @@
         ]
     };
 
-    // Firebase Load & Save
     function getUserDbRef() {
         let safeKey = playerCode ? playerCode : playerName.replace(/[^a-zA-Z0-9]/g, "");
         return db.ref('scores/dvdPlus/' + safeKey);
@@ -354,7 +352,7 @@
                 upgradeLevels = data.upgradeLevels || {};
                 unlockedSkins = data.unlockedSkins || ['#4488ff'];
                 currentSkin = data.currentSkin || '#4488ff';
-                superDvdCount = data.superDvdCount || 0;
+                dvdTiers = data.dvdTiers || [0]; // Laad alle opgeslagen tiers
 
                 reapplyUpgrades();
             } else {
@@ -362,18 +360,22 @@
             }
             updateCurrencies();
             updateLevelUI();
-            rebuildDVDsFromStats();
+            rebuildDVDsFromTiers();
             initShop();
             equipSkin(currentSkin);
         }).catch((err) => {
             console.error("Error loading Firebase data:", err);
             initShop();
-            spawnDVD();
+            spawnDVD(0);
         });
     }
 
     function saveProgressToFirebase() {
         if (!playerName) return;
+        
+        // Update dvdTiers array op basis van de actieve objecten in het spel
+        dvdTiers = dvds.map(d => d.tier);
+
         const userRef = getUserDbRef();
         userRef.set({
             name: playerName,
@@ -384,7 +386,7 @@
             upgradeLevels: upgradeLevels,
             unlockedSkins: unlockedSkins,
             currentSkin: currentSkin,
-            superDvdCount: superDvdCount,
+            dvdTiers: dvdTiers, // Sla de exacte lijst van alle tiers voor altijd op
             lastUpdated: Date.now()
         });
     }
@@ -409,18 +411,12 @@
         });
     }
 
-    function rebuildDVDsFromStats() {
+    function rebuildDVDsFromTiers() {
         dvds = [];
-        if (superDvdCount > 0) {
-            for (let i = 0; i < superDvdCount; i++) {
-                spawnDVD(true);
-            }
-        } else {
-            let count = stats.dvdCount;
-            for (let i = 0; i < count; i++) {
-                spawnDVD(false);
-            }
-        }
+        if (!dvdTiers || dvdTiers.length === 0) dvdTiers = [0];
+        dvdTiers.forEach(tier => {
+            dvds.push(new DVD(Date.now() + Math.random(), tier));
+        });
     }
 
     document.addEventListener("visibilitychange", () => {
@@ -436,8 +432,8 @@
     });
 
     const logoCache = {};
-    function getDVDCanvas(color, isSuper = false) {
-        const cacheKey = color + (isSuper ? '_super' : '');
+    function getDVDCanvas(color, tier = 0) {
+        const cacheKey = color + '_tier_' + tier;
         if (logoCache[cacheKey]) return logoCache[cacheKey];
         
         const offscreen = document.createElement('canvas');
@@ -445,8 +441,9 @@
         offscreen.height = 42;
         const octx = offscreen.getContext('2d');
         
+        let lineWidth = 2 + tier; // Dikkere rand naarmate de tier hoger wordt
         octx.strokeStyle = color;
-        octx.lineWidth = isSuper ? 3 : 2;
+        octx.lineWidth = lineWidth;
         octx.strokeRect(1, 1, 88, 40);
         octx.fillStyle = color;
         
@@ -471,7 +468,9 @@
         octx.fillStyle = color;
         octx.font = '900 7px "Arial Black", Impact, sans-serif';
         octx.textAlign = 'center';
-        octx.fillText('V I D E O', 45, 37);
+        
+        let subText = tier === 0 ? 'V I D E O' : `TIER ${tier + 1} (${Math.pow(3, tier)}X)`;
+        octx.fillText(subText, 45, 37);
         
         logoCache[cacheKey] = offscreen;
         return offscreen;
@@ -490,11 +489,11 @@
     resizeCanvas();
 
     class DVD {
-        constructor(id, isSuper = false, forceX, forceY) {
+        constructor(id, tier = 0, forceX, forceY) {
             this.id = id;
             this.w = 90; 
             this.h = 42;  
-            this.isSuper = isSuper;
+            this.tier = tier; // 0 = normaal, 1 = Super, 2 = Super Super, enz.
             this.x = forceX !== undefined ? forceX : Math.random() * (canvas.width - this.w);
             this.y = forceY !== undefined ? forceY : Math.random() * (canvas.height - this.h);
             const angle = Math.random() * Math.PI * 2;
@@ -538,16 +537,16 @@
 
             let skinObj = findSkinObj(currentSkin);
             if (skinObj.type === 'color') {
-                const imgCanvas = getDVDCanvas(skinObj.val, this.isSuper);
+                const imgCanvas = getDVDCanvas(skinObj.val, this.tier);
                 ctx.drawImage(imgCanvas, this.x, this.y, this.w, this.h);
             } else if (skinObj.type === 'flag') {
                 ctx.strokeStyle = '#ffdd00';
-                ctx.lineWidth = this.isSuper ? 3 : 2;
+                ctx.lineWidth = 2 + this.tier;
                 ctx.strokeRect(this.x, this.y, this.w, this.h);
                 ctx.font = '35px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.fillText(allFlags[currentFlagIdx], this.x + this.w/2, this.y + this.h/2 + 2);
             } else if (skinObj.type === 'emoji') {
-                ctx.strokeStyle = '#4488ff'; ctx.lineWidth = this.isSuper ? 3 : 2;
+                ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2 + this.tier;
                 ctx.strokeRect(this.x, this.y, this.w, this.h);
                 ctx.font = '35px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.fillText(skinObj.val, this.x + this.w/2, this.y + this.h/2 + 2);
@@ -563,29 +562,36 @@
         return skinsData.basic[0];
     }
 
-    function spawnDVD(isSuper = false, forceX, forceY) {
-        let normalCount = dvds.filter(d => !d.isSuper).length;
-        if (!isSuper && normalCount >= 5) { mergeDVDs(); return; }
-        dvds.push(new DVD(Date.now() + Math.random(), isSuper, forceX, forceY));
+    function spawnDVD(tier = 0, forceX, forceY) {
+        // Check of er van deze specifieke tier inmiddels 5 of meer zijn om te mergen
+        let sameTierList = dvds.filter(d => d.tier === tier);
+        if (sameTierList.length >= 5) {
+            mergeDVDs(tier);
+            return;
+        }
+        dvds.push(new DVD(Date.now() + Math.random(), tier, forceX, forceY));
+        saveProgressToFirebase();
     }
 
     function handleBuyDVD() {
-        spawnDVD(false);
+        spawnDVD(0); // Kopen levert altijd een Tier 0 (normale) DVD op
     }
 
-    function mergeDVDs() {
-        let normalDvds = dvds.filter(d => !d.isSuper);
-        if (normalDvds.length < 5) return;
+    function mergeDVDs(tier) {
+        let sameTierList = dvds.filter(d => d.tier === tier);
+        if (sameTierList.length < 5) return;
         
-        // Verwijder 5 normale DVD's
+        // Verwijder 5 DVD's van deze tier
         for (let i = 0; i < 5; i++) {
-            let idx = dvds.findIndex(d => !d.isSuper);
+            let idx = dvds.findIndex(d => d.tier === tier);
             if (idx > -1) dvds.splice(idx, 1);
         }
 
-        superDvdCount++; // Verhoog het aantal Super DVD's
-        spawnDVD(true);  // Voeg een Super DVD toe
-        showNotification(`⚡ MERGED! Je hebt nu ${superDvdCount} Super DVD('s)!`);
+        let nextTier = tier + 1;
+        let multiplier = Math.pow(3, nextTier);
+        dvds.push(new DVD(Date.now() + Math.random(), nextTier));
+        
+        showNotification(`⚡ MERGED! 5x Tier ${tier + 1} gecombineerd naar Tier ${nextTier + 1} (${multiplier}x Waarde)!`);
         saveProgressToFirebase();
     }
 
@@ -623,12 +629,12 @@
     }
 
     function handleWallHit(dvd) {
-        const mult = dvd.isSuper ? 3 : 1;
+        const mult = Math.pow(3, dvd.tier);
         addMoney(stats.moneyPerBounce * mult);
     }
 
     function handleCornerHit(dvd) {
-        const mult = dvd.isSuper ? 3 : 1;
+        const mult = Math.pow(3, dvd.tier);
         const reward = stats.moneyPerBounce * stats.cornerMultiplier * mult;
         addMoney(reward);
         triggerCornerFlash();
