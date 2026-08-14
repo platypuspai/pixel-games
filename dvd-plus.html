@@ -271,7 +271,6 @@
     }
     const db = firebase.database();
 
-    // Read player info directly from standard leaderboard localStorage keys (name + 20-digit code)
     const LB_KEY = 'pg_player_name';
     const CODE_KEY = 'pg_player_code'; 
     
@@ -297,58 +296,7 @@
         predictCooldownSec: 120
     };
 
-    let predictState = { status: 'ready', targetId: null, timer: 0, cooldownTimer: 0 };
-    let unlockedSkins = ['#4488ff']; 
-    let currentSkin = '#4488ff';
-
-    // Automatically load data from Firebase using name and code format
-    function loadProgressFromFirebase() {
-        let safeKey = playerCode ? playerCode : playerName.replace(/[^a-zA-Z0-9]/g, "");
-        const userRef = db.ref('scores/dvdPlus/' + safeKey);
-        
-        userRef.once('value').then((snapshot) => {
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                money = data.money || 0;
-                dvdp = data.dvdp || 0;
-                level = data.level || 1;
-                levelProgress = data.levelProgress || 0;
-            } else {
-                saveProgressToFirebase();
-            }
-            updateCurrencies();
-            updateLevelUI();
-        }).catch((err) => {
-            console.error("Error loading Firebase data:", err);
-        });
-    }
-
-    function saveProgressToFirebase() {
-        if (!playerName) return;
-        let safeKey = playerCode ? playerCode : playerName.replace(/[^a-zA-Z0-9]/g, "");
-        const userRef = db.ref('scores/dvdPlus/' + safeKey);
-        
-        userRef.set({
-            name: playerName,
-            money: money,
-            dvdp: dvdp,
-            level: level,
-            levelProgress: levelProgress,
-            lastUpdated: Date.now()
-        });
-    }
-
-    document.addEventListener("visibilitychange", () => {
-        const overlay = document.getElementById('pauseOverlay');
-        if (document.hidden) {
-            isPaused = true;
-            overlay.classList.add('active');
-        } else {
-            isPaused = false;
-            overlay.classList.remove('active');
-            lastTime = 0;
-        }
-    });
+    let upgradeLevels = {}; 
 
     const upgradesData = [
         { id: 'bounce', title: 'Better Bounces', desc: 'Increases base money per wall hit.', baseCost: 10, costMult: 1.5, stat: 'moneyPerBounce', increase: 1 },
@@ -363,7 +311,9 @@
         { id: 'p_cool', title: 'Fast Forward', desc: 'Reduces predict cooldown by 10s.', baseCost: 400, costMult: 1.7, stat: 'predictCooldownSec', increase: -10 }
     ];
 
-    let upgradeLevels = {}; 
+    let predictState = { status: 'ready', targetId: null, timer: 0, cooldownTimer: 0 };
+    let unlockedSkins = ['#4488ff']; 
+    let currentSkin = '#4488ff';
     const allFlags = ['🇧🇪', '🇳🇱', '🇫🇷', '🇩🇪', '🇺🇸', '🇯🇵', '🇬🇧', '🇧🇷', '🇮🇹', '🇪🇸', '🇨🇦', '🇦🇺', '🇲🇽', '🇸🇪', '🇳🇴'];
     let currentFlagIdx = 0;
 
@@ -384,6 +334,100 @@
             { id: 'fire', name: 'Inferno Core', cost: 10000, type: 'emoji', val: '🔥' }
         ]
     };
+
+    // Firebase Load & Save
+    function getUserDbRef() {
+        let safeKey = playerCode ? playerCode : playerName.replace(/[^a-zA-Z0-9]/g, "");
+        return db.ref('scores/dvdPlus/' + safeKey);
+    }
+
+    function loadProgressFromFirebase() {
+        const userRef = getUserDbRef();
+        userRef.once('value').then((snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                money = data.money || 0;
+                dvdp = data.dvdp || 0;
+                level = data.level || 1;
+                levelProgress = data.levelProgress || 0;
+                upgradeLevels = data.upgradeLevels || {};
+                unlockedSkins = data.unlockedSkins || ['#4488ff'];
+                currentSkin = data.currentSkin || '#4488ff';
+
+                // Herbereken stats op basis van geladen upgrade levels
+                reapplyUpgrades();
+            } else {
+                saveProgressToFirebase();
+            }
+            updateCurrencies();
+            updateLevelUI();
+            rebuildDVDsFromStats();
+            initShop();
+            equipSkin(currentSkin);
+        }).catch((err) => {
+            console.error("Error loading Firebase data:", err);
+            initShop();
+            spawnDVD();
+        });
+    }
+
+    function saveProgressToFirebase() {
+        if (!playerName) return;
+        const userRef = getUserDbRef();
+        userRef.set({
+            name: playerName,
+            money: money,
+            dvdp: dvdp,
+            level: level,
+            levelProgress: levelProgress,
+            upgradeLevels: upgradeLevels,
+            unlockedSkins: unlockedSkins,
+            currentSkin: currentSkin,
+            lastUpdated: Date.now()
+        });
+    }
+
+    function reapplyUpgrades() {
+        // Reset stats naar basis
+        stats.moneyPerBounce = 1;
+        stats.cornerMultiplier = 50;
+        stats.speedMultiplier = 1;
+        stats.dvdCount = 1;
+        stats.predictRewardMult = 1000;
+        stats.predictDurationSec = 30;
+        stats.predictCooldownSec = 120;
+
+        // Pas upgrades toe op basis van opgeslagen levels
+        upgradesData.forEach(up => {
+            let lvl = upgradeLevels[up.id] || 0;
+            stats[up.stat] += lvl * up.increase;
+        });
+
+        predictUpgradesData.forEach(up => {
+            let lvl = upgradeLevels[up.id] || 0;
+            stats[up.stat] += lvl * up.increase;
+        });
+    }
+
+    function rebuildDVDsFromStats() {
+        dvds = [];
+        let count = stats.dvdCount;
+        for (let i = 0; i < count; i++) {
+            spawnDVD(false);
+        }
+    }
+
+    document.addEventListener("visibilitychange", () => {
+        const overlay = document.getElementById('pauseOverlay');
+        if (document.hidden) {
+            isPaused = true;
+            overlay.classList.add('active');
+        } else {
+            isPaused = false;
+            overlay.classList.remove('active');
+            lastTime = 0;
+        }
+    });
 
     const logoCache = {};
     function getDVDCanvas(color, isSuper = false) {
@@ -655,31 +699,33 @@
 
     function initShop() {
         const upContainer = document.getElementById('upgrades-container');
+        upContainer.innerHTML = '';
         upgradesData.forEach(up => {
-            upgradeLevels[up.id] = 0;
+            if (upgradeLevels[up.id] === undefined) upgradeLevels[up.id] = 0;
             const div = document.createElement('div');
             div.className = 'shop-item';
             div.innerHTML = `
                 <div class="shop-info">
-                    <div class="shop-title">${up.title} <span style="color:var(--text-muted)">Lvl <span id="lvl-${up.id}">0</span></span></div>
+                    <div class="shop-title">${up.title} <span style="color:var(--text-muted)">Lvl <span id="lvl-${up.id}">${upgradeLevels[up.id]}</span></span></div>
                     <div class="shop-desc">${up.desc}</div>
                 </div>
-                <button class="shop-btn" id="btn-up-${up.id}" onclick="buyUpgrade('${up.id}', 'general')">$${up.baseCost}</button>
+                <button class="shop-btn" id="btn-up-${up.id}" onclick="buyUpgrade('${up.id}', 'general')">$${getUpgradeCost(up).toLocaleString()}</button>
             `;
             upContainer.appendChild(div);
         });
 
         const pContainer = document.getElementById('predict-upgrades-container');
+        pContainer.innerHTML = '';
         predictUpgradesData.forEach(up => {
-            upgradeLevels[up.id] = 0;
+            if (upgradeLevels[up.id] === undefined) upgradeLevels[up.id] = 0;
             const div = document.createElement('div');
             div.className = 'shop-item';
             div.innerHTML = `
                 <div class="shop-info">
-                    <div class="shop-title">${up.title} <span style="color:var(--text-muted)">Lvl <span id="lvl-${up.id}">0</span></span></div>
+                    <div class="shop-title">${up.title} <span style="color:var(--text-muted)">Lvl <span id="lvl-${up.id}">${upgradeLevels[up.id]}</span></span></div>
                     <div class="shop-desc">${up.desc}</div>
                 </div>
-                <button class="shop-btn" id="btn-up-${up.id}" onclick="buyUpgrade('${up.id}', 'predict')">$${up.baseCost}</button>
+                <button class="shop-btn" id="btn-up-${up.id}" onclick="buyUpgrade('${up.id}', 'predict')">$${getUpgradeCost(up).toLocaleString()}</button>
             `;
             pContainer.appendChild(div);
         });
@@ -729,7 +775,7 @@
     }
 
     function getUpgradeCost(upData) {
-        const lvl = upgradeLevels[upData.id];
+        const lvl = upgradeLevels[upData.id] || 0;
         return Math.floor(upData.baseCost * Math.pow(upData.costMult, lvl));
     }
 
@@ -740,6 +786,7 @@
         const cost = getUpgradeCost(upData);
         if (money >= cost) {
             money -= cost;
+            if (!upgradeLevels[id]) upgradeLevels[id] = 0;
             upgradeLevels[id]++;
             if (upData.id === 'p_cool') stats[upData.stat] = Math.max(10, stats[upData.stat] + upData.increase); 
             else stats[upData.stat] += upData.increase;
@@ -778,6 +825,7 @@
             activeBtn.innerText = 'EQUIPPED';
             activeBtn.classList.add('equipped');
         }
+        saveProgressToFirebase();
     }
 
     function updateUIButtons() {
@@ -829,12 +877,7 @@
     }
 
     window.onload = () => {
-        spawnDVD();
-        initShop();
-        equipSkin('#4488ff');
-        updateUIButtons();
-        updateLevelUI();
-        loadProgressFromFirebase(); // Automatically loads using the leaderboard login data
+        loadProgressFromFirebase(); // Laadt automatisch level, geld, DVDp en alle upgrades op basis van je leaderboard-gegevens
         requestAnimationFrame(gameLoop);
     };
 </script>
