@@ -170,7 +170,8 @@
             text-align: center; padding: 15px; background: rgba(0,0,0,0.3);
             border: 1px dashed var(--accent-yellow); border-radius: 4px; margin-bottom: 15px;
         }
-        .predictor-status { font-family: 'Press Start 2P', monospace; font-size: 0.6rem; color: var(--accent-yellow); margin-bottom: 10px; line-height: 1.5; }
+        .predictor-status { font-family: 'Press Start 2P', monospace; font-size: 0.6rem; color: var(--accent-yellow); margin-bottom: 5px; line-height: 1.5; }
+        .predictor-reward-preview { font-family: 'Press Start 2P', monospace; font-size: 0.55rem; color: var(--accent-green); margin-bottom: 10px; }
         .btn-predict { background: var(--accent-yellow); width: 100%; font-size: 0.6rem; padding: 12px; }
 
         .notification {
@@ -244,6 +245,7 @@
         <div id="tab-predictor" class="tab-content">
             <div class="predictor-box">
                 <div class="predictor-status" id="predict-status">READY TO PREDICT!</div>
+                <div class="predictor-reward-preview" id="predict-reward-preview">REWARD BONUS: +$0</div>
                 <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 10px;">
                     Select DVD(s) on the screen. Hit corners before time runs out for massive payouts!
                 </div>
@@ -286,7 +288,7 @@
     let isPaused = false;
     
     let stats = {
-        moneyPerBounce: 1, // Damage per bounce / hit
+        moneyPerBounce: 1, 
         cornerMultiplier: 50,
         speedMultiplier: 1,
         dvdCount: 1,
@@ -369,7 +371,6 @@
         { code: 'zm', name: 'Zambia' }, { code: 'zw', name: 'Zimbabwe' }
     ];
 
-    // Perfecte stabiliteit en balans voor kosten en damage scaling (+5 damage per level i.p.v. +1)
     const upgradesData = [
         { id: 'bounce', title: 'Better Bounces', desc: 'Increases damage per wall hit.', baseCost: 10, costMult: 1.45, stat: 'moneyPerBounce', increase: 5, currency: 'money' },
         { id: 'speed', title: 'Overclock', desc: 'Increases DVD movement speed.', baseCost: 60, costMult: 1.75, stat: 'speedMultiplier', increase: 0.2, currency: 'money' },
@@ -789,6 +790,7 @@
         document.getElementById('money').innerText = Math.floor(money).toLocaleString('en-US');
         document.getElementById('dvdp').innerText = dvdp.toLocaleString('en-US');
         updateUIButtons();
+        updatePredictUI();
     }
 
     function triggerCornerFlash() {
@@ -877,7 +879,14 @@
     function updatePredictUI() {
         const btn = document.getElementById('btn-activate-predict');
         const statusText = document.getElementById('predict-status');
+        const rewardPreviewText = document.getElementById('predict-reward-preview');
         
+        // Bereken gemiddelde of basis prediction bonus op basis van hoogste tier of standaard bounce damage
+        let highestTier = getHighestUnlockedTier();
+        let tierMult = Math.pow(3, highestTier);
+        let previewBonus = stats.moneyPerBounce * stats.predictRewardMult * tierMult;
+        rewardPreviewText.innerText = `REWARD BONUS: +$${previewBonus.toLocaleString()}`;
+
         let selectingCount = predictStates.filter(p => p.status === 'selecting').length;
         let readyCount = predictStates.filter(p => p.status === 'ready').length;
         let activeCount = predictStates.filter(p => p.status === 'active').length;
@@ -920,7 +929,6 @@
             let descText = up.desc;
             let titleText = up.title;
             if (up.id === 'bounce') {
-                // Toon actuele damage in de koopbalk titel
                 let currentDamage = 1 + (lvl * up.increase);
                 titleText = `${up.title} <span style="color:var(--accent-green); font-size:0.45rem;">(DMG: +${currentDamage})</span>`;
             } else if (up.id === 'dvd') {
