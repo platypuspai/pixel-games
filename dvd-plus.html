@@ -234,8 +234,8 @@
             <h3 style="font-family:'Press Start 2P', monospace; font-size:0.5rem; color:var(--text-muted); margin-bottom:10px;">BASIC & DVD SKINS</h3>
             <div id="skins-basic-container"></div>
             
-            <h3 style="font-family:'Press Start 2P', monospace; font-size:0.5rem; color:var(--text-muted); margin: 20px 0 10px;">WORLD FLAGS</h3>
-            <div id="skins-flag-container"></div>
+            <h3 style="font-family:'Press Start 2P', monospace; font-size:0.5rem; color:var(--text-muted); margin: 20px 0 10px;">WORLD FLAGS (SCROLLABLE)</h3>
+            <div id="skins-flag-container" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border); padding: 5px;"></div>
 
             <h3 style="font-family:'Press Start 2P', monospace; font-size:0.5rem; color:var(--text-muted); margin: 20px 0 10px;">SUPER EXPENSIVE SKINS</h3>
             <div id="skins-expensive-container"></div>
@@ -245,7 +245,7 @@
             <div class="predictor-box">
                 <div class="predictor-status" id="predict-status">READY TO PREDICT!</div>
                 <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 10px;">
-                    Select a DVD on the screen. If it hits a corner before time runs out, you get a massive payout!
+                    Select DVD(s) on the screen. Hit corners before time runs out for massive payouts!
                 </div>
                 <button class="shop-btn btn-predict" id="btn-activate-predict" onclick="activatePredictor()">START PREDICTION</button>
             </div>
@@ -286,13 +286,15 @@
     let isPaused = false;
     
     let stats = {
-        moneyPerBounce: 1,
+        moneyPerBounce: 1, // Damage per bounce / hit
         cornerMultiplier: 50,
         speedMultiplier: 1,
         dvdCount: 1,
         predictRewardMult: 1000,
         predictDurationSec: 30,
-        predictCooldownSec: 120
+        predictCooldownSec: 120,
+        autopilotLevel: 0,
+        multiTargetLevel: 0
     };
 
     let upgradeLevels = {}; 
@@ -300,24 +302,92 @@
 
     const tierNames = ['Normal', 'Super', 'Super Super', 'Super Super Super', 'Ultra Super', 'Mega Super'];
 
+    const allWorldFlags = [
+        { code: 'af', name: 'Afghanistan' }, { code: 'al', name: 'Albania' }, { code: 'dz', name: 'Algeria' },
+        { code: 'ad', name: 'Andorra' }, { code: 'ao', name: 'Angola' }, { code: 'ar', name: 'Argentina' },
+        { code: 'am', name: 'Armenia' }, { code: 'au', name: 'Australia' }, { code: 'at', name: 'Austria' },
+        { code: 'az', name: 'Azerbaijan' }, { code: 'bs', name: 'Bahamas' }, { code: 'bh', name: 'Bahrain' },
+        { code: 'bd', name: 'Bangladesh' }, { code: 'bb', name: 'Barbados' }, { code: 'by', name: 'Belarus' },
+        { code: 'be', name: 'Belgium' }, { code: 'bz', name: 'Belize' }, { code: 'bj', name: 'Benin' },
+        { code: 'bt', name: 'Bhutan' }, { code: 'bo', name: 'Bolivia' }, { code: 'ba', name: 'Bosnia and Herzegovina' },
+        { code: 'bw', name: 'Botswana' }, { code: 'br', name: 'Brazil' }, { code: 'bn', name: 'Brunei' },
+        { code: 'bg', name: 'Bulgaria' }, { code: 'bf', name: 'Burkina Faso' }, { code: 'bi', name: 'Burundi' },
+        { code: 'kh', name: 'Cambodia' }, { code: 'cm', name: 'Cameroon' }, { code: 'ca', name: 'Canada' },
+        { code: 'cv', name: 'Cape Verde' }, { code: 'cf', name: 'Central African Republic' }, { code: 'td', name: 'Chad' },
+        { code: 'cl', name: 'Chile' }, { code: 'cn', name: 'China' }, { code: 'co', name: 'Colombia' },
+        { code: 'km', name: 'Comoros' }, { code: 'cg', name: 'Congo' }, { code: 'cr', name: 'Costa Rica' },
+        { code: 'hr', name: 'Croatia' }, { code: 'cu', name: 'Cuba' }, { code: 'cy', name: 'Cyprus' },
+        { code: 'cz', name: 'Czech Republic' }, { code: 'dk', name: 'Denmark' }, { code: 'dj', name: 'Djibouti' },
+        { code: 'dm', name: 'Dominica' }, { code: 'do', name: 'Dominican Republic' }, { code: 'ec', name: 'Ecuador' },
+        { code: 'eg', name: 'Egypt' }, { code: 'sv', name: 'El Salvador' }, { code: 'gq', name: 'Equatorial Guinea' },
+        { code: 'er', name: 'Eritrea' }, { code: 'ee', name: 'Estonia' }, { code: 'sz', name: 'Eswatini' },
+        { code: 'et', name: 'Ethiopia' }, { code: 'fj', name: 'Fiji' }, { code: 'fi', name: 'Finland' },
+        { code: 'fr', name: 'France' }, { code: 'ga', name: 'Gabon' }, { code: 'gm', name: 'Gambia' },
+        { code: 'ge', name: 'Georgia' }, { code: 'de', name: 'Germany' }, { code: 'gh', name: 'Ghana' },
+        { code: 'gr', name: 'Greece' }, { code: 'gd', name: 'Grenada' }, { code: 'gt', name: 'Guatemala' },
+        { code: 'gn', name: 'Guinea' }, { code: 'gw', name: 'Guinea-Bissau' }, { code: 'gy', name: 'Guyana' },
+        { code: 'ht', name: 'Haiti' }, { code: 'hn', name: 'Honduras' }, { code: 'hu', name: 'Hungary' },
+        { code: 'is', name: 'Iceland' }, { code: 'in', name: 'India' }, { code: 'id', name: 'Indonesia' },
+        { code: 'ir', name: 'Iran' }, { code: 'iq', name: 'Iraq' }, { code: 'ie', name: 'Ireland' },
+        { code: 'il', name: 'Israel' }, { code: 'it', name: 'Italy' }, { code: 'jm', name: 'Jamaica' },
+        { code: 'jp', name: 'Japan' }, { code: 'jo', name: 'Jordan' }, { code: 'kz', name: 'Kazakhstan' },
+        { code: 'ke', name: 'Kenya' }, { code: 'ki', name: 'Kiribati' }, { code: 'kp', name: 'North Korea' },
+        { code: 'kr', name: 'South Korea' }, { code: 'kw', name: 'Kuwait' }, { code: 'kg', name: 'Kyrgyzstan' },
+        { code: 'la', name: 'Laos' }, { code: 'lv', name: 'Latvia' }, { code: 'lb', name: 'Lebanon' },
+        { code: 'ls', name: 'Lesotho' }, { code: 'lr', name: 'Liberia' }, { code: 'ly', name: 'Libya' },
+        { code: 'li', name: 'Liechtenstein' }, { code: 'lt', name: 'Lithuania' }, { code: 'lu', name: 'Luxembourg' },
+        { code: 'mg', name: 'Madagascar' }, { code: 'mw', name: 'Malawi' }, { code: 'my', name: 'Malaysia' },
+        { code: 'mv', name: 'Maldives' }, { code: 'ml', name: 'Mali' }, { code: 'mt', name: 'Malta' },
+        { code: 'mh', name: 'Marshall Islands' }, { code: 'mr', name: 'Mauritania' }, { code: 'mu', name: 'Mauritius' },
+        { code: 'mx', name: 'Mexico' }, { code: 'fm', name: 'Micronesia' }, { code: 'md', name: 'Moldova' },
+        { code: 'mc', name: 'Monaco' }, { code: 'mn', name: 'Mongolia' }, { code: 'me', name: 'Montenegro' },
+        { code: 'ma', name: 'Morocco' }, { code: 'mz', name: 'Mozambique' }, { code: 'mm', name: 'Myanmar' },
+        { code: 'na', name: 'Namibia' }, { code: 'nr', name: 'Nauru' }, { code: 'np', name: 'Nepal' },
+        { code: 'nl', name: 'Netherlands' }, { code: 'nz', name: 'New Zealand' }, { code: 'ni', name: 'Nicaragua' },
+        { code: 'ne', name: 'Niger' }, { code: 'ng', name: 'Nigeria' }, { code: 'no', name: 'Norway' },
+        { code: 'om', name: 'Oman' }, { code: 'pk', name: 'Pakistan' }, { code: 'pw', name: 'Palau' },
+        { code: 'pa', name: 'Panama' }, { code: 'pg', name: 'Papua New Guinea' }, { code: 'py', name: 'Paraguay' },
+        { code: 'pe', name: 'Peru' }, { code: 'ph', name: 'Philippines' }, { code: 'pl', name: 'Poland' },
+        { code: 'pt', name: 'Portugal' }, { code: 'qa', name: 'Qatar' }, { code: 'ro', name: 'Romania' },
+        { code: 'ru', name: 'Russia' }, { code: 'rw', name: 'Rwanda' }, { code: 'kn', name: 'Saint Kitts and Nevis' },
+        { code: 'lc', name: 'Saint Lucia' }, { code: 'vc', name: 'Saint Vincent' }, { code: 'ws', name: 'Samoa' },
+        { code: 'sm', name: 'San Marino' }, { code: 'st', name: 'Sao Tome and Principe' }, { code: 'sa', name: 'Saudi Arabia' },
+        { code: 'sn', name: 'Senegal' }, { code: 'rs', name: 'Serbia' }, { code: 'sc', name: 'Seychelles' },
+        { code: 'sl', name: 'Sierra Leone' }, { code: 'sg', name: 'Singapore' }, { code: 'sk', name: 'Slovakia' },
+        { code: 'si', name: 'Slovenia' }, { code: 'sb', name: 'Solomon Islands' }, { code: 'so', name: 'Somalia' },
+        { code: 'za', name: 'South Africa' }, { code: 'ss', name: 'South Sudan' }, { code: 'es', name: 'Spain' },
+        { code: 'lk', name: 'Sri Lanka' }, { code: 'sd', name: 'Sudan' }, { code: 'sr', name: 'Suriname' },
+        { code: 'se', name: 'Sweden' }, { code: 'ch', name: 'Switzerland' }, { code: 'sy', name: 'Syria' },
+        { code: 'tw', name: 'Taiwan' }, { code: 'tj', name: 'Tajikistan' }, { code: 'tz', name: 'Tanzania' },
+        { code: 'th', name: 'Thailand' }, { code: 'tl', name: 'Timor-Leste' }, { code: 'tg', name: 'Togo' },
+        { code: 'to', name: 'Tonga' }, { code: 'tt', name: 'Trinidad and Tobago' }, { code: 'tn', name: 'Tunisia' },
+        { code: 'tr', name: 'Turkey' }, { code: 'tm', name: 'Turkmenistan' }, { code: 'tv', name: 'Tuvalu' },
+        { code: 'ug', name: 'Uganda' }, { code: 'ua', name: 'Ukraine' }, { code: 'ae', name: 'United Arab Emirates' },
+        { code: 'gb', name: 'United Kingdom' }, { code: 'us', name: 'United States' }, { code: 'uy', name: 'Uruguay' },
+        { code: 'uz', name: 'Uzbekistan' }, { code: 'vu', name: 'Vanuatu' }, { code: 'va', name: 'Vatican City' },
+        { code: 've', name: 'Venezuela' }, { code: 'vn', name: 'Vietnam' }, { code: 'ye', name: 'Yemen' },
+        { code: 'zm', name: 'Zambia' }, { code: 'zw', name: 'Zimbabwe' }
+    ];
+
+    // Perfecte stabiliteit en balans voor kosten en damage scaling (+5 damage per level i.p.v. +1)
     const upgradesData = [
-        { id: 'bounce', title: 'Better Bounces', desc: 'Increases base money per wall hit.', baseCost: 10, costMult: 1.5, stat: 'moneyPerBounce', increase: 1 },
-        { id: 'speed', title: 'Overclock', desc: 'Increases DVD movement speed.', baseCost: 50, costMult: 1.8, stat: 'speedMultiplier', increase: 0.2 },
-        { id: 'dvd', title: 'Extra DVD', desc: 'Spawns another DVD of your highest unlocked tier.', baseCost: 100, costMult: 2.5, stat: 'dvdCount', increase: 1, onBuy: handleBuyDVD },
-        { id: 'corner', title: 'Corner Magic', desc: 'Increases the corner hit multiplier.', baseCost: 200, costMult: 1.6, stat: 'cornerMultiplier', increase: 10 }
+        { id: 'bounce', title: 'Better Bounces', desc: 'Increases damage per wall hit.', baseCost: 10, costMult: 1.45, stat: 'moneyPerBounce', increase: 5, currency: 'money' },
+        { id: 'speed', title: 'Overclock', desc: 'Increases DVD movement speed.', baseCost: 60, costMult: 1.75, stat: 'speedMultiplier', increase: 0.2, currency: 'money' },
+        { id: 'dvd', title: 'Extra DVD', desc: 'Spawns another DVD of your highest unlocked tier.', baseCost: 120, costMult: 2.3, stat: 'dvdCount', increase: 1, onBuy: handleBuyDVD, currency: 'money' },
+        { id: 'corner', title: 'Corner Magic', desc: 'Increases the corner hit multiplier.', baseCost: 250, costMult: 1.6, stat: 'cornerMultiplier', increase: 15, currency: 'money' }
     ];
 
     const predictUpgradesData = [
-        { id: 'p_reward', title: 'High Stakes', desc: 'Increases predict success multiplier.', baseCost: 500, costMult: 2.0, stat: 'predictRewardMult', increase: 500 },
-        { id: 'p_time', title: 'Patience', desc: 'Adds +5 seconds to prediction window.', baseCost: 300, costMult: 1.5, stat: 'predictDurationSec', increase: 5 },
-        { id: 'p_cool', title: 'Fast Forward', desc: 'Reduces predict cooldown by 10s.', baseCost: 400, costMult: 1.7, stat: 'predictCooldownSec', increase: -10 }
+        { id: 'p_reward', title: 'High Stakes', desc: 'Increases predict success multiplier.', baseCost: 500, costMult: 2.0, stat: 'predictRewardMult', increase: 500, currency: 'money' },
+        { id: 'p_time', title: 'Patience', desc: 'Adds +5 seconds to prediction window.', baseCost: 300, costMult: 1.5, stat: 'predictDurationSec', increase: 5, currency: 'money' },
+        { id: 'p_cool', title: 'Fast Forward', desc: 'Reduces predict cooldown by 10s.', baseCost: 400, costMult: 1.7, stat: 'predictCooldownSec', increase: -10, currency: 'money' },
+        { id: 'p_autopilot', title: 'Autopilot', desc: 'Automatically picks & starts predictions instantly when ready.', baseCost: 15000, costMult: 5.0, stat: 'autopilotLevel', increase: 1, maxLevel: 1, currency: 'dvdp' },
+        { id: 'p_multitarget', title: 'Multi-Target', desc: 'Allows up to 4 simultaneous predictions (Max Lvl 3).', baseCost: 5000, costMult: 4.0, stat: 'multiTargetLevel', increase: 1, maxLevel: 3, currency: 'dvdp' }
     ];
 
-    let predictState = { status: 'ready', targetId: null, timer: 0, cooldownTimer: 0 };
+    let predictStates = [{ status: 'ready', targetId: null, timer: 0, cooldownTimer: 0 }];
     let unlockedSkins = ['#4488ff']; 
     let currentSkin = '#4488ff';
-    const allFlags = ['🇧🇪', '🇳🇱', '🇫🇷', '🇩🇪', '🇺🇸', '🇯🇵', '🇬🇧', '🇧🇷', '🇮🇹', '🇪🇸', '🇨🇦', '🇦🇺', '🇲🇽', '🇸🇪', '🇳🇴'];
-    let currentFlagIdx = 0;
 
     const skinsData = {
         basic: [
@@ -326,9 +396,6 @@
             { id: '#00ff88', name: 'Neon Green', cost: 30, type: 'color', val: '#00ff88' },
             { id: '#ffdd00', name: 'Golden', cost: 50, type: 'color', val: '#ffdd00' }
         ],
-        flagSkin: [
-            { id: 'flag_all', name: 'World Flag (Choose)', cost: 150, type: 'flag', val: '🇧🇪' }
-        ],
         expensive: [
             { id: '#ff00ff', name: 'Cyberpunk Neon', cost: 1000, type: 'color', val: '#ff00ff' },
             { id: '#00ffff', name: 'Holographic Ice', cost: 2500, type: 'color', val: '#00ffff' },
@@ -336,6 +403,17 @@
             { id: 'fire', name: 'Inferno Core', cost: 10000, type: 'emoji', val: '🔥' }
         ]
     };
+
+    const flagImageCache = {};
+    function getFlagImage(countryCode) {
+        if (flagImageCache[countryCode]) return flagImageCache[countryCode];
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = `https://flagcdn.com/w320/${countryCode}.png`;
+        img.onload = () => { logoCache = {}; };
+        flagImageCache[countryCode] = img;
+        return img;
+    }
 
     function getUserDbRef() {
         let safeKey = playerCode ? playerCode : playerName.replace(/[^a-zA-Z0-9]/g, "");
@@ -399,6 +477,8 @@
         stats.predictRewardMult = 1000;
         stats.predictDurationSec = 30;
         stats.predictCooldownSec = 120;
+        stats.autopilotLevel = 0;
+        stats.multiTargetLevel = 0;
 
         upgradesData.forEach(up => {
             let lvl = upgradeLevels[up.id] || 0;
@@ -409,6 +489,9 @@
             let lvl = upgradeLevels[up.id] || 0;
             stats[up.stat] += lvl * up.increase;
         });
+
+        if (stats.multiTargetLevel > 3) stats.multiTargetLevel = 3;
+        if (stats.autopilotLevel > 1) stats.autopilotLevel = 1;
     }
 
     function rebuildDVDsFromTiers() {
@@ -431,9 +514,9 @@
         }
     });
 
-    const logoCache = {};
-    function getDVDCanvas(color, tier = 0) {
-        const cacheKey = color + '_tier_' + tier;
+    let logoCache = {};
+    function getDVDCanvas(skinVal, isFlag, flagCode, tier = 0) {
+        const cacheKey = skinVal + '_flag_' + isFlag + '_code_' + flagCode + '_tier_' + tier;
         if (logoCache[cacheKey]) return logoCache[cacheKey];
         
         const offscreen = document.createElement('canvas');
@@ -441,37 +524,49 @@
         offscreen.height = 42;
         const octx = offscreen.getContext('2d');
         
-        let lineWidth = 2 + tier; 
-        octx.strokeStyle = color;
-        octx.lineWidth = lineWidth;
-        octx.strokeRect(1, 1, 88, 40);
-        octx.fillStyle = color;
-        
-        octx.save();
-        octx.translate(10, 0);
-        octx.transform(1, 0, -0.26, 1, 0, 0);
-        octx.font = '900 34px "Arial Black", Impact, sans-serif';
-        octx.textAlign = 'center';
-        octx.fillText('DVD', 40, 28);
-        octx.restore();
-        
-        octx.beginPath();
-        octx.ellipse(45, 34, 42, 7, 0, 0, Math.PI * 2);
-        octx.fill();
-        
-        octx.globalCompositeOperation = 'destination-out';
-        octx.beginPath();
-        octx.ellipse(45, 34, 14, 2.5, 0, 0, Math.PI * 2);
-        octx.fill();
-        
-        octx.globalCompositeOperation = 'source-over';
-        octx.fillStyle = color;
-        octx.font = '900 7px "Arial Black", Impact, sans-serif';
-        octx.textAlign = 'center';
-        
-        let tierLabel = tierNames[tier] || `Tier ${tier + 1}`;
-        let subText = tier === 0 ? 'V I D E O' : `${tierLabel} (${Math.pow(3, tier)}X)`;
-        octx.fillText(subText, 45, 37);
+        octx.clearRect(0, 0, 90, 42);
+
+        if (isFlag) {
+            let flagImg = getFlagImage(flagCode);
+            if (flagImg.complete && flagImg.naturalWidth !== 0) {
+                octx.drawImage(flagImg, 0, 0, 90, 42);
+            }
+            octx.strokeStyle = '#000';
+            octx.lineWidth = 2 + tier;
+            octx.strokeRect(1, 1, 88, 40);
+        } else {
+            let lineWidth = 2 + tier; 
+            octx.strokeStyle = skinVal;
+            octx.lineWidth = lineWidth;
+            octx.strokeRect(1, 1, 88, 40);
+            octx.fillStyle = skinVal;
+            
+            octx.save();
+            octx.translate(10, 0);
+            octx.transform(1, 0, -0.26, 1, 0, 0);
+            octx.font = '900 34px "Arial Black", Impact, sans-serif';
+            octx.textAlign = 'center';
+            octx.fillText('DVD', 40, 28);
+            octx.restore();
+            
+            octx.beginPath();
+            octx.ellipse(45, 34, 42, 7, 0, 0, Math.PI * 2);
+            octx.fill();
+            
+            octx.globalCompositeOperation = 'destination-out';
+            octx.beginPath();
+            octx.ellipse(45, 34, 14, 2.5, 0, 0, Math.PI * 2);
+            octx.fill();
+            
+            octx.globalCompositeOperation = 'source-over';
+            octx.fillStyle = skinVal;
+            octx.font = '900 7px "Arial Black", Impact, sans-serif';
+            octx.textAlign = 'center';
+            
+            let tierLabel = tierNames[tier] || `Tier ${tier + 1}`;
+            let subText = tier === 0 ? 'V I D E O' : `${tierLabel} (${Math.pow(3, tier)}X)`;
+            octx.fillText(subText, 45, 37);
+        }
         
         logoCache[cacheKey] = offscreen;
         return offscreen;
@@ -490,17 +585,30 @@
     resizeCanvas();
 
     class DVD {
-        constructor(id, tier = 0, forceX, forceY) {
+        constructor(id, tier = 0) {
             this.id = id;
             this.w = 90; 
             this.h = 42;  
             this.tier = tier; 
-            this.x = forceX !== undefined ? forceX : Math.random() * (canvas.width - this.w);
-            this.y = forceY !== undefined ? forceY : Math.random() * (canvas.height - this.h);
-            const angle = Math.random() * Math.PI * 2;
-            this.baseSpeed = 150; 
-            this.vx = Math.cos(angle) * this.baseSpeed;
-            this.vy = Math.sin(angle) * this.baseSpeed;
+
+            this.x = Math.random() * (canvas.width - this.w - 100) + 50;
+            this.y = Math.random() * (canvas.height - this.h - 100) + 50;
+
+            const corners = [
+                { x: 0, y: 0 },                                 
+                { x: canvas.width, y: 0 },                      
+                { x: 0, y: canvas.height },                     
+                { x: canvas.width, y: canvas.height }           
+            ];
+            const targetCorner = corners[Math.floor(Math.random() * corners.length)];
+
+            const dx = targetCorner.x - (this.x + this.w / 2);
+            const dy = targetCorner.y - (this.y + this.h / 2);
+            const angle = Math.atan2(dy, dx);
+
+            const baseSpeed = 150;
+            this.vx = Math.cos(angle) * baseSpeed;
+            this.vy = Math.sin(angle) * baseSpeed;
         }
 
         update(dt) {
@@ -526,7 +634,8 @@
         }
 
         draw() {
-            if (predictState.status === 'active' && predictState.targetId === this.id) {
+            let isTarget = predictStates.some(p => p.status === 'active' && p.targetId === this.id);
+            if (isTarget) {
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = '#ffdd00';
                 ctx.strokeStyle = '#ffdd00';
@@ -538,14 +647,11 @@
 
             let skinObj = findSkinObj(currentSkin);
             if (skinObj.type === 'color') {
-                const imgCanvas = getDVDCanvas(skinObj.val, this.tier);
+                const imgCanvas = getDVDCanvas(skinObj.val, false, '', this.tier);
                 ctx.drawImage(imgCanvas, this.x, this.y, this.w, this.h);
             } else if (skinObj.type === 'flag') {
-                ctx.strokeStyle = '#ffdd00';
-                ctx.lineWidth = 2 + this.tier;
-                ctx.strokeRect(this.x, this.y, this.w, this.h);
-                ctx.font = '35px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(allFlags[currentFlagIdx], this.x + this.w/2, this.y + this.h/2 + 2);
+                const imgCanvas = getDVDCanvas('', true, skinObj.code, this.tier);
+                ctx.drawImage(imgCanvas, this.x, this.y, this.w, this.h);
             } else if (skinObj.type === 'emoji') {
                 ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2 + this.tier;
                 ctx.strokeRect(this.x, this.y, this.w, this.h);
@@ -560,6 +666,10 @@
             let found = skinsData[key].find(s => s.id === id);
             if(found) return found;
         }
+        let flagFound = allWorldFlags.find(f => 'flag_' + f.code === id);
+        if (flagFound) {
+            return { id: 'flag_' + flagFound.code, name: flagFound.name, cost: 150, type: 'flag', code: flagFound.code };
+        }
         return skinsData.basic[0];
     }
 
@@ -572,15 +682,14 @@
         return maxTier;
     }
 
-    function spawnDVD(tier = 0, forceX, forceY) {
-        dvds.push(new DVD(Date.now() + Math.random(), tier, forceX, forceY));
+    function spawnDVD(tier = 0) {
+        dvds.push(new DVD(Date.now() + Math.random(), tier));
         checkAndMerge(tier);
         saveProgressToFirebase();
-        initShop(); // Update shop descriptions
+        initShop();
     }
 
     function handleBuyDVD() {
-        // Kopen koopt automatisch de hoogst ontgrendelde soort (tier) die je hebt bereikt door te mergen!
         let highestTier = getHighestUnlockedTier();
         spawnDVD(highestTier); 
     }
@@ -658,14 +767,16 @@
         triggerCornerFlash();
         showNotification(`CORNER HIT! +$${reward.toLocaleString()}`);
 
-        if (predictState.status === 'active' && predictState.targetId === dvd.id) {
-            const jackpot = stats.moneyPerBounce * stats.predictRewardMult * mult;
-            addMoney(jackpot);
-            showNotification(`🎯 PREDICTION SUCCESS! JACKPOT +$${jackpot.toLocaleString()}`);
-            predictState.status = 'cooldown';
-            predictState.cooldownTimer = stats.predictCooldownSec;
-            updatePredictUI();
-        }
+        predictStates.forEach(p => {
+            if (p.status === 'active' && p.targetId === dvd.id) {
+                const jackpot = stats.moneyPerBounce * stats.predictRewardMult * mult;
+                addMoney(jackpot);
+                showNotification(`🎯 PREDICTION SUCCESS! JACKPOT +$${jackpot.toLocaleString()}`);
+                p.status = 'cooldown';
+                p.cooldownTimer = stats.predictCooldownSec;
+                updatePredictUI();
+            }
+        });
     }
 
     function addMoney(amount) { 
@@ -686,50 +797,111 @@
     }
 
     canvas.addEventListener('click', (e) => {
-        if (predictState.status !== 'selecting') return;
+        let selectingP = predictStates.find(p => p.status === 'selecting');
+        if (!selectingP) return;
         const rect = canvas.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const clickY = e.clientY - rect.top;
         for (let dvd of dvds) {
-            if (clickX >= dvd.x && clickX <= dvd.x + dvd.w && clickY >= dvd.y && clickY <= dvd.y + dvd.h) {
-                predictState.status = 'active';
-                predictState.targetId = dvd.id;
-                predictState.timer = stats.predictDurationSec;
+            let alreadyTargeted = predictStates.some(p => p.targetId === dvd.id && (p.status === 'selecting' || p.status === 'active'));
+            if (!alreadyTargeted && clickX >= dvd.x && clickX <= dvd.x + dvd.w && clickY >= dvd.y && clickY <= dvd.y + dvd.h) {
+                selectingP.status = 'active';
+                selectingP.targetId = dvd.id;
+                selectingP.timer = stats.predictDurationSec;
+                
+                let nextSelecting = predictStates.find(p => p.status === 'ready');
+                if (nextSelecting) {
+                    nextSelecting.status = 'selecting';
+                }
+                
                 updatePredictUI();
                 break;
             }
         }
     });
 
-    function activatePredictor() { if (predictState.status === 'ready') { predictState.status = 'selecting'; updatePredictUI(); } }
+    function activatePredictor() {
+        let maxSlots = 1 + stats.multiTargetLevel;
+        if (maxSlots > 4) maxSlots = 4;
 
-    function updatePredictorLogic(dt) {
-        if (predictState.status === 'active') {
-            predictState.timer -= dt;
-            if (predictState.timer <= 0) {
-                predictState.status = 'cooldown';
-                predictState.cooldownTimer = stats.predictCooldownSec;
-                showNotification("Prediction failed. Try again later!");
-            }
-            updatePredictUI();
-        } else if (predictState.status === 'cooldown') {
-            predictState.cooldownTimer -= dt;
-            if (predictState.cooldownTimer <= 0) predictState.status = 'ready';
+        while (predictStates.length < maxSlots) {
+            predictStates.push({ status: 'ready', targetId: null, timer: 0, cooldownTimer: 0 });
+        }
+
+        let readySlots = predictStates.filter(p => p.status === 'ready');
+        if (readySlots.length > 0) {
+            readySlots.forEach(p => {
+                p.status = 'selecting';
+            });
             updatePredictUI();
         }
+    }
+
+    function updatePredictorLogic(dt) {
+        let maxSlots = 1 + stats.multiTargetLevel;
+        if (maxSlots > 4) maxSlots = 4;
+
+        while (predictStates.length < maxSlots) {
+            predictStates.push({ status: 'ready', targetId: null, timer: 0, cooldownTimer: 0 });
+        }
+
+        predictStates.forEach(p => {
+            if (p.status === 'active') {
+                p.timer -= dt;
+                if (p.timer <= 0) {
+                    p.status = 'cooldown';
+                    p.cooldownTimer = stats.predictCooldownSec;
+                    showNotification("Prediction failed. Try again later!");
+                }
+            } else if (p.status === 'cooldown') {
+                p.cooldownTimer -= dt;
+                if (p.cooldownTimer <= 0) {
+                    p.status = 'ready';
+                }
+            }
+
+            if (p.status === 'ready' && stats.autopilotLevel > 0 && dvds.length > 0) {
+                let availableDvds = dvds.filter(d => !predictStates.some(ps => ps.targetId === d.id && ps.status === 'active'));
+                if (availableDvds.length === 0) availableDvds = dvds;
+                let randomDvd = availableDvds[Math.floor(Math.random() * availableDvds.length)];
+                
+                p.status = 'active';
+                p.targetId = randomDvd.id;
+                p.timer = stats.predictDurationSec;
+                showNotification("🤖 Autopilot auto-started prediction!");
+            }
+        });
+        updatePredictUI();
     }
 
     function updatePredictUI() {
         const btn = document.getElementById('btn-activate-predict');
         const statusText = document.getElementById('predict-status');
-        if (predictState.status === 'ready') {
-            btn.disabled = false; btn.innerText = "START PREDICTION"; statusText.innerText = "READY TO PREDICT!"; statusText.style.color = "var(--accent-yellow)";
-        } else if (predictState.status === 'selecting') {
-            btn.disabled = true; btn.innerText = "SELECT A DVD..."; statusText.innerText = "CLICK A DVD ON SCREEN!"; statusText.style.color = "var(--accent-pink)";
-        } else if (predictState.status === 'active') {
-            btn.disabled = true; btn.innerText = "PREDICTION ACTIVE"; statusText.innerText = `TIME LEFT: ${Math.ceil(predictState.timer)}s`; statusText.style.color = "var(--accent-green)";
-        } else if (predictState.status === 'cooldown') {
-            btn.disabled = true; btn.innerText = "COOLING DOWN..."; statusText.innerText = `WAIT: ${Math.ceil(predictState.cooldownTimer)}s`; statusText.style.color = "var(--text-muted)";
+        
+        let selectingCount = predictStates.filter(p => p.status === 'selecting').length;
+        let readyCount = predictStates.filter(p => p.status === 'ready').length;
+        let activeCount = predictStates.filter(p => p.status === 'active').length;
+
+        if (selectingCount > 0) {
+            btn.disabled = true; 
+            btn.innerText = "SELECT DVD(S)..."; 
+            statusText.innerText = `CLICK DVD(S) ON SCREEN (${selectingCount} left)!`; 
+            statusText.style.color = "var(--accent-pink)";
+        } else if (readyCount > 0) {
+            btn.disabled = stats.autopilotLevel > 0; 
+            btn.innerText = stats.autopilotLevel > 0 ? "AUTOPILOT RUNNING" : "START PREDICTION"; 
+            statusText.innerText = stats.autopilotLevel > 0 ? "AUTOPILOT MANAGING SLOTS" : "READY TO PREDICT!"; 
+            statusText.style.color = "var(--accent-yellow)";
+        } else if (activeCount > 0) {
+            btn.disabled = true; 
+            btn.innerText = "PREDICTIONS ACTIVE"; 
+            statusText.innerText = `ACTIVE SLOTS: ${activeCount}`; 
+            statusText.style.color = "var(--accent-green)";
+        } else {
+            btn.disabled = true; 
+            btn.innerText = "COOLING DOWN..."; 
+            statusText.innerText = "ALL SLOTS ON COOLDOWN"; 
+            statusText.style.color = "var(--text-muted)";
         }
     }
 
@@ -743,9 +915,15 @@
 
         upgradesData.forEach(up => {
             if (upgradeLevels[up.id] === undefined) upgradeLevels[up.id] = 0;
+            let lvl = upgradeLevels[up.id] || 0;
             
             let descText = up.desc;
-            if (up.id === 'dvd') {
+            let titleText = up.title;
+            if (up.id === 'bounce') {
+                // Toon actuele damage in de koopbalk titel
+                let currentDamage = 1 + (lvl * up.increase);
+                titleText = `${up.title} <span style="color:var(--accent-green); font-size:0.45rem;">(DMG: +${currentDamage})</span>`;
+            } else if (up.id === 'dvd') {
                 descText = `Spawns a new ${tierLabelName} DVD (x${currentMultiplier} value, merges at 5!).`;
             }
 
@@ -753,7 +931,7 @@
             div.className = 'shop-item';
             div.innerHTML = `
                 <div class="shop-info">
-                    <div class="shop-title">${up.title} <span style="color:var(--text-muted)">Lvl <span id="lvl-${up.id}">${upgradeLevels[up.id]}</span></span></div>
+                    <div class="shop-title">${titleText} <span style="color:var(--text-muted)">Lvl <span id="lvl-${up.id}">${lvl}</span></span></div>
                     <div class="shop-desc">${descText}</div>
                 </div>
                 <button class="shop-btn" id="btn-up-${up.id}" onclick="buyUpgrade('${up.id}', 'general')">$${getUpgradeCost(up).toLocaleString()}</button>
@@ -765,20 +943,27 @@
         pContainer.innerHTML = '';
         predictUpgradesData.forEach(up => {
             if (upgradeLevels[up.id] === undefined) upgradeLevels[up.id] = 0;
+            let lvl = upgradeLevels[up.id] || 0;
+            
+            if (up.maxLevel && lvl >= up.maxLevel) return;
+
+            let cost = getUpgradeCost(up);
+            let currencySign = up.currency === 'dvdp' ? ' DVDp' : '$';
+
             const div = document.createElement('div');
             div.className = 'shop-item';
             div.innerHTML = `
                 <div class="shop-info">
-                    <div class="shop-title">${up.title} <span style="color:var(--text-muted)">Lvl <span id="lvl-${up.id}">${upgradeLevels[up.id]}</span></span></div>
+                    <div class="shop-title">${up.title} <span style="color:var(--text-muted)">Lvl <span id="lvl-${up.id}">${lvl}</span></span></div>
                     <div class="shop-desc">${up.desc}</div>
                 </div>
-                <button class="shop-btn" id="btn-up-${up.id}" onclick="buyUpgrade('${up.id}', 'predict')">$${getUpgradeCost(up).toLocaleString()}</button>
+                <button class="shop-btn" id="btn-up-${up.id}" onclick="buyUpgrade('${up.id}', 'predict')">${currencySign}${cost.toLocaleString()}</button>
             `;
             pContainer.appendChild(div);
         });
 
         buildSkinCategory(skinsData.basic, 'skins-basic-container');
-        buildSkinCategory(skinsData.flagSkin, 'skins-flag-container');
+        buildFlagCategory();
         buildSkinCategory(skinsData.expensive, 'skins-expensive-container');
     }
 
@@ -789,25 +974,15 @@
             const div = document.createElement('div');
             div.className = 'shop-item';
             
-            let btnHtml = '';
-            if (s.type === 'flag') {
-                const unlocked = unlockedSkins.includes(s.id);
-                btnHtml = unlocked ? 
-                    `<button class="shop-btn skin-btn" id="btn-skin-${s.id}" onclick="equipSkin('${s.id}')">EQUIP</button><button class="shop-btn" onclick="cycleFlag()">FLAG</button>` : 
-                    `<button class="shop-btn skin-btn" id="btn-skin-${s.id}" onclick="buySkin('${s.id}')">${s.cost} DVDp</button>`;
-            } else {
-                const unlocked = unlockedSkins.includes(s.id);
-                if (unlocked) {
-                    btnHtml = `<button class="shop-btn skin-btn" id="btn-skin-${s.id}" onclick="equipSkin('${s.id}')">EQUIP</button>`;
-                } else {
-                    btnHtml = `<button class="shop-btn skin-btn" id="btn-skin-${s.id}" onclick="buySkin('${s.id}')">${s.cost} DVDp</button>`;
-                }
-            }
+            const unlocked = unlockedSkins.includes(s.id);
+            let btnHtml = unlocked ? 
+                `<button class="shop-btn skin-btn" id="btn-skin-${s.id}" onclick="equipSkin('${s.id}')">EQUIP</button>` : 
+                `<button class="shop-btn skin-btn" id="btn-skin-${s.id}" onclick="buySkin('${s.id}')">${s.cost} DVDp</button>`;
 
             div.innerHTML = `
                 <div class="shop-info">
                     <div class="shop-title">${s.name}</div>
-                    <div class="shop-desc">${s.type === 'flag' ? 'Current: ' + allFlags[currentFlagIdx] : s.val}</div>
+                    <div class="shop-desc">${s.val}</div>
                 </div>
                 ${btnHtml}
             `;
@@ -815,10 +990,28 @@
         });
     }
 
-    function cycleFlag() {
-        currentFlagIdx = (currentFlagIdx + 1) % allFlags.length;
-        buildSkinCategory(skinsData.flagSkin, 'skins-flag-container');
-        showNotification(`Flag changed to ${allFlags[currentFlagIdx]}`);
+    function buildFlagCategory() {
+        const container = document.getElementById('skins-flag-container');
+        container.innerHTML = '';
+        allWorldFlags.forEach(f => {
+            let skinId = 'flag_' + f.code;
+            const div = document.createElement('div');
+            div.className = 'shop-item';
+            
+            const unlocked = unlockedSkins.includes(skinId);
+            let btnHtml = unlocked ? 
+                `<button class="shop-btn skin-btn" id="btn-skin-${skinId}" onclick="equipSkin('${skinId}')">EQUIP</button>` : 
+                `<button class="shop-btn skin-btn" id="btn-skin-${skinId}" onclick="buySkin('${skinId}')">150 DVDp</button>`;
+
+            div.innerHTML = `
+                <div class="shop-info">
+                    <div class="shop-title">${f.name}</div>
+                    <div class="shop-desc"><img src="https://flagcdn.com/w40/${f.code}.png" style="width: 30px; vertical-align: middle;"></div>
+                </div>
+                ${btnHtml}
+            `;
+            container.appendChild(div);
+        });
     }
 
     function getUpgradeCost(upData) {
@@ -830,29 +1023,39 @@
         const list = type === 'general' ? upgradesData : predictUpgradesData;
         const upData = list.find(u => u.id === id);
         if (!upData) return;
+        
+        let lvl = upgradeLevels[id] || 0;
+        if (upData.maxLevel && lvl >= upData.maxLevel) return;
+
         const cost = getUpgradeCost(upData);
-        if (money >= cost) {
-            money -= cost;
+        let canAfford = upData.currency === 'dvdp' ? (dvdp >= cost) : (money >= cost);
+        
+        if (canAfford) {
+            if (upData.currency === 'dvdp') dvdp -= cost;
+            else money -= cost;
+
             if (!upgradeLevels[id]) upgradeLevels[id] = 0;
             upgradeLevels[id]++;
-            if (upData.id === 'p_cool') stats[upData.stat] = Math.max(10, stats[upData.stat] + upData.increase); 
-            else stats[upData.stat] += upData.increase;
+            reapplyUpgrades();
+            
             if (upData.onBuy) upData.onBuy();
-            document.getElementById(`lvl-${id}`).innerText = upgradeLevels[id];
-            document.getElementById(`btn-up-${id}`).innerText = `$${getUpgradeCost(upData).toLocaleString()}`;
+            
+            initShop();
             updateCurrencies(); 
             saveProgressToFirebase();
+        } else {
+            showNotification(upData.currency === 'dvdp' ? "Not enough DVDp!" : "Not enough money!");
         }
     }
 
     function buySkin(id) {
         let skin = findSkinObj(id);
-        if (dvdp >= skin.cost && !unlockedSkins.includes(id)) {
-            dvdp -= skin.cost;
+        let cost = skin.cost !== undefined ? skin.cost : 150;
+        if (dvdp >= cost && !unlockedSkins.includes(id)) {
+            dvdp -= cost;
             unlockedSkins.push(id);
             updateCurrencies();
-            let cat = Object.keys(skinsData).find(k => skinsData[k].find(s => s.id === id));
-            buildSkinCategory(skinsData[cat], `skins-${cat === 'basic' ? 'basic-container' : (cat === 'flagSkin' ? 'flag-container' : 'expensive-container')}`);
+            initShop();
             equipSkin(id);
             saveProgressToFirebase();
         } else {
@@ -863,6 +1066,7 @@
     function equipSkin(id) {
         if (!unlockedSkins.includes(id)) return;
         currentSkin = id;
+        logoCache = {};
         document.querySelectorAll('.skin-btn').forEach(btn => {
             if (btn.innerText === 'EQUIPPED') btn.innerText = 'EQUIP';
             btn.classList.remove('equipped');
@@ -882,7 +1086,11 @@
         });
         predictUpgradesData.forEach(up => {
             const btn = document.getElementById(`btn-up-${up.id}`);
-            if (btn) btn.disabled = money < getUpgradeCost(up);
+            if (btn) {
+                let cost = getUpgradeCost(up);
+                let lvl = upgradeLevels[up.id] || 0;
+                btn.disabled = (up.maxLevel && lvl >= up.maxLevel) || (up.currency === 'dvdp' ? (dvdp < cost) : (money < cost));
+            }
         });
         for(let key in skinsData) {
             skinsData[key].forEach(s => {
@@ -890,6 +1098,11 @@
                 if (btn && !unlockedSkins.includes(s.id)) btn.disabled = dvdp < s.cost;
             });
         }
+        allWorldFlags.forEach(f => {
+            let skinId = 'flag_' + f.code;
+            const btn = document.getElementById(`btn-skin-${skinId}`);
+            if (btn && !unlockedSkins.includes(skinId)) btn.disabled = dvdp < 150;
+        });
     }
 
     function showNotification(msg) {
