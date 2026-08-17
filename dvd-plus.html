@@ -276,7 +276,13 @@
     const CODE_KEY = 'pg_player_code'; 
     
     let playerName = localStorage.getItem(LB_KEY) || 'Guest';
-    let playerCode = localStorage.getItem(CODE_KEY) || '00000000000000000000';
+    let playerCode = localStorage.getItem(CODE_KEY) || '';
+
+    // Valideer of genereer een 20-cijferige code als deze er nog niet is
+    if (!playerCode || playerCode.length !== 20) {
+        playerCode = Array.from({length: 20}, () => Math.floor(Math.random() * 10)).join('');
+        localStorage.setItem(CODE_KEY, playerCode);
+    }
 
     let money = 0;
     let dvdp = 0; 
@@ -416,9 +422,9 @@
         return img;
     }
 
+    // STRIKT GESPAREN PER UNIEKE 20-CIJFERIGE CODE
     function getUserDbRef() {
-        let safeKey = playerCode ? playerCode : playerName.replace(/[^a-zA-Z0-9]/g, "");
-        return db.ref('scores/dvdPlus/' + safeKey);
+        return db.ref('scores/dvdPlus/' + playerCode);
     }
 
     function loadProgressFromFirebase() {
@@ -452,12 +458,13 @@
     }
 
     function saveProgressToFirebase() {
-        if (!playerName) return;
+        if (!playerCode) return;
         dvdTiers = dvds.map(d => d.tier);
 
         const userRef = getUserDbRef();
         userRef.set({
             name: playerName,
+            code: playerCode,
             money: money,
             dvdp: dvdp,
             level: level,
@@ -881,7 +888,6 @@
         const statusText = document.getElementById('predict-status');
         const rewardPreviewText = document.getElementById('predict-reward-preview');
         
-        // Bereken gemiddelde of basis prediction bonus op basis van hoogste tier of standaard bounce damage
         let highestTier = getHighestUnlockedTier();
         let tierMult = Math.pow(3, highestTier);
         let previewBonus = stats.moneyPerBounce * stats.predictRewardMult * tierMult;
