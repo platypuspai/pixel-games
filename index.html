@@ -1380,7 +1380,8 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         if (!scoreElement) {
             scoreElement = document.createElement('div');
             scoreElement.id = 'snake-score';
-            scoreElement.style.cssText = 'position:fixed; top:20px; right:20px; color:#ffdd00; font-family:"Press Start 2P", "Inconsolata", monospace; font-size:16px; font-weight:bold; pointer-events:none; z-index:10000; text-shadow: 2px 2px 0 #000; display:none;';
+            // Aangepast van right:20px naar left:20px zodat de score links staat!
+            scoreElement.style.cssText = 'position:fixed; top:20px; left:20px; color:#ffdd00; font-family:"Press Start 2P", "Inconsolata", monospace; font-size:16px; font-weight:bold; pointer-events:none; z-index:10000; text-shadow: 2px 2px 0 #000; display:none;';
             document.body.appendChild(scoreElement);
         }
         scoreElement.innerText = 'SCORE: 0';
@@ -1528,26 +1529,23 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         // KAMELEON LOGICA: Check of we over een pixel-block zweven
         const colorBlocks = document.querySelectorAll('.pixel-block');
         for (let i = 0; i < colorBlocks.length; i++) {
-                        const elRect = colorBlocks[i].getBoundingClientRect();
+            const elRect = colorBlocks[i].getBoundingClientRect();
             
-            // Nieuwe soepele en vergevingsgezinde Kameleon Check (20px hitbox vanaf het centrum)
             const blockCenterX = elRect.left + (elRect.width / 2);
             const blockCenterY = elRect.top + (elRect.height / 2);
-            const headCenterX = headRect.left + 10; // 10 is the center of our 20x20 snake
+            const headCenterX = headRect.left + 10; 
             const headCenterY = headRect.top + 10;
             
             if (Math.abs(blockCenterX - headCenterX) < 22 && Math.abs(blockCenterY - headCenterY) < 22) {
-                // Vind de specifieke vulkleur van DIT blokje
                 const rectEl = colorBlocks[i].querySelector('rect');
                 if (rectEl) {
                     let fill = rectEl.getAttribute('fill');
                     if (fill) {
-                        snakeColor = fill; // Update de slangkleur!
+                        snakeColor = fill; 
                         snake.forEach(seg => {
                             seg.el.style.backgroundColor = snakeColor;
                         });
                         
-                        // Dynamische appel kleur
                         if (snakeColor === '#00ff88') {
                             foodColor = '#ff4444';
                         } else if (snakeColor === '#ff4444') {
@@ -1556,7 +1554,6 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
                             foodColor = '#00ff88';
                         }
                         
-                        // Verander de huidige appel ook meteen van kleur
                         if (food && food.el) {
                             food.el.style.backgroundColor = foodColor;
                         }
