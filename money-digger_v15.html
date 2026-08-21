@@ -404,7 +404,97 @@ function drawStack(bills){
 }
 
 function drawObjects(bills){
-  // Objects rendering logic
+  if(bills <= 0) return;
+  const altM    = bills * BILL_M;
+  const maxH    = H * 0.38;
+  const pxPerM  = maxH / Math.max(altM, BILL_M);
+  const stackCX = W/2;
+  const stackSW = 110, stackDepth = 20;
+  
+  const stackR  = stackCX + stackSW/2 + stackDepth + 14;
+  const stackL  = stackCX - stackSW/2 - 14;
+  
+  const stackPx = Math.min(bills * 0.5, maxH);
+  const MIN_PX  = Math.max(15, stackPx * 0.25);  
+
+  const vis = [];
+  for(let i=0;i<OBJECTS.length;i++){
+    const obj   = OBJECTS[i];
+    const ph    = obj.m * pxPerM;
+    const ratio = obj.m / altM;
+    
+    if(ratio > 8) break;
+    if(ratio < 0.0001) continue; 
+    
+    const drawH = Math.min(ph, H*0.9);
+    if(drawH < MIN_PX) continue; 
+
+    const opIn  = Math.min(1,(ratio-0.0005)/0.03);
+    const opOut = Math.min(1,(8-ratio)/3);
+    const opacity = opIn * opOut;
+    
+    const emojiW = Math.max(drawH * 0.65, 30); 
+    vis.push({obj, drawH, emojiW, ratio, opacity});
+  }
+  if(!vis.length) return;
+
+  const smaller = vis.filter(v=>v.ratio<=1).sort((a,b)=>b.ratio-a.ratio); 
+  const bigger  = vis.filter(v=>v.ratio>1).sort((a,b)=>a.ratio-b.ratio);  
+
+  let gapL = 16; 
+  if(smaller.length > 0){
+    const totW = smaller.reduce((sum, v) => sum + v.emojiW, 0);
+    if(totW + smaller.length * 16 < stackL){
+      gapL = (stackL - totW) / smaller.length;
+    }
+  }
+
+  let curX = stackL;
+  for(const v of smaller){
+    curX -= gapL / 2;
+    const cx2 = curX - v.emojiW / 2;
+    if(cx2 + v.emojiW / 2 < 0) break; 
+    drawOneObject(v, cx2);
+    curX -= v.emojiW; 
+    curX -= gapL / 2; 
+  }
+
+  const rightAvail = W - stackR; 
+  let gapR = 16;
+  if(bigger.length > 0){
+    const totW = bigger.reduce((sum, v) => sum + v.emojiW, 0);
+    if(totW + bigger.length * 16 < rightAvail){
+      gapR = (rightAvail - totW) / bigger.length;
+    }
+  }
+
+  curX = stackR;
+  for(const v of bigger){
+    curX += gapR / 2;
+    const cx2 = curX + v.emojiW / 2;
+    if(cx2 - v.emojiW / 2 > W) break;
+    drawOneObject(v, cx2);
+    curX += v.emojiW;
+    curX += gapR / 2;
+  }
+}
+
+function drawOneObject(v, cx2){
+  const {obj, drawH, opacity} = v;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0.04, opacity);
+  const shRX = drawH*0.28, shRY = Math.max(3, drawH*0.036);
+  const shg = ctx.createRadialGradient(cx2,GY,0,cx2,GY,shRX);
+  shg.addColorStop(0,'rgba(0,0,0,.4)'); shg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle = shg;
+  ctx.beginPath(); ctx.ellipse(cx2,GY+shRY*.4,shRX,shRY,0,0,Math.PI*2); ctx.fill();
+
+  const fs = Math.min(drawH, 500);
+  ctx.font = `${fs}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(obj.emoji, cx2, GY);
+  ctx.restore();
 }
 
 let bannerTO = null;
@@ -561,18 +651,13 @@ document.getElementById('ach-btn').addEventListener('click', ()=> achPanelOpen ?
 document.getElementById('ach-close').addEventListener('click', closeAchPanel);
 
 const MINIGAMES = [
-  { id: 'mg_mouse', name: 'Mouse Catcher', icon: '🐭', unlockObj: 'Mouse', unlockDesc: 'Unlock by reaching the mouse (0.07 m)', build: function(){} },
-  { id: 'mg_basketball', name: 'Basketball Shoot', icon: '🏀', unlockObj: 'Basketball', unlockDesc: 'Unlock by reaching basketball (0.24 m)', build: function(){} },
-  { id: 'mg_cat', name: 'Dodge the Cats', icon: '🐱', unlockObj: 'Cat', unlockDesc: 'Unlock by reaching the cat (0.6 m)', build: function(){} },
-  { id: 'mg_horse', name: 'Horse Runner', icon: '🐴', unlockObj: 'Horse', unlockDesc: 'Unlock by reaching the horse (2.4 m)', build: function(){} },
+  { id: 'mg_mouse', name: 'Mouse Catcher', icon: '🐭', unlockObj: 'Mouse', unlockDesc: 'Unlock by reaching the mouse (0.07 m)' },
+  { id: 'mg_basketball', name: 'Basketball Shoot', icon: '🏀', unlockObj: 'Basketball', unlockDesc: 'Unlock by reaching basketball (0.24 m)' },
+  { id: 'mg_cat', name: 'Dodge the Cats', icon: '🐱', unlockObj: 'Cat', unlockDesc: 'Unlock by reaching the cat (0.6 m)' },
+  { id: 'mg_horse', name: 'Horse Runner', icon: '🐴', unlockObj: 'Horse', unlockDesc: 'Unlock by reaching the horse (2.4 m)' },
 ];
 
 let unlockedMg = new Set();
-let mgPanelOpen = false;
-let newMgCount = 0;
-let activeMgId = null;
-let mgLoops = {};
-
 try { unlockedMg = new Set(JSON.parse(safeGetLS('md6_mg','[]'))); } catch(e){}
 
 function checkMinigameUnlocks(){
@@ -584,7 +669,6 @@ function checkMinigameUnlocks(){
     if(obj && altM >= obj.m){
       unlockedMg.add(mg.id);
       safeSetLS('md6_mg', JSON.stringify([...unlockedMg]));
-      newMgCount++;
     }
   }
 }
@@ -613,6 +697,34 @@ function initFirebase(){
       myRef.onDisconnect().remove();
       onlineRef.on('value', snap => {
         document.getElementById('online').textContent = `● ${snap.numChildren()} online`;
+      });
+
+      scoresRef.on('value', snap => {
+        scores = {};
+        let berekendTotaal = 0;
+        snap.forEach(child => {
+          const rec = child.val();
+          if(rec === null || rec === undefined) return;
+          if (typeof rec === 'number') {
+            scores[child.key] = (scores[child.key] || 0) + rec;
+            berekendTotaal += rec;
+            return;
+          }
+          const did   = child.key;
+          const clicks= rec.clicks|| 0;
+          if(did === deviceId){
+            myClicks = clicks;
+            myName   = rec.name || myName;
+            safeSetLS('pg_player_name', myName);
+            safeSetLS('md6_n', myName);
+          }
+          scores[rec.name || 'Unknown'] = (scores[rec.name || 'Unknown']||0) + clicks;
+          berekendTotaal += clicks;
+        });
+        if (gameMode !== 'sp') {
+          totalBills = berekendTotaal;
+        }
+        updateScoreboard();
       });
     }
   } catch(e) {
@@ -658,6 +770,17 @@ document.getElementById('cbtn').addEventListener('click', ()=>{
     checkMinigameUnlocks();
     return;
   }
+
+  try {
+    if(scoresRef && typeof scoresRef.transaction === 'function') {
+      scoresRef.child(deviceId).transaction(rec => {
+        if(!rec || typeof rec !== 'object') rec = { clicks: 0, name: myName };
+        rec.clicks = (rec.clicks||0) + 1;
+        rec.name = myName;
+        return rec;
+      });
+    }
+  } catch(e) {}
 });
 
 function loop(){
