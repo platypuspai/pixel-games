@@ -33,8 +33,6 @@
         .back-link:hover { color: var(--accent-green); border-color: var(--accent-green); }
         h1 { font-family: 'Press Start 2P', monospace; font-size: clamp(0.9rem, 3vw, 1.4rem); color: var(--accent-yellow); letter-spacing: 0.05em; line-height: 1.5; }
         .subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 12px; letter-spacing: 0.15em; }
-        .subtitle span { color: var(--accent-green); animation: blink 1.2s step-end infinite; }
-        @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
 
         .wrap { position: relative; z-index: 10; max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
         .name-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--accent-yellow); padding: 16px 22px; margin-bottom: 32px; }
@@ -64,8 +62,6 @@
 
         .board { background: var(--card); border: 1px solid var(--border); border-radius: 2px; margin-bottom: 10px; }
         .board-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
-        .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green); animation: pulse 1.5s ease-in-out infinite; flex-shrink: 0; }
-        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
         .board-title { font-family: 'Press Start 2P', monospace; font-size: 0.45rem; letter-spacing: 0.08em; flex: 1; line-height: 1.6; }
         .board-meta { font-size: 0.62rem; color: var(--text-muted); white-space: nowrap; }
         .board-body { max-height: 580px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
@@ -83,7 +79,7 @@
         .lb-name.me { color: var(--accent-yellow); font-weight: 700; }
         .lb-score { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; font-family: 'Inconsolata', monospace; }
         .lb-empty, .lb-loading { padding: 28px 18px; color: var(--text-muted); font-size: 0.78rem; text-align: center; line-height: 1.7; }
-        .lb-loading::after { content: '...'; animation: blink 1s step-end infinite; }
+        .lb-loading::after { content: '...'; }
         .board-foot { border-top: 1px solid var(--border); padding: 10px 18px; font-size: 0.72rem; color: var(--text-muted); background: rgba(255,221,0,0.04); display: none; }
         .board-foot span { color: var(--accent-yellow); font-weight: 700; }
 
@@ -99,43 +95,43 @@
 <div class="stars" id="stars"></div>
 
 <header>
-    <a class="back-link" href="index.html">◀ BACK</a>
-    <h1>🏆 LEADERBOARD</h1>
-    <p class="subtitle">Live rankings &nbsp;·&nbsp; all Pixel-Games &nbsp;·&nbsp; <span>_</span></p>
+    <a class="back-link" href="index.html" data-i18n="back">◀ BACK</a>
+    <h1 data-i18n="title">🏆 LEADERBOARD</h1>
+    <p class="subtitle"><span data-i18n="subText">Live rankings &nbsp;·&nbsp; all Pixel-Games</span></p>
 </header>
 
 <div class="wrap">
 
     <div class="name-bar">
-        <span class="name-bar-label">// PLAYER</span>
+        <span class="name-bar-label" data-i18n="playerLabel">// PLAYER</span>
         <span class="name-bar-value" id="bar-name">—</span>
-        <button class="change-btn" onclick="showModal()">CHANGE NAME</button>
+        <button class="change-btn" onclick="showModal()" data-i18n="changeName">CHANGE NAME</button>
     </div>
 
     <div class="account-section">
-        <span class="account-label">// ACCOUNT CODE</span>
+        <span class="account-label" data-i18n="accountCodeLabel">// ACCOUNT CODE</span>
         <span class="account-code" id="account-code">—</span>
-        <button class="account-btn" onclick="copyCode()">COPY</button>
-        <button class="account-btn" onclick="showImportModal()">IMPORT ON OTHER DEVICE</button>
+        <button class="account-btn" onclick="copyCode()" data-i18n="copyBtn">COPY</button>
+        <button class="account-btn" onclick="showImportModal()" data-i18n="importBtnLabel">IMPORT ON OTHER DEVICE</button>
     </div>
 
     <div class="modal-overlay hidden" id="import-modal">
         <div class="import-modal">
-            <h3>// IMPORT ACCOUNT</h3>
-            <p>Enter the 20-character code from your other device to transfer your account here.</p>
+            <h3 data-i18n="importTitle">// IMPORT ACCOUNT</h3>
+            <p data-i18n="importDesc">Enter the 20-character code from your other device to transfer your account here.</p>
             <input id="import-input" type="text" maxlength="20" placeholder="XXXXXXXXXXXXXXXXXXXX" autocomplete="off" spellcheck="false">
             <div id="import-error" style="color:#ff4444;font-size:0.75rem;margin-bottom:12px;min-height:1em;"></div>
-            <button class="import-btn" onclick="importAccount()">► IMPORT ACCOUNT</button>
-            <p style="margin-top:14px;font-size:0.7rem;color:var(--text-muted);">Warning: this will replace the account on this device.</p>
+            <button class="import-btn" onclick="importAccount()" data-i18n="importBtn">► IMPORT ACCOUNT</button>
+            <p style="margin-top:14px;font-size:0.7rem;color:var(--text-muted);" data-i18n="importWarn">Warning: this will replace the account on this device.</p>
         </div>
     </div>
 
     <div class="modal-overlay hidden" id="modal">
         <div class="modal">
-            <h3>// CHOOSE YOUR NAME</h3>
-            <p>This name is used to identify you across all leaderboards.</p>
+            <h3 data-i18n="chooseNameTitle">// CHOOSE YOUR NAME</h3>
+            <p data-i18n="chooseNameDesc">This name is used to identify you across all leaderboards.</p>
             <input id="name-input" type="text" maxlength="18" placeholder="Your player name..." autocomplete="off">
-            <button class="modal-btn" onclick="confirmName()">► CONFIRM NAME</button>
+            <button class="modal-btn" onclick="confirmName()" data-i18n="confirmNameBtn">► CONFIRM NAME</button>
         </div>
     </div>
 
@@ -143,61 +139,55 @@
 
         <div class="board" style="border-top: 2px solid var(--accent-orange);">
             <div class="board-head">
-                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-orange)">MONEY DIGGER</span>
-                <span class="board-meta">clicks</span>
+                <span class="board-meta" data-i18n="metaClicks">clicks</span>
             </div>
-            <div class="board-body" id="md-body"><div class="lb-loading">Connecting</div></div>
+            <div class="board-body" id="md-body"><div class="lb-loading" data-i18n="connecting">Connecting</div></div>
             <div class="board-foot" id="md-foot"></div>
         </div>
 
         <div class="board" style="border-top: 2px solid var(--accent-green);">
             <div class="board-head">
-                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-green)">MINI PLATFORMER</span>
-                <span class="board-meta">best time</span>
+                <span class="board-meta" data-i18n="metaTime">best time</span>
             </div>
-            <div class="board-body" id="pf-body"><div class="lb-loading">Connecting</div></div>
+            <div class="board-body" id="pf-body"><div class="lb-loading" data-i18n="connecting">Connecting</div></div>
             <div class="board-foot" id="pf-foot"></div>
         </div>
 
         <div class="board" style="border-top: 2px solid var(--accent-cyan);">
             <div class="board-head">
-                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-cyan)">LUCKY GUY</span>
-                <span class="board-meta">highest level</span>
+                <span class="board-meta" data-i18n="metaLevel">highest level</span>
             </div>
-            <div class="board-body" id="lg-body"><div class="lb-loading">Connecting</div></div>
+            <div class="board-body" id="lg-body"><div class="lb-loading" data-i18n="connecting">Connecting</div></div>
             <div class="board-foot" id="lg-foot"></div>
         </div>
 
         <div class="board" style="border-top: 2px solid var(--accent-pink);">
             <div class="board-head">
-                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-pink)">MINI APOCALYPSE</span>
-                <span class="board-meta">score</span>
+                <span class="board-meta" data-i18n="metaScore">score</span>
             </div>
-            <div class="board-body" id="ma-body"><div class="lb-loading">Connecting</div></div>
+            <div class="board-body" id="ma-body"><div class="lb-loading" data-i18n="connecting">Connecting</div></div>
             <div class="board-foot" id="ma-foot"></div>
         </div>
 
         <div class="board" style="border-top: 2px solid var(--accent-red);">
             <div class="board-head">
-                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-red)">BUG ESCAPE</span>
-                <span class="board-meta">score</span>
+                <span class="board-meta" data-i18n="metaScore">score</span>
             </div>
-            <div class="board-body" id="be-body"><div class="lb-loading">Connecting</div></div>
+            <div class="board-body" id="be-body"><div class="lb-loading" data-i18n="connecting">Connecting</div></div>
             <div class="board-foot" id="be-foot"></div>
         </div>
 
         <div class="board" style="border-top: 2px solid var(--accent-indigo);">
             <div class="board-head">
-                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-indigo)">DODGING ARENA</span>
-                <span class="board-meta">score</span>
+                <span class="board-meta" data-i18n="metaScore">score</span>
             </div>
-            <div class="board-body" id="da-body"><div class="lb-loading">Connecting</div></div>
+            <div class="board-body" id="da-body"><div class="lb-loading" data-i18n="connecting">Connecting</div></div>
             <div class="board-foot" id="da-foot"></div>
         </div>
 
@@ -205,28 +195,102 @@
 </div>
 
 <script>
-// Vertalingen voor de totale geldstapel en statusberichten
 const translations = {
     nl: {
-        totalStack: "TOTALE GELDSTAPEL",
+        back: "◀ TERUG",
+        title: "🏆 RANGSLIJST",
+        subText: "Live ranglijsten &nbsp;·&nbsp; alle Pixel-Games",
+        playerLabel: "// SPELER",
+        changeName: "NAAM WIJZIGEN",
+        accountCodeLabel: "// ACCOUNTCODE",
+        copyBtn: "KOPIËREN",
+        importBtnLabel: "IMPORTEREN OP ANDER APPARAAT",
+        importTitle: "// ACCOUNT IMPORTEREN",
+        importDesc: "Voer de code van 20 tekens van je andere apparaat in om je account hierheen over te zetten.",
+        importBtn: "► ACCOUNT IMPORTEREN",
+        importWarn: "Waarschuwing: dit vervangt het account op dit apparaat.",
+        chooseNameTitle: "// KIES JE NAAM",
+        chooseNameDesc: "Deze naam wordt gebruikt om je te identificeren op alle ranglijsten.",
+        namePlaceholder: "Je spelersnaam...",
+        confirmNameBtn: "► NAAM BEVESTIGEN",
+        metaClicks: "klikken",
+        metaTime: "beste tijd",
+        metaLevel: "hoogste niveau",
+        metaScore: "score",
         connecting: "Verbinden",
         noScores: "Nog geen scores.",
         yourRank: "Jouw rang:",
-        notInRanking: "Je staat nog niet in deze ranglijst."
+        notInRanking: "Je staat nog niet in deze ranglijst.",
+        totalStack: "TOTALE GELDSTAPEL",
+        copied: "GEKOPIEERD!",
+        lookingUp: "⏳ Zoeken...",
+        checking: "⏳ Controleren...",
+        nameTaken: "Naam is al bezet. Kies een andere naam.",
+        connError: "Verbindingsfout. Probeer het opnieuw."
     },
     en: {
-        totalStack: "TOTAL STACK",
+        back: "◀ BACK",
+        title: "🏆 LEADERBOARD",
+        subText: "Live rankings &nbsp;·&nbsp; all Pixel-Games",
+        playerLabel: "// PLAYER",
+        changeName: "CHANGE NAME",
+        accountCodeLabel: "// ACCOUNT CODE",
+        copyBtn: "COPY",
+        importBtnLabel: "IMPORT ON OTHER DEVICE",
+        importTitle: "// IMPORT ACCOUNT",
+        importDesc: "Enter the 20-character code from your other device to transfer your account here.",
+        importBtn: "► IMPORT ACCOUNT",
+        importWarn: "Warning: this will replace the account on this device.",
+        chooseNameTitle: "// CHOOSE YOUR NAME",
+        chooseNameDesc: "This name is used to identify you across all leaderboards.",
+        namePlaceholder: "Your player name...",
+        confirmNameBtn: "► CONFIRM NAME",
+        metaClicks: "clicks",
+        metaTime: "best time",
+        metaLevel: "highest level",
+        metaScore: "score",
         connecting: "Connecting",
         noScores: "No scores yet.",
         yourRank: "Your rank:",
-        notInRanking: "You are not in this ranking yet."
+        notInRanking: "You are not in this ranking yet.",
+        totalStack: "TOTAL STACK",
+        copied: "COPIED!",
+        lookingUp: "⏳ Looking up...",
+        checking: "⏳ Checking...",
+        nameTaken: "Name already taken. Choose a different name.",
+        connError: "Connection error. Please try again."
     },
     fr: {
-        totalStack: "PILE TOTALE",
+        back: "◀ RETOUR",
+        title: "🏆 CLASSEMENT",
+        subText: "Classements en direct &nbsp;·&nbsp; tous les Pixel-Games",
+        playerLabel: "// JOUEUR",
+        changeName: "CHANGER DE NOM",
+        accountCodeLabel: "// CODE DE COMPTE",
+        copyBtn: "COPIER",
+        importBtnLabel: "IMPORTER SUR UN AUTRE APPAREIL",
+        importTitle: "// IMPORTER LE COMPTE",
+        importDesc: "Entrez le code à 20 caractères de votre autre appareil pour transférer votre compte ici.",
+        importBtn: "► IMPORTER LE COMPTE",
+        importWarn: "Avertissement : cela remplacera le compte sur cet appareil.",
+        chooseNameTitle: "// CHOISISSEZ VOTRE NOM",
+        chooseNameDesc: "Ce nom est utilisé pour vous identifier sur tous les classements.",
+        namePlaceholder: "Votre nom de joueur...",
+        confirmNameBtn: "► CONFIRMER LE NOM",
+        metaClicks: "clics",
+        metaTime: "meilleur temps",
+        metaLevel: "niveau le plus élevé",
+        metaScore: "score",
         connecting: "Connexion",
         noScores: "Pas encore de scores.",
-        yourRank: "Votre rang:",
-        notInRanking: "Vous n'êtes pas encore dans ce classement."
+        yourRank: "Votre rang :",
+        notInRanking: "Vous n'êtes pas encore dans ce classement.",
+        totalStack: "PILE TOTALE",
+        copied: "COPIÉ !",
+        lookingUp: "⏳ Recherche...",
+        checking: "⏳ Vérification...",
+        nameTaken: "Ce nom est déjà pris. Choisissez un autre nom.",
+        connError: "Erreur de connexion. Réessayez."
     }
 };
 
@@ -238,6 +302,18 @@ function tr(key) {
     const l = getLang();
     return (translations[l] || translations['nl'])[key] || key;
 }
+
+function applyTranslations() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (translations[getLang()][key]) {
+            el.innerHTML = translations[getLang()][key];
+        }
+    });
+    const nameInp = document.getElementById('name-input');
+    if (nameInp) nameInp.placeholder = tr('namePlaceholder');
+}
+document.addEventListener('DOMContentLoaded', applyTranslations);
 
 const starsEl = document.getElementById('stars');
 for (let i = 0; i < 80; i++) {
@@ -275,7 +351,7 @@ function copyCode() {
     navigator.clipboard.writeText(MY_ACCOUNT_CODE).then(() => {
         const el = document.getElementById('account-code');
         el.style.color = 'var(--accent-green)';
-        el.textContent = 'COPIED!';
+        el.textContent = tr('copied');
         setTimeout(() => { el.style.color = ''; el.textContent = MY_ACCOUNT_CODE; }, 1500);
     }).catch(() => { prompt('Copy your account code:', MY_ACCOUNT_CODE); });
 }
@@ -292,14 +368,14 @@ async function importAccount() {
     const errEl = document.getElementById('import-error');
     if (code.length !== 20) { errEl.textContent = 'Code must be exactly 20 characters.'; return; }
     const btn = document.querySelector('.import-btn');
-    btn.textContent = '⏳ Looking up...'; btn.disabled = true; errEl.textContent = '';
+    btn.textContent = tr('lookingUp'); btn.disabled = true; errEl.textContent = '';
     try {
         const db = fbApp.database();
         const snap = await db.ref('accountCodes/' + code).once('value');
         const data = snap.val();
         if (!data || !data.deviceId || !data.name) {
             errEl.textContent = 'Code not found. Make sure you copied it correctly.';
-            btn.textContent = '► IMPORT ACCOUNT'; btn.disabled = false; return;
+            btn.textContent = tr('importBtn'); btn.disabled = false; return;
         }
 
         const cleanName = data.name.trim();
@@ -354,8 +430,8 @@ async function importAccount() {
         document.getElementById('bar-name').textContent = cleanName;
         document.getElementById('account-code').textContent = code;
         location.reload(); 
-    } catch(e) { errEl.textContent = 'Connection error. Try again.'; console.error(e); }
-    btn.textContent = '► IMPORT ACCOUNT'; btn.disabled = false;
+    } catch(e) { errEl.textContent = tr('connError'); console.error(e); }
+    btn.textContent = tr('importBtn'); btn.disabled = false;
 }
 document.getElementById('import-modal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden'); });
 document.getElementById('import-input').addEventListener('keydown', e => { if (e.key === 'Enter') importAccount(); });
@@ -388,14 +464,14 @@ async function confirmName() {
     if (oldName && oldName.toLowerCase() === valLow) { document.getElementById('modal').classList.add('hidden'); return; }
     
     const btn = document.querySelector('.modal-btn');
-    btn.textContent = '⏳ Checking...'; btn.disabled = true;
+    btn.textContent = tr('checking'); btn.disabled = true;
 
     try {
         const db = fbApp.database();
         const nameSnap = await db.ref('nameOwners').once('value');
         const owners = nameSnap.val() || {};
         const conflict = Object.entries(owners).find(([devId, v]) => devId !== MY_DEVICE_ID && v.name && v.name.toLowerCase() === valLow);
-        if (conflict) { showNameError('Name already taken. Choose a different name.'); btn.textContent = '► CONFIRM NAME'; btn.disabled = false; return; }
+        if (conflict) { showNameError(tr('nameTaken')); btn.textContent = tr('confirmNameBtn'); btn.disabled = false; return; }
 
         await db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: val });
         await db.ref('accountCodes/' + MY_ACCOUNT_CODE).set({ deviceId: MY_DEVICE_ID, name: val });
@@ -432,9 +508,9 @@ async function confirmName() {
         if (window._beData) render('be-body', 'be-foot', window._beData, val);
         if (window._daData) render('da-body', 'da-foot', window._daData, val);
 
-    } catch(e) { showNameError('Connection error. Please try again.'); console.error(e); }
+    } catch(e) { showNameError(tr('connError')); console.error(e); }
 
-    btn.textContent = '► CONFIRM NAME'; btn.disabled = false;
+    btn.textContent = tr('confirmNameBtn'); btn.disabled = false;
 }
 
 document.getElementById('name-input').addEventListener('keydown', e => { if (e.key === 'Enter') confirmName(); });
