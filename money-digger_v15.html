@@ -73,6 +73,10 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 .mg-row.unlocked .mg-hlock{color:rgba(99,102,241,.6)}
 .mg-play{background:rgba(99,102,241,.18);border:1px solid rgba(99,102,241,.35);color:#a5b4fc;font-size:.58rem;font-weight:700;border-radius:7px;padding:5px 11px;cursor:pointer;pointer-events:all;transition:background .15s;white-space:nowrap;flex-shrink:0}
 .mg-play:hover{background:rgba(99,102,241,.35)}
+.mg-game{padding:0 11px 14px;display:none}
+.mg-row.playing .mg-game{display:block}
+.mg-canvas{width:100%;border-radius:8px;background:#000;display:block;image-rendering:pixelated}
+.mg-score{font-size:.55rem;color:rgba(99,102,241,.7);text-align:right;margin-top:5px;margin-bottom:2px;font-family:'DM Mono',monospace;padding:0 2px;white-space:nowrap;display:block}
 
 #ach-toast{position:fixed;bottom:114px;right:28px;z-index:60;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none}
 .ach-toast-item{background:rgba(10,10,10,.95);border:1px solid rgba(234,179,8,.4);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;animation:ach-in .4s cubic-bezier(.22,1,.36,1) forwards}
@@ -179,6 +183,11 @@ const translations = {
     beyondMilestones: "🌌 Beyond all milestones!",
     playBtn: "▶ Play",
     unlockedLabel: "✓ Unlocked",
+    clicksLeft: "clicks left",
+    scoreLabel: "Score",
+    bestLabel: "Best",
+    timeLabel: "Time",
+    distanceLabel: "Distance",
 
     obj_ant: "Ant", obj_grape: "Grape", obj_strawberry: "Strawberry", obj_mouse: "Mouse", obj_apple: "Apple",
     obj_basketball: "Basketball", obj_tulip: "Tulip", obj_sunflower: "Sunflower", obj_cat: "Cat", obj_dog: "Dog",
@@ -236,6 +245,11 @@ const translations = {
     beyondMilestones: "🌌 Voorbij alle mijlpalen!",
     playBtn: "▶ Spelen",
     unlockedLabel: "✓ Ontgrendeld",
+    clicksLeft: "klikken te gaan",
+    scoreLabel: "Score",
+    bestLabel: "Beste",
+    timeLabel: "Tijd",
+    distanceLabel: "Afstand",
 
     obj_ant: "Mier", obj_grape: "Druif", obj_strawberry: "Aardbei", obj_mouse: "Muis", obj_apple: "Appel",
     obj_basketball: "Basketbal", obj_tulip: "Tulp", obj_sunflower: "Zonnebloem", obj_cat: "Kat", obj_dog: "Hond",
@@ -293,6 +307,11 @@ const translations = {
     beyondMilestones: "🌌 Au-delà de tous les jalons !",
     playBtn: "▶ Jouer",
     unlockedLabel: "✓ Débloqué",
+    clicksLeft: "clics restants",
+    scoreLabel: "Score",
+    bestLabel: "Meilleur",
+    timeLabel: "Temps",
+    distanceLabel: "Distance",
 
     obj_ant: "Fourmi", obj_grape: "Raisin", obj_strawberry: "Fraise", obj_mouse: "Souris", obj_apple: "Pomme",
     obj_basketball: "Ballon de basket", obj_tulip: "Tulipe", obj_sunflower: "Tournesol", obj_cat: "Chat", obj_dog: "Chien",
@@ -458,6 +477,7 @@ function drawGround(altM){
   ctx.fillRect(0, GY, W, H-GY);
 }
 
+// 3D STACK RENDERER RESTORED
 function drawStack(bills){
   if(bills <= 0) return;
   const cx   = W/2;
@@ -466,11 +486,38 @@ function drawStack(bills){
   const top  = GY - sh;
   const sw   = 110, depth = 20;
 
+  const shg = ctx.createRadialGradient(cx+depth*.4,GY+4,0,cx+depth*.4,GY+4,sw*.7);
+  shg.addColorStop(0,'rgba(0,0,0,.5)'); shg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle = shg;
+  ctx.beginPath(); ctx.ellipse(cx+depth*.4,GY+4,sw*.7,10,0,0,Math.PI*2); ctx.fill();
+
+  const rf = ctx.createLinearGradient(cx+sw/2,top,cx+sw/2+depth,top-depth*.5);
+  rf.addColorStop(0,'#14532d'); rf.addColorStop(1,'#052e16');
+  ctx.fillStyle = rf;
+  ctx.beginPath();
+  ctx.moveTo(cx+sw/2,top); ctx.lineTo(cx+sw/2+depth,top-depth*.5);
+  ctx.lineTo(cx+sw/2+depth,GY-depth*.5); ctx.lineTo(cx+sw/2,GY); ctx.fill();
+
   const ff = ctx.createLinearGradient(cx,top,cx,GY);
   ff.addColorStop(0,'#166534'); ff.addColorStop(.3,'#22c55e');
   ff.addColorStop(.7,'#16a34a'); ff.addColorStop(1,'#14532d');
   ctx.fillStyle = ff;
   ctx.fillRect(cx-sw/2, top, sw, sh);
+
+  const le = Math.max(1, Math.floor(sh/Math.min(100,bills)));
+  ctx.strokeStyle='rgba(0,60,20,.22)'; ctx.lineWidth=.5;
+  for(let y=GY;y>top;y-=le){
+    ctx.beginPath(); ctx.moveTo(cx-sw/2,y); ctx.lineTo(cx+sw/2,y); ctx.stroke();
+  }
+
+  if(sh > 20){
+    ctx.fillStyle='rgba(255,255,255,.1)';
+    ctx.font=`bold ${Math.min(36,sh*.26)}px serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('$1', cx, top+sh*.52);
+    ctx.strokeStyle='rgba(0,80,20,.15)'; ctx.lineWidth=1;
+    ctx.strokeRect(cx-sw/2+3,top+3,sw-6,sh-6);
+  }
 
   const tf = ctx.createLinearGradient(cx-sw/2,top,cx+sw/2+depth,top-depth*.5);
   tf.addColorStop(0,'#4ade80'); tf.addColorStop(.5,'#86efac'); tf.addColorStop(1,'#22c55e');
@@ -479,6 +526,12 @@ function drawStack(bills){
   ctx.moveTo(cx-sw/2,top); ctx.lineTo(cx+sw/2,top);
   ctx.lineTo(cx+sw/2+depth,top-depth*.5); ctx.lineTo(cx-sw/2+depth,top-depth*.5);
   ctx.closePath(); ctx.fill();
+
+  ctx.save();
+  ctx.shadowColor='#22c55e'; ctx.shadowBlur=14;
+  ctx.strokeStyle='rgba(34,197,94,.28)'; ctx.lineWidth=1;
+  ctx.strokeRect(cx-sw/2,top,sw,sh);
+  ctx.restore();
 }
 
 function drawObjects(bills){
@@ -588,7 +641,7 @@ function updateHUD(){
   let next = null;
   for(const o of OBJECTS) if(o.m > altM){ next=o; break; }
   document.getElementById('nxt').textContent = next
-    ? `${next.emoji} ${t(next.key)} — ${fmtN(Math.ceil((next.m-altM)/BILL_M))} clicks left`
+    ? `${next.emoji} ${t(next.key)} — ${fmtN(Math.ceil((next.m-altM)/BILL_M))} ${t('clicksLeft')}`
     : t('beyondMilestones');
   document.getElementById('bnum').textContent = fmtN(Math.round(totalBills));
 
@@ -713,11 +766,12 @@ function closeAchPanel(){
 document.getElementById('ach-btn').addEventListener('click', ()=> achPanelOpen ? closeAchPanel() : openAchPanel());
 document.getElementById('ach-close').addEventListener('click', closeAchPanel);
 
+// MINIGAMES FULL RESTORE
 const MINIGAMES = [
-  { id: 'mg_mouse', nameKey: 'mg_mouse_name', icon: '🐭', unlockObjKey: 'obj_mouse', lockKey: 'mg_mouse_lock' },
-  { id: 'mg_basketball', nameKey: 'mg_basket_name', icon: '🏀', unlockObjKey: 'obj_basketball', lockKey: 'mg_basket_lock' },
-  { id: 'mg_cat', nameKey: 'mg_cat_name', icon: '🐱', unlockObjKey: 'obj_cat', lockKey: 'mg_cat_lock' },
-  { id: 'mg_horse', nameKey: 'mg_horse_name', icon: '🐴', unlockObjKey: 'obj_horse', lockKey: 'mg_horse_lock' },
+  { id: 'mg_mouse', nameKey: 'mg_mouse_name', icon: '🐭', unlockObjKey: 'obj_mouse', lockKey: 'mg_mouse_lock', build: buildMouseCannonGame },
+  { id: 'mg_basketball', nameKey: 'mg_basket_name', icon: '🏀', unlockObjKey: 'obj_basketball', lockKey: 'mg_basket_lock', build: buildBasketballGame },
+  { id: 'mg_cat', nameKey: 'mg_cat_name', icon: '🐱', unlockObjKey: 'obj_cat', lockKey: 'mg_cat_lock', build: buildCatGame },
+  { id: 'mg_horse', nameKey: 'mg_horse_name', icon: '🐴', unlockObjKey: 'obj_horse', lockKey: 'mg_horse_lock', build: buildHorseGame },
 ];
 
 let unlockedMg = new Set();
@@ -736,6 +790,9 @@ function checkMinigameUnlocks(){
   }
 }
 
+let activeMgId = null;
+let mgLoops = {};
+
 function renderMgPanel(){
   const list = document.getElementById('mg-list');
   list.innerHTML = '';
@@ -753,9 +810,226 @@ function renderMgPanel(){
           <div class="mg-hlock">${isUnlocked ? t('unlockedLabel') : '🔒 ' + t(mg.lockKey)}</div>
         </div>
         ${playBtn}
-      </div>`;
+      </div>
+      <div class="mg-game" id="mggame-${mg.id}"></div>`;
     list.appendChild(row);
   }
+  list.querySelectorAll('.mg-play').forEach(btn => {
+    btn.addEventListener('click', ()=> toggleMgGame(btn.dataset.mg));
+  });
+}
+
+function toggleMgGame(id){
+  if(activeMgId === id){ stopMgGame(id); return; }
+  if(activeMgId) stopMgGame(activeMgId);
+  activeMgId = id;
+  const row     = document.getElementById('mgrow-'+id);
+  const gameDiv = document.getElementById('mggame-'+id);
+  row.classList.add('playing');
+  const mg = MINIGAMES.find(m=>m.id===id);
+  mg.build(gameDiv, id);
+}
+
+function stopMgGame(id){
+  if(mgLoops[id]){ mgLoops[id](); delete mgLoops[id]; }
+  const row     = document.getElementById('mgrow-'+id);
+  const gameDiv = document.getElementById('mggame-'+id);
+  if(row) row.classList.remove('playing');
+  if(gameDiv) gameDiv.innerHTML = '';
+  if(activeMgId === id) activeMgId = null;
+}
+
+function buildMouseCannonGame(container, id){
+  const W=288, H=170;
+  container.innerHTML=`<canvas class="mg-canvas" id="mgc-${id}" width="${W}" height="${H}"></canvas><div class="mg-score" id="mgs-${id}">${t('scoreLabel')}: 0 · ${t('bestLabel')}: ${safeGetLS('mg_hi_'+id,'0')}</div>`;
+  const cv=document.getElementById('mgc-'+id);
+  const ctx=cv.getContext('2d');
+  let score=0, tcnt=0, running=true;
+  let mice=[];
+
+  function spawnMouse(){
+    mice.push({
+      x: Math.random()*(W-30)+15, y: Math.random()*(H-30)+15,
+      vx: (Math.random()-.5)*2.6, vy: (Math.random()-.5)*2.6,
+      r: 14, life: 200+Math.floor(Math.random()*80), maxLife: 280,
+    });
+  }
+  for(let i=0;i<3;i++) spawnMouse();
+
+  cv.addEventListener('click', e=>{
+    const rect=cv.getBoundingClientRect();
+    const sx=(e.clientX-rect.left)*(W/rect.width);
+    const sy=(e.clientY-rect.top)*(H/rect.height);
+    let caught=false;
+    mice=mice.filter(m=>{
+      if(!caught && Math.hypot(sx-m.x,sy-m.y)<m.r+10){ score++; caught=true; return false; }
+      return true;
+    });
+  });
+
+  function loop(){
+    if(!running) return;
+    tcnt++;
+    if(tcnt%70===0) spawnMouse();
+    if(mice.length>10) mice.shift();
+
+    ctx.fillStyle='#0e1a10'; ctx.fillRect(0,0,W,H);
+    mice=mice.filter(m=>{ m.life--; if(m.life<=0){ score=0; return false; } return true; });
+    for(const m of mice){
+      m.x+=m.vx; m.y+=m.vy;
+      if(m.x<m.r||m.x>W-m.r){ m.vx*=-1; m.x=Math.max(m.r,Math.min(W-m.r,m.x)); }
+      if(m.y<m.r||m.y>H-m.r){ m.vy*=-1; m.y=Math.max(m.r,Math.min(H-m.r,m.y)); }
+      ctx.font='26px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('🐭',m.x,m.y);
+    }
+    const hi=Math.max(score,parseInt(safeGetLS('mg_hi_'+id,'0')));
+    safeSetLS('mg_hi_'+id,hi);
+    document.getElementById('mgs-'+id).textContent=`${t('scoreLabel')}: ${score} · ${t('bestLabel')}: ${hi}`;
+    requestAnimationFrame(loop);
+  }
+  loop();
+  mgLoops[id]=()=>{running=false;};
+}
+
+function buildBasketballGame(container, id){
+  const W=288, H=200;
+  container.innerHTML=`<canvas class="mg-canvas" id="mgc-${id}" width="${W}" height="${H}"></canvas><div class="mg-score" id="mgs-${id}">${t('scoreLabel')}: 0 · ${t('bestLabel')}: ${safeGetLS('mg_hi_'+id,'0')}</div>`;
+  const cv=document.getElementById('mgc-'+id);
+  const ctx=cv.getContext('2d');
+  let score=0, running=true;
+  let ball={ x:44, y:H-30, vx:0, vy:0, flying:false };
+  let dragStart=null, dragCur=null;
+
+  function getPos(e){
+    const r=cv.getBoundingClientRect();
+    const src=e.touches?e.touches[0]:e;
+    return {x:(src.clientX-r.left)*(W/r.width), y:(src.clientY-r.top)*(H/r.height)};
+  }
+
+  cv.addEventListener('mousedown', e=>{ if(!ball.flying){ dragStart=getPos(e); dragCur=getPos(e); } });
+  cv.addEventListener('mousemove', e=>{ if(dragStart&&!ball.flying) dragCur=getPos(e); });
+  cv.addEventListener('mouseup',   e=>{ if(dragStart&&!ball.flying){ launch(); } });
+
+  function launch(){
+    const vx=(dragStart.x-dragCur.x)*0.09;
+    const vy=(dragStart.y-dragCur.y)*0.09;
+    ball.vx=vx; ball.vy=vy; ball.flying=true;
+    dragStart=null; dragCur=null;
+  }
+  function resetBall(){ ball={x:44,y:H-30,vx:0,vy:0,flying:false}; }
+
+  function loop(){
+    if(!running) return;
+    ctx.fillStyle='#7c3f00'; ctx.fillRect(0,0,W,H);
+    if(ball.flying){
+      ball.vy+=0.38; ball.x+=ball.vx; ball.y+=ball.vy;
+      if(ball.y>H-18){ ball.y=H-18; ball.vy*=-0.42; ball.vx*=0.78; if(Math.abs(ball.vy)<0.8){ score=0; resetBall(); } }
+      if(ball.x<11||ball.x>W-11) ball.vx*=-0.5;
+    }
+    ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🏀',ball.x,ball.y);
+    const hi=Math.max(score,parseInt(safeGetLS('mg_hi_'+id,'0')));
+    safeSetLS('mg_hi_'+id,hi);
+    document.getElementById('mgs-'+id).textContent=`${t('scoreLabel')}: ${score} · ${t('bestLabel')}: ${hi}`;
+    requestAnimationFrame(loop);
+  }
+  loop();
+  mgLoops[id]=()=>{running=false;};
+}
+
+function buildCatGame(container, id){
+  const W=288,H=160;
+  container.innerHTML=`<canvas class="mg-canvas" id="mgc-${id}" width="${W}" height="${H}"></canvas><div class="mg-score" id="mgs-${id}">${t('timeLabel')}: 0s · ${t('bestLabel')}: ${safeGetLS('mg_hi_'+id,'0')}s</div>`;
+  const cv=document.getElementById('mgc-'+id);
+  const ctx=cv.getContext('2d');
+  let running=true, alive=true, tcnt=0;
+  let player={x:W/2,y:H/2};
+  let cats=[];
+  let mx=W/2,my=H/2;
+
+  cv.addEventListener('mousemove',e=>{
+    const r=cv.getBoundingClientRect();
+    mx=(e.clientX-r.left)*(W/r.width);
+    my=(e.clientY-r.top)*(H/r.height);
+  });
+  cv.addEventListener('click',()=>{ if(!alive){alive=true;tcnt=0;cats=[];player={x:W/2,y:H/2};} });
+
+  function spawnCat(){ cats.push({x:Math.random()*W, y:-20, spd:1.2+Math.min(tcnt/300,2.5)}); }
+
+  function loop(){
+    if(!running) return;
+    ctx.fillStyle='#0d0d1a'; ctx.fillRect(0,0,W,H);
+    if(alive){
+      tcnt++;
+      if(tcnt%150===0) spawnCat();
+      player.x+=(mx-player.x)*.18; player.y+=(my-player.y)*.18;
+      for(const c of cats){
+        const dx=player.x-c.x, dy=player.y-c.y, d=Math.hypot(dx,dy);
+        c.x+=dx/d*c.spd; c.y+=dy/d*c.spd;
+        if(d<18) alive=false;
+        ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('🐱',c.x,c.y);
+      }
+      ctx.fillText('💵',player.x,player.y);
+      const secs=Math.floor(tcnt/60);
+      const hi=Math.max(secs,parseInt(safeGetLS('mg_hi_'+id,'0')));
+      safeSetLS('mg_hi_'+id,hi);
+      document.getElementById('mgs-'+id).textContent=`${t('timeLabel')}: ${secs}s · ${t('bestLabel')}: ${hi}s`;
+    } else {
+      ctx.fillStyle='rgba(255,50,50,.12)'; ctx.fillRect(0,0,W,H);
+      ctx.font='bold 14px DM Sans,sans-serif'; ctx.fillStyle='#fff'; ctx.textAlign='center';
+      ctx.fillText(t('gotCaught'),W/2,H/2-10);
+      ctx.font='10px DM Sans,sans-serif'; ctx.fillStyle='rgba(255,255,255,.4)';
+      ctx.fillText(t('clickPlayAgain'),W/2,H/2+12);
+    }
+    requestAnimationFrame(loop);
+  }
+  loop();
+  mgLoops[id]=()=>{running=false;};
+}
+
+function buildHorseGame(container, id){
+  const W=288, H=160;
+  container.innerHTML=`<canvas class="mg-canvas" id="mgc-${id}" width="${W}" height="${H}"></canvas><div class="mg-score" id="mgs-${id}">${t('distanceLabel')}: 0 m · ${t('bestLabel')}: ${safeGetLS('mg_hi_'+id,'0')} m</div>`;
+  const cv=document.getElementById('mgc-'+id);
+  const ctx=cv.getContext('2d');
+  const GROUND = H - 28;
+  let running=true, alive=true, dist=0, speed=2.2, tcnt=0;
+  let horse = { x:50, y:GROUND, vy:0, onGround:true };
+
+  function reset(){ alive=true; dist=0; speed=2.2; tcnt=0; horse={x:50,y:GROUND,vy:0,onGround:true}; }
+  function jump(){ if(horse.onGround){ horse.vy=-8.5; horse.onGround=false; } }
+
+  cv.addEventListener('click', ()=>{ if(!alive) reset(); else jump(); });
+
+  function loop(){
+    if(!running) return;
+    ctx.fillStyle='#87ceeb'; ctx.fillRect(0,0,W,GROUND);
+    ctx.fillStyle='#5c4a1e'; ctx.fillRect(0,GROUND,W,H-GROUND);
+
+    if(alive){
+      tcnt++; dist += speed/60;
+      if(!horse.onGround){
+        horse.vy += 0.45; horse.y += horse.vy;
+        if(horse.y >= GROUND){ horse.y=GROUND; horse.vy=0; horse.onGround=true; }
+      }
+      ctx.font='28px serif'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+      ctx.fillText('🐴', horse.x, horse.y);
+      const m=Math.round(dist);
+      const hi=Math.max(m,parseInt(safeGetLS('mg_hi_'+id,'0')));
+      safeSetLS('mg_hi_'+id,hi);
+      document.getElementById('mgs-'+id).textContent=`${t('distanceLabel')}: ${m} m · ${t('bestLabel')}: ${hi} m`;
+    } else {
+      ctx.fillStyle='rgba(0,0,0,.45)'; ctx.fillRect(0,0,W,H);
+      ctx.font='bold 15px DM Sans,sans-serif'; ctx.fillStyle='#fff'; ctx.textAlign='center';
+      ctx.fillText(t('wipedOut'), W/2, H/2-12);
+      ctx.font='10px DM Sans,sans-serif'; ctx.fillStyle='rgba(255,255,255,.5)';
+      ctx.fillText(t('clickPlayAgain'), W/2, H/2+10);
+    }
+    requestAnimationFrame(loop);
+  }
+  loop();
+  mgLoops[id]=()=>{running=false;};
 }
 
 let mgPanelOpen = false;
@@ -765,6 +1039,7 @@ function openMgPanel(){
 }
 function closeMgPanel(){
   mgPanelOpen = false;
+  if(activeMgId) stopMgGame(activeMgId);
   document.getElementById('mg-box').classList.remove('open');
 }
 document.getElementById('mg-btn').addEventListener('click', ()=> mgPanelOpen ? closeMgPanel() : openMgPanel());
