@@ -477,7 +477,6 @@ function drawGround(altM){
   ctx.fillRect(0, GY, W, H-GY);
 }
 
-// 3D STACK RENDERER RESTORED
 function drawStack(bills){
   if(bills <= 0) return;
   const cx   = W/2;
@@ -599,6 +598,7 @@ function drawObjects(bills){
   }
 }
 
+// OBJECT NAME RENDERED UNDERNEATH THE EMOJI
 function drawOneObject(v, cx2){
   const {obj, drawH, opacity} = v;
   ctx.save();
@@ -613,6 +613,24 @@ function drawOneObject(v, cx2){
   ctx.font = `${fs}px serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
   ctx.fillText(obj.emoji, cx2, GY);
+
+  if(drawH > 14){
+    const labelText = t(obj.key);
+    const lblSz = Math.min(12, Math.max(8, 8+drawH*.06));
+    ctx.font = `600 ${lblSz}px DM Sans,sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const tw = ctx.measureText(labelText).width;
+    const pad = 5, ph2 = lblSz+pad;
+    
+    ctx.fillStyle = 'rgba(0,0,0,.65)';
+    if(ctx.roundRect) {
+      ctx.beginPath(); ctx.roundRect(cx2-tw/2-pad, GY+4, tw+pad*2, ph2, ph2/2); ctx.fill();
+    } else {
+      ctx.fillRect(cx2-tw/2-pad, GY+4, tw+pad*2, ph2);
+    }
+    ctx.fillStyle = '#fff';
+    ctx.fillText(labelText, cx2, GY+4+pad/2);
+  }
   ctx.restore();
 }
 
@@ -766,7 +784,7 @@ function closeAchPanel(){
 document.getElementById('ach-btn').addEventListener('click', ()=> achPanelOpen ? closeAchPanel() : openAchPanel());
 document.getElementById('ach-close').addEventListener('click', closeAchPanel);
 
-// MINIGAMES FULL RESTORE
+// ROBUST FIXED MINIGAMES
 const MINIGAMES = [
   { id: 'mg_mouse', nameKey: 'mg_mouse_name', icon: '🐭', unlockObjKey: 'obj_mouse', lockKey: 'mg_mouse_lock', build: buildMouseCannonGame },
   { id: 'mg_basketball', nameKey: 'mg_basket_name', icon: '🏀', unlockObjKey: 'obj_basketball', lockKey: 'mg_basket_lock', build: buildBasketballGame },
@@ -849,20 +867,20 @@ function buildMouseCannonGame(container, id){
 
   function spawnMouse(){
     mice.push({
-      x: Math.random()*(W-30)+15, y: Math.random()*(H-30)+15,
-      vx: (Math.random()-.5)*2.6, vy: (Math.random()-.5)*2.6,
-      r: 14, life: 200+Math.floor(Math.random()*80), maxLife: 280,
+      x: Math.random()*(W-40)+20, y: Math.random()*(H-40)+20,
+      vx: (Math.random()-.5)*2.2, vy: (Math.random()-.5)*2.2,
+      r: 16, life: 250+Math.floor(Math.random()*100),
     });
   }
   for(let i=0;i<3;i++) spawnMouse();
 
-  cv.addEventListener('click', e=>{
+  cv.addEventListener('pointerdown', e=>{
     const rect=cv.getBoundingClientRect();
     const sx=(e.clientX-rect.left)*(W/rect.width);
     const sy=(e.clientY-rect.top)*(H/rect.height);
     let caught=false;
     mice=mice.filter(m=>{
-      if(!caught && Math.hypot(sx-m.x,sy-m.y)<m.r+10){ score++; caught=true; return false; }
+      if(!caught && Math.hypot(sx-m.x,sy-m.y)<m.r+12){ score++; caught=true; return false; }
       return true;
     });
   });
@@ -870,8 +888,8 @@ function buildMouseCannonGame(container, id){
   function loop(){
     if(!running) return;
     tcnt++;
-    if(tcnt%70===0) spawnMouse();
-    if(mice.length>10) mice.shift();
+    if(tcnt%60===0) spawnMouse();
+    if(mice.length>12) mice.shift();
 
     ctx.fillStyle='#0e1a10'; ctx.fillRect(0,0,W,H);
     mice=mice.filter(m=>{ m.life--; if(m.life<=0){ score=0; return false; } return true; });
@@ -906,13 +924,13 @@ function buildBasketballGame(container, id){
     return {x:(src.clientX-r.left)*(W/r.width), y:(src.clientY-r.top)*(H/r.height)};
   }
 
-  cv.addEventListener('mousedown', e=>{ if(!ball.flying){ dragStart=getPos(e); dragCur=getPos(e); } });
-  cv.addEventListener('mousemove', e=>{ if(dragStart&&!ball.flying) dragCur=getPos(e); });
-  cv.addEventListener('mouseup',   e=>{ if(dragStart&&!ball.flying){ launch(); } });
+  cv.addEventListener('pointerdown', e=>{ if(!ball.flying){ dragStart=getPos(e); dragCur=getPos(e); } });
+  cv.addEventListener('pointermove', e=>{ if(dragStart&&!ball.flying) dragCur=getPos(e); });
+  cv.addEventListener('pointerup',   e=>{ if(dragStart&&!ball.flying){ launch(); } });
 
   function launch(){
-    const vx=(dragStart.x-dragCur.x)*0.09;
-    const vy=(dragStart.y-dragCur.y)*0.09;
+    const vx=(dragStart.x-dragCur.x)*0.08;
+    const vy=(dragStart.y-dragCur.y)*0.08;
     ball.vx=vx; ball.vy=vy; ball.flying=true;
     dragStart=null; dragCur=null;
   }
@@ -922,10 +940,16 @@ function buildBasketballGame(container, id){
     if(!running) return;
     ctx.fillStyle='#7c3f00'; ctx.fillRect(0,0,W,H);
     if(ball.flying){
-      ball.vy+=0.38; ball.x+=ball.vx; ball.y+=ball.vy;
-      if(ball.y>H-18){ ball.y=H-18; ball.vy*=-0.42; ball.vx*=0.78; if(Math.abs(ball.vy)<0.8){ score=0; resetBall(); } }
-      if(ball.x<11||ball.x>W-11) ball.vx*=-0.5;
+      ball.vy+=0.35; ball.x+=ball.vx; ball.y+=ball.vy;
+      if(ball.y>H-18){ ball.y=H-18; ball.vy*=-0.4; ball.vx*=0.75; if(Math.abs(ball.vy)<0.8){ score=0; resetBall(); } }
+      if(ball.x<12||ball.x>W-12) ball.vx*=-0.5;
+      if(ball.x>W-70 && ball.x<W-30 && ball.y>50 && ball.y<75 && ball.vy>0){
+        score++; resetBall();
+      }
     }
+    ctx.strokeStyle='#fff'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(W-70,50); ctx.lineTo(W-30,50); ctx.stroke();
+
     ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText('🏀',ball.x,ball.y);
     const hi=Math.max(score,parseInt(safeGetLS('mg_hi_'+id,'0')));
@@ -947,26 +971,26 @@ function buildCatGame(container, id){
   let cats=[];
   let mx=W/2,my=H/2;
 
-  cv.addEventListener('mousemove',e=>{
+  cv.addEventListener('pointermove',e=>{
     const r=cv.getBoundingClientRect();
     mx=(e.clientX-r.left)*(W/r.width);
     my=(e.clientY-r.top)*(H/r.height);
   });
-  cv.addEventListener('click',()=>{ if(!alive){alive=true;tcnt=0;cats=[];player={x:W/2,y:H/2};} });
+  cv.addEventListener('pointerdown',()=>{ if(!alive){alive=true;tcnt=0;cats=[];player={x:W/2,y:H/2};} });
 
-  function spawnCat(){ cats.push({x:Math.random()*W, y:-20, spd:1.2+Math.min(tcnt/300,2.5)}); }
+  function spawnCat(){ cats.push({x:Math.random()*W, y:-20, spd:1.0+Math.min(tcnt/350,2.2)}); }
 
   function loop(){
     if(!running) return;
     ctx.fillStyle='#0d0d1a'; ctx.fillRect(0,0,W,H);
     if(alive){
       tcnt++;
-      if(tcnt%150===0) spawnCat();
-      player.x+=(mx-player.x)*.18; player.y+=(my-player.y)*.18;
+      if(tcnt%140===0) spawnCat();
+      player.x+=(mx-player.x)*.2; player.y+=(my-player.y)*.2;
       for(const c of cats){
         const dx=player.x-c.x, dy=player.y-c.y, d=Math.hypot(dx,dy);
         c.x+=dx/d*c.spd; c.y+=dy/d*c.spd;
-        if(d<18) alive=false;
+        if(d<16) alive=false;
         ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('🐱',c.x,c.y);
       }
@@ -976,10 +1000,10 @@ function buildCatGame(container, id){
       safeSetLS('mg_hi_'+id,hi);
       document.getElementById('mgs-'+id).textContent=`${t('timeLabel')}: ${secs}s · ${t('bestLabel')}: ${hi}s`;
     } else {
-      ctx.fillStyle='rgba(255,50,50,.12)'; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='rgba(255,50,50,.15)'; ctx.fillRect(0,0,W,H);
       ctx.font='bold 14px DM Sans,sans-serif'; ctx.fillStyle='#fff'; ctx.textAlign='center';
       ctx.fillText(t('gotCaught'),W/2,H/2-10);
-      ctx.font='10px DM Sans,sans-serif'; ctx.fillStyle='rgba(255,255,255,.4)';
+      ctx.font='10px DM Sans,sans-serif'; ctx.fillStyle='rgba(255,255,255,.5)';
       ctx.fillText(t('clickPlayAgain'),W/2,H/2+12);
     }
     requestAnimationFrame(loop);
@@ -994,13 +1018,14 @@ function buildHorseGame(container, id){
   const cv=document.getElementById('mgc-'+id);
   const ctx=cv.getContext('2d');
   const GROUND = H - 28;
-  let running=true, alive=true, dist=0, speed=2.2, tcnt=0;
+  let running=true, alive=true, dist=0, speed=2.5, tcnt=0;
   let horse = { x:50, y:GROUND, vy:0, onGround:true };
+  let obstacle = { x: W + 50, w: 16, h: 26 };
 
-  function reset(){ alive=true; dist=0; speed=2.2; tcnt=0; horse={x:50,y:GROUND,vy:0,onGround:true}; }
-  function jump(){ if(horse.onGround){ horse.vy=-8.5; horse.onGround=false; } }
+  function reset(){ alive=true; dist=0; speed=2.5; tcnt=0; horse={x:50,y:GROUND,vy:0,onGround:true}; obstacle.x=W+50; }
+  function jump(){ if(horse.onGround){ horse.vy=-8.2; horse.onGround=false; } }
 
-  cv.addEventListener('click', ()=>{ if(!alive) reset(); else jump(); });
+  cv.addEventListener('pointerdown', ()=>{ if(!alive) reset(); else jump(); });
 
   function loop(){
     if(!running) return;
@@ -1008,13 +1033,23 @@ function buildHorseGame(container, id){
     ctx.fillStyle='#5c4a1e'; ctx.fillRect(0,GROUND,W,H-GROUND);
 
     if(alive){
-      tcnt++; dist += speed/60;
+      tcnt++; dist += speed/55;
+      obstacle.x -= speed;
+      if(obstacle.x < -30){ obstacle.x = W + Math.random()*80; }
+
       if(!horse.onGround){
-        horse.vy += 0.45; horse.y += horse.vy;
+        horse.vy += 0.42; horse.y += horse.vy;
         if(horse.y >= GROUND){ horse.y=GROUND; horse.vy=0; horse.onGround=true; }
       }
+
+      if(Math.abs(horse.x - obstacle.x) < 14 && horse.y >= GROUND - obstacle.h){
+        alive = false;
+      }
+
       ctx.font='28px serif'; ctx.textAlign='center'; ctx.textBaseline='bottom';
       ctx.fillText('🐴', horse.x, horse.y);
+      ctx.fillStyle='#333'; ctx.fillRect(obstacle.x-8, GROUND-obstacle.h, obstacle.h, obstacle.h);
+
       const m=Math.round(dist);
       const hi=Math.max(m,parseInt(safeGetLS('mg_hi_'+id,'0')));
       safeSetLS('mg_hi_'+id,hi);
