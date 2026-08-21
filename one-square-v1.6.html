@@ -100,7 +100,7 @@ canvas { display: block; image-rendering: pixelated; }
   <button id="btn-settings" title="Settings">⚙</button>
   <div id="settings-panel" class="hidden">
     <div class="settings-row">
-      <label>Name</label>
+      <label id="lbl-name">Name</label>
       <input id="settings-name" type="text" maxlength="12" placeholder="your name..." />
     </div>
     <button class="s-btn s-btn-name" id="btn-save-name">Save name</button>
@@ -117,7 +117,7 @@ canvas { display: block; image-rendering: pixelated; }
 <canvas id="game" width="200" height="200"></canvas>
 <div id="name-modal">
   <div id="name-box">
-    <h2>ONE SQUARE v1.6</h2>
+    <h2 id="modal-title">ONE SQUARE v1.6</h2>
     <input id="name-input" type="text" maxlength="12" placeholder="your name..." />
     <button id="name-confirm">Play ▶</button>
   </div>
@@ -127,6 +127,76 @@ canvas { display: block; image-rendering: pixelated; }
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+// ═══════════════════════════════════════════════════════
+//  VERTALINGEN & LOKALE OPSLAG SYSTEEM
+// ═══════════════════════════════════════════════════════
+const i18n = {
+  en: {
+    title: "ONE SQUARE",
+    nameLabel: "Name",
+    namePlaceholder: "your name...",
+    btnSaveName: "Save name",
+    btnSaveNameDone: "✓ Saved!",
+    btnMp: "🌐 Go to Multiplayer",
+    btnSp: "🏠 Go to Singleplayer",
+    btnReset: "🗑 Reset singleplayer world",
+    btnHome: "🏠 Go to website",
+    btnFsEnter: "⛶ Fullscreen",
+    btnFsExit: "✕ Exit fullscreen",
+    btnPlay: "Play ▶"
+  },
+  nl: {
+    title: "EEN VIERKANT",
+    nameLabel: "Naam",
+    namePlaceholder: "jouw naam...",
+    btnSaveName: "Naam opslaan",
+    btnSaveNameDone: "✓ Opgeslagen!",
+    btnMp: "🌐 Naar Multiplayer",
+    btnSp: "🏠 Naar Singleplayer",
+    btnReset: "🗑 Reset singleplayer wereld",
+    btnHome: "🏠 Naar website",
+    btnFsEnter: "⛶ Volledig scherm",
+    btnFsExit: "✕ Scherm sluiten",
+    btnPlay: "Spelen ▶"
+  },
+  fr: {
+    title: "UN CARRÉ",
+    nameLabel: "Nom",
+    namePlaceholder: "votre nom...",
+    btnSaveName: "Enregistrer",
+    btnSaveNameDone: "✓ Enregistré!",
+    btnMp: "🌐 Vers Multijoueur",
+    btnSp: "🏠 Vers Solo",
+    btnReset: "🗑 Réinitialiser le monde",
+    btnHome: "🏠 Aller au site",
+    btnFsEnter: "⛶ Plein écran",
+    btnFsExit: "✕ Quitter plein écran",
+    btnPlay: "Jouer ▶"
+  }
+};
+
+function getLang() { return localStorage.getItem('app_lang') || 'en'; }
+function t(key) { return (i18n[getLang()] || i18n['en'])[key]; }
+
+function applyLanguage() {
+  document.getElementById('game-title').textContent = t('title');
+  document.getElementById('lbl-name').textContent = t('nameLabel');
+  document.getElementById('settings-name').placeholder = t('namePlaceholder');
+  document.getElementById('btn-save-name').textContent = document.getElementById('btn-save-name').textContent.includes('✓') ? t('btnSaveNameDone') : t('btnSaveName');
+  document.getElementById('btn-toggle-mp').textContent = isMultiplayer ? t('btnSp') : t('btnMp');
+  document.getElementById('btn-reset').textContent = t('btnReset');
+  document.getElementById('btn-home').textContent = t('btnHome');
+  document.getElementById('btn-fs').textContent = document.fullscreenElement ? t('btnFsExit') : t('btnFsEnter');
+  document.getElementById('modal-title').textContent = t('title') + " v1.6";
+  document.getElementById('name-input').placeholder = t('namePlaceholder');
+  document.getElementById('name-confirm').textContent = t('btnPlay');
+}
+
+// Luister naar taalveranderingen in andere tabbladen
+window.addEventListener('storage', (e) => {
+  if (e.key === 'app_lang') applyLanguage();
+});
+
 // ═══════════════════════════════════════════════════════
 //  FIREBASE CONFIG (zelfde project als platformer)
 // ═══════════════════════════════════════════════════════
@@ -167,6 +237,9 @@ window.Image = function(...args) {
   });
   return img;
 };
+
+// Pas de taal direct toe bij inladen
+applyLanguage();
 
 // ═══════════════════════════════════════════════════════
 //  BLOCK LIST
@@ -536,7 +609,7 @@ function enterMultiplayer() {
 
   isMultiplayer=true;
   modeBadge.textContent="🌐 MP";
-  btnToggle.textContent="🏠 Go to Singleplayer";
+  btnToggle.textContent=t('btnSp');
   btnToggle.classList.add("in-mp");
   btnReset.style.display="none";
   spawnPlayer();
@@ -560,7 +633,7 @@ function exitMultiplayer() {
   hotbar=loadSPHotbar();
   isMultiplayer=false;
   modeBadge.textContent="🎮 SP";
-  btnToggle.textContent="🌐 Go to Multiplayer";
+  btnToggle.textContent=t('btnMp');
   btnToggle.classList.remove("in-mp");
   btnReset.style.display="";
   setStatus("");
@@ -772,8 +845,8 @@ btnSaveName.addEventListener("click", () => {
   if(!n) return;
   myName = n;
   localStorage.setItem("onesquare_name", myName);
-  btnSaveName.textContent = "✓ Saved!";
-  setTimeout(() => { btnSaveName.textContent = "Save name"; }, 1500);
+  btnSaveName.textContent = t('btnSaveNameDone');
+  setTimeout(() => { btnSaveName.textContent = t('btnSaveName'); }, 1500);
 });
 settingsNameInput.addEventListener("keydown", e => {
   if(e.key === "Enter") btnSaveName.click();
@@ -790,14 +863,14 @@ const fsBtn = document.getElementById("btn-fs");
 fsBtn.addEventListener("click", () => {
   if(!document.fullscreenElement) {
     document.body.requestFullscreen().catch(() => {});
-    fsBtn.textContent = "✕ Exit fullscreen";
+    fsBtn.textContent = t('btnFsExit');
   } else {
     document.exitFullscreen();
   }
 });
 document.addEventListener("fullscreenchange", () => {
   if(!document.fullscreenElement) {
-    fsBtn.textContent = "⛶ Fullscreen";
+    fsBtn.textContent = t('btnFsEnter');
   }
 });
 
