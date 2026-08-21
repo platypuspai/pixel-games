@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leaderboard — Plixo-Arcade</title>
+    <title>Leaderboard — Pixel-Games</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -32,6 +32,9 @@
         .back-link { display: inline-flex; align-items: center; gap: 8px; font-family: 'Press Start 2P', monospace; font-size: 0.45rem; color: var(--text-muted); text-decoration: none; letter-spacing: 0.1em; border: 1px solid var(--border); padding: 8px 14px; transition: all 0.15s; position: absolute; top: 48px; left: 24px; }
         .back-link:hover { color: var(--accent-green); border-color: var(--accent-green); }
         h1 { font-family: 'Press Start 2P', monospace; font-size: clamp(0.9rem, 3vw, 1.4rem); color: var(--accent-yellow); letter-spacing: 0.05em; line-height: 1.5; }
+        .subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 12px; letter-spacing: 0.15em; }
+        .subtitle span { color: var(--accent-green); animation: blink 1.2s step-end infinite; }
+        @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
 
         .wrap { position: relative; z-index: 10; max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
         .name-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--accent-yellow); padding: 16px 22px; margin-bottom: 32px; }
@@ -61,6 +64,8 @@
 
         .board { background: var(--card); border: 1px solid var(--border); border-radius: 2px; margin-bottom: 10px; }
         .board-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
+        .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green); animation: pulse 1.5s ease-in-out infinite; flex-shrink: 0; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
         .board-title { font-family: 'Press Start 2P', monospace; font-size: 0.45rem; letter-spacing: 0.08em; flex: 1; line-height: 1.6; }
         .board-meta { font-size: 0.62rem; color: var(--text-muted); white-space: nowrap; }
         .board-body { max-height: 580px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
@@ -79,7 +84,6 @@
         .lb-score { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; font-family: 'Inconsolata', monospace; }
         .lb-empty, .lb-loading { padding: 28px 18px; color: var(--text-muted); font-size: 0.78rem; text-align: center; line-height: 1.7; }
         .lb-loading::after { content: '...'; animation: blink 1s step-end infinite; }
-        @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
         .board-foot { border-top: 1px solid var(--border); padding: 10px 18px; font-size: 0.72rem; color: var(--text-muted); background: rgba(255,221,0,0.04); display: none; }
         .board-foot span { color: var(--accent-yellow); font-weight: 700; }
 
@@ -95,42 +99,43 @@
 <div class="stars" id="stars"></div>
 
 <header>
-    <a class="back-link" href="index.html" data-i18n="backHome">◄ BACK</a>
-    <h1 data-i18n="lbHeaderTitle">🏆 LEADERBOARD</h1>
+    <a class="back-link" href="index.html">◀ BACK</a>
+    <h1>🏆 LEADERBOARD</h1>
+    <p class="subtitle">Live rankings &nbsp;·&nbsp; all Pixel-Games &nbsp;·&nbsp; <span>_</span></p>
 </header>
 
 <div class="wrap">
 
     <div class="name-bar">
-        <span class="name-bar-label" data-i18n="lbSpeler">// PLAYER</span>
+        <span class="name-bar-label">// PLAYER</span>
         <span class="name-bar-value" id="bar-name">—</span>
-        <button class="change-btn" onclick="showModal()" data-i18n="lbBtnNaam">CHANGE NAME</button>
+        <button class="change-btn" onclick="showModal()">CHANGE NAME</button>
     </div>
 
     <div class="account-section">
-        <span class="account-label" data-i18n="accLabel">// ACCOUNT CODE</span>
+        <span class="account-label">// ACCOUNT CODE</span>
         <span class="account-code" id="account-code">—</span>
-        <button class="account-btn" onclick="copyCode()" data-i18n="accCopy">COPY</button>
-        <button class="account-btn" onclick="showImportModal()" data-i18n="accImportBtn">IMPORT ON OTHER DEVICE</button>
+        <button class="account-btn" onclick="copyCode()">COPY</button>
+        <button class="account-btn" onclick="showImportModal()">IMPORT ON OTHER DEVICE</button>
     </div>
 
     <div class="modal-overlay hidden" id="import-modal">
         <div class="import-modal">
-            <h3 data-i18n="impTitle">// IMPORT ACCOUNT</h3>
-            <p data-i18n="impDesc">Enter the 20-character code from your other device to transfer your account here.</p>
+            <h3>// IMPORT ACCOUNT</h3>
+            <p>Enter the 20-character code from your other device to transfer your account here.</p>
             <input id="import-input" type="text" maxlength="20" placeholder="XXXXXXXXXXXXXXXXXXXX" autocomplete="off" spellcheck="false">
             <div id="import-error" style="color:#ff4444;font-size:0.75rem;margin-bottom:12px;min-height:1em;"></div>
-            <button class="import-btn" onclick="importAccount()" data-i18n="impBtn">► IMPORT ACCOUNT</button>
-            <p style="margin-top:14px;font-size:0.7rem;color:var(--text-muted);" data-i18n="impWarn">Warning: this will replace the account on this device.</p>
+            <button class="import-btn" onclick="importAccount()">► IMPORT ACCOUNT</button>
+            <p style="margin-top:14px;font-size:0.7rem;color:var(--text-muted);">Warning: this will replace the account on this device.</p>
         </div>
     </div>
 
     <div class="modal-overlay hidden" id="modal">
         <div class="modal">
-            <h3 data-i18n="lbMT">// CHOOSE YOUR NAME</h3>
-            <p data-i18n="lbMP">This name is used to identify you across all leaderboards.</p>
-            <input id="name-input" type="text" maxlength="18" data-i18n-placeholder="lbMPh" placeholder="Your player name..." autocomplete="off">
-            <button class="modal-btn" onclick="confirmName()" data-i18n="lbMBtn">► CONFIRM NAME</button>
+            <h3>// CHOOSE YOUR NAME</h3>
+            <p>This name is used to identify you across all leaderboards.</p>
+            <input id="name-input" type="text" maxlength="18" placeholder="Your player name..." autocomplete="off">
+            <button class="modal-btn" onclick="confirmName()">► CONFIRM NAME</button>
         </div>
     </div>
 
@@ -138,161 +143,102 @@
 
         <div class="board" style="border-top: 2px solid var(--accent-orange);">
             <div class="board-head">
+                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-orange)">MONEY DIGGER</span>
-                <span class="board-meta" data-i18n="lbMdMeta">clicks</span>
+                <span class="board-meta">clicks</span>
             </div>
-            <div class="board-body" id="md-body"><div class="lb-loading"><span data-i18n="lbConn">Connecting</span></div></div>
+            <div class="board-body" id="md-body"><div class="lb-loading">Connecting</div></div>
             <div class="board-foot" id="md-foot"></div>
         </div>
 
         <div class="board" style="border-top: 2px solid var(--accent-green);">
             <div class="board-head">
+                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-green)">MINI PLATFORMER</span>
-                <span class="board-meta" data-i18n="lbPfMeta">best time</span>
+                <span class="board-meta">best time</span>
             </div>
-            <div class="board-body" id="pf-body"><div class="lb-loading"><span data-i18n="lbConn">Connecting</span></div></div>
+            <div class="board-body" id="pf-body"><div class="lb-loading">Connecting</div></div>
             <div class="board-foot" id="pf-foot"></div>
         </div>
 
         <div class="board" style="border-top: 2px solid var(--accent-cyan);">
             <div class="board-head">
+                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-cyan)">LUCKY GUY</span>
-                <span class="board-meta" data-i18n="lbLgMeta">highest level</span>
+                <span class="board-meta">highest level</span>
             </div>
-            <div class="board-body" id="lg-body"><div class="lb-loading"><span data-i18n="lbConn">Connecting</span></div></div>
+            <div class="board-body" id="lg-body"><div class="lb-loading">Connecting</div></div>
             <div class="board-foot" id="lg-foot"></div>
         </div>
 
         <div class="board" style="border-top: 2px solid var(--accent-pink);">
             <div class="board-head">
+                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-pink)">MINI APOCALYPSE</span>
-                <span class="board-meta" data-i18n="lbScoreMeta">score</span>
+                <span class="board-meta">score</span>
             </div>
-            <div class="board-body" id="ma-body"><div class="lb-loading"><span data-i18n="lbConn">Connecting</span></div></div>
+            <div class="board-body" id="ma-body"><div class="lb-loading">Connecting</div></div>
             <div class="board-foot" id="ma-foot"></div>
         </div>
 
         <div class="board" style="border-top: 2px solid var(--accent-red);">
             <div class="board-head">
+                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-red)">BUG ESCAPE</span>
-                <span class="board-meta" data-i18n="lbScoreMeta">score</span>
+                <span class="board-meta">score</span>
             </div>
-            <div class="board-body" id="be-body"><div class="lb-loading"><span data-i18n="lbConn">Connecting</span></div></div>
+            <div class="board-body" id="be-body"><div class="lb-loading">Connecting</div></div>
             <div class="board-foot" id="be-foot"></div>
         </div>
 
         <div class="board" style="border-top: 2px solid var(--accent-indigo);">
             <div class="board-head">
+                <span class="live-dot"></span>
                 <span class="board-title" style="color:var(--accent-indigo)">DODGING ARENA</span>
-                <span class="board-meta" data-i18n="lbScoreMeta">score</span>
+                <span class="board-meta">score</span>
             </div>
-            <div class="board-body" id="da-body"><div class="lb-loading"><span data-i18n="lbConn">Connecting</span></div></div>
+            <div class="board-body" id="da-body"><div class="lb-loading">Connecting</div></div>
             <div class="board-foot" id="da-foot"></div>
         </div>
 
     </div>
 </div>
 
-<!-- VERTALINGEN SYSTEEM -->
 <script>
-const i18n = {
-  en: {
-    backHome: "◄ BACK",
-    lbHeaderTitle: "🏆 LEADERBOARD",
-    lbSpeler: "// PLAYER",
-    lbBtnNaam: "CHANGE NAME",
-    accLabel: "// ACCOUNT CODE",
-    accCopy: "COPY",
-    accImportBtn: "IMPORT ON OTHER DEVICE",
-    impTitle: "// IMPORT ACCOUNT",
-    impDesc: "Enter the 20-character code from your other device to transfer your account here.",
-    impBtn: "► IMPORT ACCOUNT",
-    impWarn: "Warning: this will replace the account on this device.",
-    lbMT: "// CHOOSE YOUR NAME",
-    lbMP: "This name is used to identify you across all leaderboards.",
-    lbMPh: "Your player name...",
-    lbMBtn: "► CONFIRM NAME",
-    lbMdMeta: "clicks",
-    lbPfMeta: "best time",
-    lbLgMeta: "highest level",
-    lbScoreMeta: "score",
-    lbConn: "Connecting",
-    lbEmpty: "No scores yet.",
-    lbNotRanked: "You are not in this ranking yet.",
-    lbYourRank: "Your rank: #"
-  },
-  nl: {
-    backHome: "◄ TERUG",
-    lbHeaderTitle: "🏆 LEADERBOARD",
-    lbSpeler: "// SPELER",
-    lbBtnNaam: "NAAM WIJZIGEN",
-    accLabel: "// ACCOUNT CODE",
-    accCopy: "KOPIËREN",
-    accImportBtn: "IMPORTEREN OP ANDER APPARAAT",
-    impTitle: "// ACCOUNT IMPORTEREN",
-    impDesc: "Vul de 20-tekens code in van je andere apparaat om je account hierheen over te zetten.",
-    impBtn: "► ACCOUNT IMPORTEREN",
-    impWarn: "Waarschuwing: dit overschrijft het account op dit apparaat.",
-    lbMT: "// KIES JE NAAM",
-    lbMP: "Deze naam wordt gebruikt om je te herkennen op alle leaderboards.",
-    lbMPh: "Jouw spelernaam...",
-    lbMBtn: "► BEVESTIG NAAM",
-    lbMdMeta: "clicks",
-    lbPfMeta: "beste tijd",
-    lbLgMeta: "hoogste level",
-    lbScoreMeta: "score",
-    lbConn: "Verbinden",
-    lbEmpty: "Nog geen scores.",
-    lbNotRanked: "Je staat nog niet in deze ranglijst.",
-    lbYourRank: "Je ranking: #"
-  },
-  fr: {
-    backHome: "◄ RETOUR",
-    lbHeaderTitle: "🏆 CLASSEMENT",
-    lbSpeler: "// JOUEUR",
-    lbBtnNaam: "CHANGER NOM",
-    accLabel: "// CODE DE COMPTE",
-    accCopy: "COPIER",
-    accImportBtn: "IMPORTER SUR UN AUTRE APPAREIL",
-    impTitle: "// IMPORTER LE COMPTE",
-    impDesc: "Entrez le code à 20 caractères de votre autre appareil pour transférer votre compte ici.",
-    impBtn: "► IMPORTER LE COMPTE",
-    impWarn: "Attention : cela remplacera le compte sur cet appareil.",
-    lbMT: "// CHOISISSEZ VOTRE NOM",
-    lbMP: "Ce nom est utilisé pour vous identifier dans tous les classements.",
-    lbMPh: "Votre nom de joueur...",
-    lbMBtn: "► CONFIRMER LE NOM",
-    lbMdMeta: "clics",
-    lbPfMeta: "meilleur temps",
-    lbLgMeta: "niveau max",
-    lbScoreMeta: "score",
-    lbConn: "Connexion",
-    lbEmpty: "Pas encore de scores.",
-    lbNotRanked: "Vous n'êtes pas encore dans ce classement.",
-    lbYourRank: "Votre rang : #"
-  }
+// Vertalingen voor de totale geldstapel en statusberichten
+const translations = {
+    nl: {
+        totalStack: "TOTALE GELDSTAPEL",
+        connecting: "Verbinden",
+        noScores: "Nog geen scores.",
+        yourRank: "Jouw rang:",
+        notInRanking: "Je staat nog niet in deze ranglijst."
+    },
+    en: {
+        totalStack: "TOTAL STACK",
+        connecting: "Connecting",
+        noScores: "No scores yet.",
+        yourRank: "Your rank:",
+        notInRanking: "You are not in this ranking yet."
+    },
+    fr: {
+        totalStack: "PILE TOTALE",
+        connecting: "Connexion",
+        noScores: "Pas encore de scores.",
+        yourRank: "Votre rang:",
+        notInRanking: "Vous n'êtes pas encore dans ce classement."
+    }
 };
 
-window.t = function(key) {
-  const lang = localStorage.getItem('app_lang') || 'en';
-  return (i18n[lang] || i18n['en'])[key];
-};
-
-function applyTranslations() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    el.innerHTML = t(el.getAttribute('data-i18n'));
-  });
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
-  });
+function getLang() {
+    return localStorage.getItem('app_lang') || 'nl';
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  applyTranslations();
-});
-</script>
+function tr(key) {
+    const l = getLang();
+    return (translations[l] || translations['nl'])[key] || key;
+}
 
-<script>
 const starsEl = document.getElementById('stars');
 for (let i = 0; i < 80; i++) {
     const s = document.createElement('div');
@@ -521,7 +467,7 @@ function render(bodyId, footId, rows, me) {
     const body = document.getElementById(bodyId);
     const foot = document.getElementById(footId);
     if (!body) return;
-    if (!rows || !rows.length) { body.innerHTML = `<div class="lb-empty">${window.t('lbEmpty')}</div>`; if (foot) foot.style.display = 'none'; return; }
+    if (!rows || !rows.length) { body.innerHTML = `<div class="lb-empty">${tr('noScores')}</div>`; if (foot) foot.style.display = 'none'; return; }
     const low = (me || '').toLowerCase();
     let html = '', pos = -1;
     for (let i = 0; i < rows.length; i++) {
@@ -536,8 +482,8 @@ function render(bodyId, footId, rows, me) {
     }
     body.innerHTML = html;
     if (foot) {
-        if (me && pos >= 0) { foot.innerHTML = `${window.t('lbYourRank')}${pos+1}</span> · ${esc(rows[pos].score)}`; foot.style.display = ''; } 
-        else if (me) { foot.innerHTML = window.t('lbNotRanked'); foot.style.display = ''; } 
+        if (me && pos >= 0) { foot.innerHTML = `${tr('yourRank')} <span>#${pos+1}</span> · ${esc(rows[pos].score)}`; foot.style.display = ''; } 
+        else if (me) { foot.innerHTML = tr('notInRanking'); foot.style.display = ''; } 
         else { foot.style.display = 'none'; }
     }
 }
@@ -560,7 +506,7 @@ function formatNum(n) { return Number(n).toLocaleString('en-US'); }
 let mdOff = null;
 (function loadMD() {
     const body = document.getElementById('md-body'); const foot = document.getElementById('md-foot');
-    body.innerHTML = `<div class="lb-loading">${window.t('lbConn')}</div>`;
+    body.innerHTML = `<div class="lb-loading">${tr('connecting')}</div>`;
     if (mdOff) { mdOff(); mdOff = null; }
     const ref = fbApp.database().ref('scores');
     function onVal(snap) {
@@ -568,7 +514,7 @@ let mdOff = null;
         snap.forEach(child => { const d = child.val(); if (!d) return; const c = d.clicks || 0; totalBillsSum += c; rows.push({ name: d.name || child.key, score: formatNum(c), v: c }); });
         rows.sort((a,b) => b.v - a.v);
         const cleaned = rows.map(r => ({ name: r.name, score: r.score })); window._mdData = cleaned; render('md-body', 'md-foot', cleaned, getName());
-        if (foot) { foot.style.display = 'block'; foot.innerHTML = `TOTALE GELDSTAPEL: <span style="color: var(--accent-orange);">${formatNum(totalBillsSum)}</span>`; }
+        if (foot) { foot.style.display = 'block'; foot.innerHTML = `${tr('totalStack')}: <span style="color: var(--accent-orange);">${formatNum(totalBillsSum)}</span>`; }
     }
     ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
     mdOff = () => ref.off('value', onVal);
@@ -578,7 +524,7 @@ let mdOff = null;
 function ts(ms) { const s = Math.floor(ms/1000), m = Math.floor(s/60), t = Math.floor((ms%1000)/100); return m > 0 ? m+'m '+(s%60)+'.'+t+'s' : s+'.'+t+'s'; }
 let pfOff = null;
 (function loadPF() {
-    const body = document.getElementById('pf-body'); body.innerHTML = `<div class="lb-loading">${window.t('lbConn')}</div>`;
+    const body = document.getElementById('pf-body'); body.innerHTML = `<div class="lb-loading">${tr('connecting')}</div>`;
     if (pfOff) { pfOff(); pfOff = null; }
     const ref = fbApp.database().ref('platformerScores');
     function onVal(snap) {
@@ -594,7 +540,7 @@ let pfOff = null;
 // Lucky Guy
 let lgOff = null;
 (function loadLG() {
-    const body = document.getElementById('lg-body'); body.innerHTML = `<div class="lb-loading">${window.t('lbConn')}</div>`;
+    const body = document.getElementById('lg-body'); body.innerHTML = `<div class="lb-loading">${tr('connecting')}</div>`;
     if (lgOff) { lgOff(); lgOff = null; }
     const ref = fbApp.database().ref('luckyGuyScores');
     function onVal(snap) {
@@ -609,7 +555,7 @@ let lgOff = null;
 // Mini Apocalypse
 let maOff = null;
 (function loadMA() {
-    const body = document.getElementById('ma-body'); body.innerHTML = `<div class="lb-loading">${window.t('lbConn')}</div>`;
+    const body = document.getElementById('ma-body'); body.innerHTML = `<div class="lb-loading">${tr('connecting')}</div>`;
     if (maOff) { maOff(); maOff = null; }
     const ref = fbApp.database().ref('miniApocalypseScores');
     function onVal(snap) {
@@ -624,7 +570,7 @@ let maOff = null;
 // Bug Escape
 let beOff = null;
 (function loadBE() {
-    const body = document.getElementById('be-body'); body.innerHTML = `<div class="lb-loading">${window.t('lbConn')}</div>`;
+    const body = document.getElementById('be-body'); body.innerHTML = `<div class="lb-loading">${tr('connecting')}</div>`;
     if (beOff) { beOff(); beOff = null; }
     const ref = fbApp.database().ref('bugEscapeScores');
     function onVal(snap) {
@@ -640,7 +586,7 @@ let beOff = null;
 let daOff = null;
 (function loadDA() {
     const body = document.getElementById('da-body'); const foot = document.getElementById('da-foot');
-    body.innerHTML = `<div class="lb-loading">${window.t('lbConn')}</div>`;
+    body.innerHTML = `<div class="lb-loading">${tr('connecting')}</div>`;
     if (daOff) { daOff(); daOff = null; }
     const ref = fbApp.database().ref('dodgingArenaScores');
     function onVal(snap) {
