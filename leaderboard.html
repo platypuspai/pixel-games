@@ -201,17 +201,6 @@
             <div class="board-foot" id="da-foot"></div>
         </div>
 
-        <div class="board" style="border-top: 2px solid var(--accent-green);">
-            <div class="board-head">
-                <span class="live-dot"></span>
-                <span class="board-title" style="color:var(--accent-green)">SNAKE MINIGAME</span>
-                <span class="board-meta">score</span>
-            </div>
-            <div class="board-body" id="snake-body"><div class="lb-loading">Connecting</div></div>
-            <div class="board-foot" id="snake-foot"></div>
-        </div>
-
-
     </div>
 </div>
 
@@ -264,7 +253,6 @@ function showImportModal() {
     setTimeout(() => document.getElementById('import-input').focus(), 50);
 }
 
-// 🔥 DE VERNIEUWDE, VEILIGE IMPORT FUNCTIE (MET PERFECTE MONEY DIGGER FIX) 🔥
 async function importAccount() {
     const code = document.getElementById('import-input').value.trim().toUpperCase();
     const errEl = document.getElementById('import-error');
@@ -282,7 +270,6 @@ async function importAccount() {
 
         const cleanName = data.name.trim();
 
-        // 🚀 NIEUW: Haal eerst alle data op (vooral voor de slimme Money Digger check)
         const [mdSnap, lgSnap, pfSnap, maSnap, beSnap, daSnap] = await Promise.all([
             db.ref('scores').once('value'),
             db.ref('luckyGuyScores').once('value'),
@@ -292,33 +279,27 @@ async function importAccount() {
             db.ref('dodgingArenaScores').once('value')
         ]);
 
-        // 🚀 NIEUW: Zoek de ECHTE Money Digger ID op basis van de naam in de cloud!
         let trueMdDeviceId = data.deviceId; 
         mdSnap.forEach(child => {
             let n = child.val()?.name;
             if (n && n.trim().toLowerCase() === cleanName.toLowerCase()) {
-                trueMdDeviceId = child.key; // Gevonden! We stelen de originele 'dev-...' sleutel
+                trueMdDeviceId = child.key; 
             }
         });
 
-        // 🔥 DE GROTE SCHOONMAAK
         localStorage.clear();
 
-        // Standaard leaderboard gegevens terugzetten
         localStorage.setItem(DEV_KEY, data.deviceId);
         localStorage.setItem(LB_KEY, cleanName);
         localStorage.setItem(ACC_KEY, code);
         localStorage.setItem('pg_player_name', cleanName);
         
-        // 🚀 DE ECHTE MONEY DIGGER FIX 🚀
-        // Zet de correcte sleutel in md6_did (en NIET md6_device_id!)
         localStorage.setItem('md6_did', trueMdDeviceId);
         localStorage.setItem('md6_n', cleanName);
 
         await db.ref('nameOwners/' + data.deviceId).set({ name: cleanName });
         await db.ref('accountCodes/' + code).set({ deviceId: data.deviceId, name: cleanName });
 
-        // AUTO-FIX: We dwingen de database om eventuele foutjes gelijk te trekken
         const fixNameInDB = (dbSnap, path) => {
             dbSnap.forEach(child => {
                 let n = child.val()?.name;
@@ -416,7 +397,6 @@ async function confirmName() {
         if (window._maData) render('ma-body', 'ma-foot', window._maData, val);
         if (window._beData) render('be-body', 'be-foot', window._beData, val);
         if (window._daData) render('da-body', 'da-foot', window._daData, val);
-            if (window._snakeData) render('snake-body', 'snake-foot', window._snakeData, val);
 
     } catch(e) { showNameError('Connection error. Please try again.'); console.error(e); }
 
@@ -568,7 +548,7 @@ let beOff = null;
     beOff = () => ref.off('value', onVal);
 })();
 
-// Dodging Arena (NIEUW!)
+// Dodging Arena
 let daOff = null;
 (function loadDA() {
     const body = document.getElementById('da-body'); const foot = document.getElementById('da-foot');
