@@ -14,6 +14,11 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 #unit{font-size:.88rem;font-weight:300;color:rgba(255,255,255,.6);margin-top:2px}
 #nxt{margin-top:8px;font-size:.66rem;color:rgba(255,255,255,.42);max-width:240px;line-height:1.5}
 
+
+
+
+
+
 #bctr{position:absolute;bottom:110px;right:28px;text-align:right}
 #bnum{font-size:1.2rem;font-weight:700;color:#22c55e;font-family:'DM Mono',monospace;text-shadow:0 2px 12px rgba(34,197,94,.4)}
 #blbl{font-size:.56rem;color:rgba(255,255,255,.3);margin-top:2px}
@@ -21,6 +26,8 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 @keyframes pulse{0%,100%{box-shadow:0 4px 20px rgba(34,197,94,.5),0 0 0 0 rgba(34,197,94,.3)}70%{box-shadow:0 4px 20px rgba(34,197,94,.5),0 0 0 16px rgba(34,197,94,0)}}
 #cbtn:active{transform:scale(.88);animation:none}
 #online{position:absolute;bottom:28px;left:20px;font-size:.58rem;color:rgba(255,255,255,.3)}
+
+
 
 #msb{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;opacity:0;transition:opacity .5s;pointer-events:none;background:rgba(0,0,0,.6);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:24px 32px}
 #msb.show{opacity:1}
@@ -30,6 +37,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 .fb{position:fixed;font-size:1.1rem;pointer-events:none;z-index:25;animation:fup .85s ease-out forwards}
 @keyframes fup{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-70px)}}
 
+/* ── ACHIEVEMENTS & MINIGAMES BUTTONS ── */
 #sp-btns{position:absolute;top:20px;right:20px;display:none;align-items:center;gap:8px;pointer-events:all}
 .sp-btn{background:rgba(0,0,0,.5);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:8px 13px;cursor:pointer;display:flex;align-items:center;gap:7px;font-size:.62rem;color:rgba(255,255,255,.55);transition:border-color .2s,color .2s;white-space:nowrap}
 #ach-btn:hover,.sp-btn:hover{border-color:rgba(234,179,8,.4);color:#fff}
@@ -37,6 +45,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 #ach-badge{background:#eab308;color:#000;font-size:.48rem;font-weight:700;padding:2px 5px;border-radius:99px;display:none}
 #mg-badge{background:#6366f1;color:#fff;font-size:.48rem;font-weight:700;padding:2px 5px;border-radius:99px;display:none}
 
+/* shared panel base */
 #ach-panel,#mg-panel{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:flex-end;pointer-events:none;padding:20px;padding-bottom:110px;padding-top:65px}
 #ach-box,#mg-box{width:310px;max-height:calc(100vh - 175px);background:rgba(10,10,10,.95);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.09);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;transform:translateX(340px);transition:transform .35s cubic-bezier(.22,1,.36,1);pointer-events:all}
 #ach-box.open,#mg-box.open{transform:translateX(0)}
@@ -60,6 +69,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 .ach-check{font-size:.9rem;opacity:0}
 .ach-row.unlocked .ach-check{opacity:1}
 
+/* mini game panel */
 #mg-list{overflow-y:auto;padding:8px 10px 14px;display:flex;flex-direction:column;gap:6px}
 .mg-row{border-radius:12px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);transition:border-color .2s}
 .mg-row.unlocked{border-color:rgba(99,102,241,.25);background:rgba(99,102,241,.05)}
@@ -73,11 +83,13 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 .mg-row.unlocked .mg-hlock{color:rgba(99,102,241,.6)}
 .mg-play{background:rgba(99,102,241,.18);border:1px solid rgba(99,102,241,.35);color:#a5b4fc;font-size:.58rem;font-weight:700;border-radius:7px;padding:5px 11px;cursor:pointer;pointer-events:all;transition:background .15s;white-space:nowrap;flex-shrink:0}
 .mg-play:hover{background:rgba(99,102,241,.35)}
+/* inline game canvas area */
 .mg-game{padding:0 11px 14px;display:none}
 .mg-row.playing .mg-game{display:block}
 .mg-canvas{width:100%;border-radius:8px;background:#000;display:block;image-rendering:pixelated}
 .mg-score{font-size:.55rem;color:rgba(99,102,241,.7);text-align:right;margin-top:5px;margin-bottom:2px;font-family:'DM Mono',monospace;padding:0 2px;white-space:nowrap;display:block}
 
+/* toasts */
 #ach-toast{position:fixed;bottom:114px;right:28px;z-index:60;display:flex;flex-direction:column;gap:6px;align-items:flex-end;pointer-events:none}
 .ach-toast-item{background:rgba(10,10,10,.95);border:1px solid rgba(234,179,8,.4);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;animation:ach-in .4s cubic-bezier(.22,1,.36,1) forwards}
 @keyframes ach-in{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:translateX(0)}}
@@ -87,7 +99,10 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 .ati-text{font-size:.6rem}
 .ati-top{color:rgba(234,179,8,.8);font-size:.48rem;text-transform:uppercase;letter-spacing:1px;font-weight:700}
 .ati-name{color:#fff;font-weight:700;margin-top:1px}
+.ach-toast-item.mg-toast{border-color:rgba(99,102,241,.5)}
+.mg-toast .ati-top{color:rgba(165,180,252,.8)}
 
+/* ── MENU SCREEN ── */
 #menu{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#111;transition:opacity .5s}
 #menu.hide{opacity:0;pointer-events:none}
 #menu-logo{font-size:3.2rem;font-weight:700;color:#fff;letter-spacing:-2px;margin-bottom:4px;line-height:1;text-align:center}
@@ -108,313 +123,122 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 <body>
 <div id="menu">
   <div id="menu-logo"><span class="word-money">Money</span><span class="word-digger">Digger</span></div>
-  <div id="menu-sub" data-i18n="chooseMode">Choose your mode</div>
+  <div id="menu-sub">Choose your mode</div>
   <div id="menu-cards">
     <div class="mcard" id="btn-sp">
       <div class="mcard-icon">🧍</div>
-      <div class="mcard-title" data-i18n="spTitle">Singleplayer</div>
-      <div class="mcard-desc" data-i18n="spDesc">Play alone.<br>Your own world,<br>your own progress.</div>
+      <div class="mcard-title">Singleplayer</div>
+      <div class="mcard-desc">Play alone.<br>Your own world,<br>your own progress.</div>
     </div>
     <div class="mcard mp" id="btn-mp">
       <div class="mcard-icon">🌍</div>
-      <div class="mcard-title" data-i18n="mpTitle">Multiplayer</div>
-      <div class="mcard-desc" data-i18n="mpDesc">Play with everyone.<br>Shared counter.</div>
+      <div class="mcard-title">Multiplayer</div>
+      <div class="mcard-desc">Play with everyone.<br>Shared counter.</div>
     </div>
   </div>
   <div id="menu-footer">MONEY DIGGER · v15</div>
 </div>
 <canvas id="c"></canvas>
 <div id="ui">
-  <div id="hud"><div id="alt">0.000</div><div id="unit" data-i18n="unitMm">millimeter</div><div id="nxt" data-i18n="loading">Loading...</div></div>
+  <div id="hud"><div id="alt">0.000</div><div id="unit">millimeter</div><div id="nxt">Loading...</div></div>
   
-  <div id="bctr"><div id="bnum">0</div><div id="blbl" data-i18n="stackedBanknotes">stacked banknotes</div></div>
+  <div id="bctr"><div id="bnum">0</div><div id="blbl">stacked banknotes</div></div>
   
-  <div id="online" data-i18n="connecting">● connecting...</div>
+  <div id="online">● connecting...</div>
   <div id="msb"><div id="mse"></div><div id="msn"></div><div id="mss"></div></div>
-  
+  <!-- SP buttons: Achievements + Mini Games -->
   <div id="sp-btns">
-    <div class="sp-btn" id="ach-btn"><span data-i18n="achievements">🏆 Achievements</span> <span id="ach-badge"></span></div>
-    <div class="sp-btn" id="mg-btn"><span data-i18n="miniGames">🎮 Mini Games</span> <span id="mg-badge"></span></div>
+    <div class="sp-btn" id="ach-btn">🏆 Achievements <span id="ach-badge"></span></div>
+    <div class="sp-btn" id="mg-btn">🎮 Mini Games <span id="mg-badge"></span></div>
   </div>
-
+  <!-- Achievement panel -->
   <div id="ach-panel">
     <div id="ach-box">
-      <div id="ach-head"><h2 data-i18n="achievements">🏆 Achievements</h2><button id="ach-close">✕</button></div>
+      <div id="ach-head"><h2>🏆 Achievements</h2><button id="ach-close">✕</button></div>
       <div id="ach-prog"><span id="ach-prog-txt">0 / 0 unlocked</span><span id="ach-pct">0%</span></div>
       <div id="ach-bar-wrap"><div id="ach-bar" style="width:0%"></div></div>
       <div id="ach-list"></div>
     </div>
   </div>
-
+  <!-- Mini Games panel -->
   <div id="mg-panel">
     <div id="mg-box">
-      <div id="mg-head"><h2 data-i18n="miniGames">🎮 Mini Games</h2><button id="mg-close">✕</button></div>
+      <div id="mg-head"><h2>🎮 Mini Games</h2><button id="mg-close">✕</button></div>
       <div id="mg-list"></div>
     </div>
   </div>
 </div>
+<!-- Achievement toasts -->
 <div id="ach-toast"></div>
 <button id="cbtn">💵</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
-const translations = {
-  en: {
-    chooseMode: "Choose your mode",
-    spTitle: "Singleplayer",
-    spDesc: "Play alone.<br>Your own world,<br>your own progress.",
-    mpTitle: "Multiplayer",
-    mpDesc: "Play with everyone.<br>Shared counter.",
-    unitMm: "millimeter",
-    loading: "Loading...",
-    stackedBanknotes: "stacked banknotes",
-    connecting: "● connecting...",
-    offline: "● Offline mode",
-    singleplayerMode: "● Singleplayer",
-    achievements: "🏆 Achievements",
-    miniGames: "🎮 Mini Games",
-    unlockedText: "unlocked",
-    achUnlockedTitle: "Achievement Unlocked!",
-    mgUnlockedTitle: "Mini Game Unlocked!",
-    clickPlayAgain: "Click to play again",
-    wipedOut: "Wiped out!",
-    gotCaught: "You got caught!",
-    beyondMilestones: "🌌 Beyond all milestones!",
-    playBtn: "▶ Play",
-    unlockedLabel: "✓ Unlocked",
-    clicksLeft: "clicks left",
-    scoreLabel: "Score",
-    bestLabel: "Best",
-    timeLabel: "Time",
-    distanceLabel: "Distance",
-
-    obj_ant: "Ant", obj_grape: "Grape", obj_strawberry: "Strawberry", obj_mouse: "Mouse", obj_apple: "Apple",
-    obj_basketball: "Basketball", obj_tulip: "Tulip", obj_sunflower: "Sunflower", obj_cat: "Cat", obj_dog: "Dog",
-    obj_human: "Human", obj_horse: "Horse", obj_elephant: "Elephant", obj_giraffe: "Giraffe", obj_young_tree: "Young tree",
-    obj_house: "House", obj_big_oak: "Big oak", obj_sequoia: "Sequoia", obj_pisa: "Tower of Pisa", obj_liberty: "Statue of liberty",
-    obj_giant_sequoia: "Giant sequoia", obj_washington: "Washington Monument", obj_eiffel: "Eiffel tower", obj_empire: "Empire State Building",
-    obj_pterodactylus: "Pterodactylus", obj_burj: "Burj Khalifa", obj_1km: "1 kilometer!", obj_balloon_alt: "Hot air balloon altitude",
-    obj_jeddah: "Jeddah Tower", obj_butterfly: "Monarch butterfly altitude", obj_ben_nevis: "Ben Nevis", obj_5xeiffel: "5x Eiffel Tower",
-    obj_ventoux: "Mont Ventoux", obj_milv12: "Mil V-12 helicopter", obj_fuji: "Mount Fuji", obj_walk: "1-hour walk distance",
-    obj_oxygen: "Oxygen dropped to 50%", obj_football: "65 football fields stacked", obj_deathzone: "Death zone", obj_everest: "Mount Everest",
-    obj_balloon_burst: "Balloon burst height!", obj_sr71: "SR-71 Blackbird max height", obj_baumgartner: "Felix Baumgartner",
-    obj_karman: "Kármán line (space)", obj_iss: "ISS Space Station", obj_moon: "The moon", obj_sun: "The sun",
-
-    ach_click_1_name: "First Click!", ach_click_1_desc: "Click for the very first time.",
-    ach_click_10_name: "Warming Up", ach_click_10_desc: "Clicked 10 times.",
-    ach_click_100_name: "Persistent", ach_click_100_desc: "Clicked 100 times.",
-    ach_click_1k_name: "Getting There", ach_click_1k_desc: "Clicked 1,000 times.",
-    ach_click_10k_name: "Fingers of Steel", ach_click_10k_desc: "Clicked 10,000 times.",
-    ach_click_100k_name: "Click Hurricane", ach_click_100k_desc: "Clicked 100,000 times.",
-    ach_h_1mm_name: "Off the Ground", ach_h_1mm_desc: "Reached 1 millimeter.",
-    ach_h_1m_name: "One Meter!", ach_h_1m_desc: "Exactly 1 meter high.",
-    ach_h_10m_name: "Rooftop", ach_h_10m_desc: "10 meters — almost a rooftop!",
-    ach_h_100m_name: "Skyscraper", ach_h_100m_desc: "Reached 100 meters.",
-    ach_speed_10s_name: "Quick Start", ach_speed_10s_desc: "10 clicks within 10 seconds.",
-    ach_speed_50s_name: "Rocket Launch", ach_speed_50s_desc: "50 clicks within 10 seconds.",
-    ach_sec_5min_name: "Five Minutes", ach_sec_5min_desc: "Played for 5 minutes.",
-    ach_sec_1h_name: "Addicted", ach_sec_1h_desc: "Played for one hour.",
-    ach_comeback_name: "Welcome Back!", ach_comeback_desc: "Reopened the game after a previous session.",
-
-    mg_mouse_name: "Mouse Catcher", mg_mouse_lock: "Unlock by reaching the mouse (0.07 m)",
-    mg_basket_name: "Basketball Shoot", mg_basket_lock: "Unlock by reaching basketball (0.24 m)",
-    mg_cat_name: "Dodge the Cats", mg_cat_lock: "Unlock by reaching the cat (0.6 m)",
-    mg_horse_name: "Horse Runner", mg_horse_lock: "Unlock by reaching the horse (2.4 m)"
-  },
-  nl: {
-    chooseMode: "Kies je modus",
-    spTitle: "Singleplayer",
-    spDesc: "Speel alleen.<br>Je eigen wereld,<br>je eigen voortgang.",
-    mpTitle: "Multiplayer",
-    mpDesc: "Speel met iedereen.<br>Gedeelde teller.",
-    unitMm: "millimeter",
-    loading: "Laden...",
-    stackedBanknotes: "gestapelde bankbiljetten",
-    connecting: "● verbinden...",
-    offline: "● Offline modus",
-    singleplayerMode: "● Singleplayer",
-    achievements: "🏆 Prestaties",
-    miniGames: "🎮 Minigames",
-    unlockedText: "ontgrendeld",
-    achUnlockedTitle: "Prestatie ontgrendeld!",
-    mgUnlockedTitle: "Minigame ontgrendeld!",
-    clickPlayAgain: "Klik om opnieuw te spelen",
-    wipedOut: "Gecrasht!",
-    gotCaught: "Je bent gepakt!",
-    beyondMilestones: "🌌 Voorbij alle mijlpalen!",
-    playBtn: "▶ Spelen",
-    unlockedLabel: "✓ Ontgrendeld",
-    clicksLeft: "klikken te gaan",
-    scoreLabel: "Score",
-    bestLabel: "Beste",
-    timeLabel: "Tijd",
-    distanceLabel: "Afstand",
-
-    obj_ant: "Mier", obj_grape: "Druif", obj_strawberry: "Aardbei", obj_mouse: "Muis", obj_apple: "Appel",
-    obj_basketball: "Basketbal", obj_tulip: "Tulp", obj_sunflower: "Zonnebloem", obj_cat: "Kat", obj_dog: "Hond",
-    obj_human: "Mens", obj_horse: "Paard", obj_elephant: "Olifant", obj_giraffe: "Giraffe", obj_young_tree: "Jonge boom",
-    obj_house: "Huis", obj_big_oak: "Grote eik", obj_sequoia: "Sequoia", obj_pisa: "Toren van Pisa", obj_liberty: "Vrijheidsbeeld",
-    obj_giant_sequoia: "Reuzenboom", obj_washington: "Washington Monument", obj_eiffel: "Eiffeltoren", obj_empire: "Empire State Building",
-    obj_pterodactylus: "Pterodactylus", obj_burj: "Burj Khalifa", obj_1km: "1 kilometer!", obj_balloon_alt: "Luchtballon hoogte",
-    obj_jeddah: "Jeddah Tower", obj_butterfly: "Monarchvlinder hoogte", obj_ben_nevis: "Ben Nevis", obj_5xeiffel: "5x Eiffeltoren",
-    obj_ventoux: "Mont Ventoux", obj_milv12: "Mil V-12 helikopter", obj_fuji: "Berg Fuji", obj_walk: "Wandeling afstand (1u)",
-    obj_oxygen: "Zuurstof naar 50%", obj_football: "65 voetbalvelden op elkaar", obj_deathzone: "Dode zone", obj_everest: "Mount Everest",
-    obj_balloon_burst: "Waar ballon knalt!", obj_sr71: "SR-71 Blackbird hoogte", obj_baumgartner: "Felix Baumgartner",
-    obj_karman: "Kármán-lijn (ruimte)", obj_iss: "ISS Ruimtestation", obj_moon: "De maan", obj_sun: "De zon",
-
-    ach_click_1_name: "Eerste Klik!", ach_click_1_desc: "Klik voor de aller eerste keer.",
-    ach_click_10_name: "Warmdraaien", ach_click_10_desc: "10 keer geklikt.",
-    ach_click_100_name: "Doorzetter", ach_click_100_desc: "100 keer geklikt.",
-    ach_click_1k_name: "Lekkere Start", ach_click_1k_desc: "1.000 keer geklikt.",
-    ach_click_10k_name: "Vingers van Staal", ach_click_10k_desc: "10.000 keer geklikt.",
-    ach_click_100k_name: "Klik Orkaan", ach_click_100k_desc: "100.000 keer geklikt.",
-    ach_h_1mm_name: "Los van de Grond", ach_h_1mm_desc: "Bereik 1 millimeter.",
-    ach_h_1m_name: "Eén Meter!", ach_h_1m_desc: "Precies 1 meter hoog.",
-    ach_h_10m_name: "Dak van het Huis", ach_h_10m_desc: "10 meter — bijna een dak!",
-    ach_h_100m_name: "Wolkenkrabber", ach_h_100m_desc: "Bereik 100 meter.",
-    ach_speed_10s_name: "Snelle Start", ach_speed_10s_desc: "10 klikken in 10 seconden.",
-    ach_speed_50s_name: "Raketlancering", ach_speed_50s_desc: "50 klikken in 10 seconden.",
-    ach_sec_5min_name: "Vijf Minuten", ach_sec_5min_desc: "5 minuten gespeeld.",
-    ach_sec_1h_name: "Verslaafd", ach_sec_1h_desc: "Een uur lang gespeeld.",
-    ach_comeback_name: "Welkom Terug!", ach_comeback_desc: "Het spel opnieuw geopend na een eerdere sessie.",
-
-    mg_mouse_name: "Muis Vanger", mg_mouse_lock: "Ontgrendel bij de muis (0,07 m)",
-    mg_basket_name: "Basketbal Schot", mg_basket_lock: "Ontgrendel bij basketbal (0,24 m)",
-    mg_cat_name: "Ontwijk de Katten", mg_cat_lock: "Ontgrendel bij de kat (0,6 m)",
-    mg_horse_name: "Paarden Race", mg_horse_lock: "Ontgrendel bij het paard (2,4 m)"
-  },
-  fr: {
-    chooseMode: "Choisissez votre mode",
-    spTitle: "Solo",
-    spDesc: "Jouez seul.<br>Votre propre monde,<br>votre progression.",
-    mpTitle: "Multijoueur",
-    mpDesc: "Jouez avec tout le monde.<br>Compteur partagé.",
-    unitMm: "millimètre",
-    loading: "Chargement...",
-    stackedBanknotes: "billets empilés",
-    connecting: "● connexion...",
-    offline: "● Mode hors ligne",
-    singleplayerMode: "● Solo",
-    achievements: "🏆 Succès",
-    miniGames: "🎮 Mini-jeux",
-    unlockedText: "débloqué",
-    achUnlockedTitle: "Succès débloqué !",
-    mgUnlockedTitle: "Mini-jeu débloqué !",
-    clickPlayAgain: "Cliquez pour rejouer",
-    wipedOut: "Éliminé !",
-    gotCaught: "Vous avez été attrapé !",
-    beyondMilestones: "🌌 Au-delà de tous les jalons !",
-    playBtn: "▶ Jouer",
-    unlockedLabel: "✓ Débloqué",
-    clicksLeft: "clics restants",
-    scoreLabel: "Score",
-    bestLabel: "Meilleur",
-    timeLabel: "Temps",
-    distanceLabel: "Distance",
-
-    obj_ant: "Fourmi", obj_grape: "Raisin", obj_strawberry: "Fraise", obj_mouse: "Souris", obj_apple: "Pomme",
-    obj_basketball: "Ballon de basket", obj_tulip: "Tulipe", obj_sunflower: "Tournesol", obj_cat: "Chat", obj_dog: "Chien",
-    obj_human: "Humain", obj_horse: "Cheval", obj_elephant: "Éléphant", obj_giraffe: "Girafe", obj_young_tree: "Jeune arbre",
-    obj_house: "Maison", obj_big_oak: "Grand chêne", obj_sequoia: "Séquoia", obj_pisa: "Tour de Pise", obj_liberty: "Statue de la Liberté",
-    obj_giant_sequoia: "Séquoia géant", obj_washington: "Monument de Washington", obj_eiffel: "Tour Eiffel", obj_empire: "Empire State Building",
-    obj_pterodactylus: "Ptérodactyle", obj_burj: "Burj Khalifa", obj_1km: "1 kilomètre !", obj_balloon_alt: "Altitude montgolfière",
-    obj_jeddah: "Jeddah Tower", obj_butterfly: "Altitude papillon", obj_ben_nevis: "Ben Nevis", obj_5xeiffel: "5x Tour Eiffel",
-    obj_ventoux: "Mont Ventoux", obj_milv12: "Hélicoptère Mil V-12", obj_fuji: "Mont Fuji", obj_walk: "Distance de marche (1h)",
-    obj_oxygen: "Oxygène réduit à 50%", obj_football: "65 terrains de foot empilés", obj_deathzone: "Zone de la mort", obj_everest: "Mont Everest",
-    obj_balloon_burst: "Éclatement du ballon !", obj_sr71: "Altitude SR-71", obj_baumgartner: "Felix Baumgartner",
-    obj_karman: "Ligne de Kármán", obj_iss: "Station spatiale ISS", obj_moon: "La Lune", obj_sun: "Le Soleil",
-
-    ach_click_1_name: "Premier Clic !", ach_click_1_desc: "Cliquez pour la toute première fois.",
-    ach_click_10_name: "Échauffement", ach_click_10_desc: "10 clics effectués.",
-    ach_click_100_name: "Persévérant", ach_click_100_desc: "100 clics effectués.",
-    ach_click_1k_name: "En bonne voie", ach_click_1k_desc: "1 000 clics effectués.",
-    ach_click_10k_name: "Doigts d'Acier", ach_click_10k_desc: "10 000 clics effectués.",
-    ach_click_100k_name: "Ouragan de Clics", ach_click_100k_desc: "100 000 clics effectués.",
-    ach_h_1mm_name: "Décollage", ach_h_1mm_desc: "Atteindre 1 millimètre.",
-    ach_h_1m_name: "Un Mètre !", ach_h_1m_desc: "Exactement 1 mètre de haut.",
-    ach_h_10m_name: "Toit", ach_h_10m_desc: "10 mètres — presque un toit !",
-    ach_h_100m_name: "Gratte-ciel", ach_h_100m_desc: "Atteindre 100 mètres.",
-    ach_speed_10s_name: "Départ Rapide", ach_speed_10s_desc: "10 clics en 10 secondes.",
-    ach_speed_50s_name: "Lancement de Fusée", ach_speed_50s_desc: "50 clics en 10 secondes.",
-    ach_sec_5min_name: "Cinq Minutes", ach_sec_5min_desc: "Joué pendant 5 minutes.",
-    ach_sec_1h_name: "Accro", ach_sec_1h_desc: "Joué pendant une heure.",
-    ach_comeback_name: "Bon Retour !", ach_comeback_desc: "Jeu rouvert après une session précédente.",
-
-    mg_mouse_name: "Chasseur de Souris", mg_mouse_lock: "Débloquez en atteignant la souris (0,07 m)",
-    mg_basket_name: "Tir au Panier", mg_basket_lock: "Débloquez en atteignant le basket (0,24 m)",
-    mg_cat_name: "Esquivez les Chats", mg_cat_lock: "Débloquez en atteignant le chat (0,6 m)",
-    mg_horse_name: "Course de Chevaux", mg_horse_lock: "Débloquez en atteignant le cheval (2,4 m)"
-  }
-};
-
-function t(key) {
-  const lang = localStorage.getItem('app_lang') || 'en';
-  return (translations[lang] || translations['en'])[key] || key;
-}
-
-function applyTranslations() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    el.innerHTML = t(el.getAttribute('data-i18n'));
-  });
-}
-document.addEventListener('DOMContentLoaded', applyTranslations);
-
+// ═══════════════════════════════
+// SAFE STORAGE
+// ═══════════════════════════════
 function safeGetLS(key, def) { try { return localStorage.getItem(key) || def; } catch(e) { return def; } }
 function safeSetLS(key, val) { try { localStorage.setItem(key, val); } catch(e) {} }
 
+// ═══════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════
 const BILL_M = 0.0001; 
 
 const OBJECTS = [
-  {m:0.001,   key:'obj_ant', emoji:'🐜'},
-  {m:0.015,   key:'obj_grape', emoji:'🍇'},
-  {m:0.040,   key:'obj_strawberry', emoji:'🍓'},
-  {m:0.070,   key:'obj_mouse', emoji:'🐭'},
-  {m:0.112,   key:'obj_apple', emoji:'🍎'},
-  {m:0.240,   key:'obj_basketball', emoji:'🏀'},
-  {m:0.300,   key:'obj_tulip', emoji:'🌷'},
-  {m:0.450,   key:'obj_sunflower', emoji:'🌻'},
-  {m:0.600,   key:'obj_cat', emoji:'🐱'},
-  {m:0.900,   key:'obj_dog', emoji:'🐕'},
-  {m:1.750,   key:'obj_human', emoji:'🧍'},
-  {m:2.400,   key:'obj_horse', emoji:'🐴'},
-  {m:4.000,   key:'obj_elephant', emoji:'🐘'},
-  {m:5.500,   key:'obj_giraffe', emoji:'🦒'},
-  {m:7.000,   key:'obj_young_tree', emoji:'🌲'},
-  {m:8.500,   key:'obj_house', emoji:'🏠'},
-  {m:15.00,   key:'obj_big_oak', emoji:'🌳'},
-  {m:25.00,   key:'obj_sequoia', emoji:'🌲'},
-  {m:46.00,   key:'obj_pisa', emoji:'🗼'},
-  {m:93.00,   key:'obj_liberty', emoji:'🗽'},
-  {m:115.0,   key:'obj_giant_sequoia', emoji:'🌲'},
-  {m:169.0,   key:'obj_washington', emoji:'🏛️'},
-  {m:324.0,   key:'obj_eiffel', emoji:'🗼'},
-  {m:443.0,   key:'obj_empire', emoji:'🏙️'},
-  {m:600.0,   key:'obj_pterodactylus', emoji:'🦕'},
-  {m:828.0,   key:'obj_burj', emoji:'🏙️'},
-  {m:1000,    key:'obj_1km', emoji:'🎊'},
-  {m:1100,    key:'obj_balloon_alt', emoji:'🎈'},
-  {m:1178,    key:'obj_jeddah', emoji:'🏗️'},
-  {m:1200,    key:'obj_butterfly', emoji:'🦋'},
-  {m:1345,    key:'obj_ben_nevis', emoji:'⛰️'},
-  {m:1620,    key:'obj_5xeiffel', emoji:'🗼'},
-  {m:1909,    key:'obj_ventoux', emoji:'🚴'},
-  {m:2250,    key:'obj_milv12', emoji:'🚁'},
-  {m:3776,    key:'obj_fuji', emoji:'🗻'},
-  {m:4800,    key:'obj_walk', emoji:'🥾'},
-  {m:5500,    key:'obj_oxygen', emoji:'😮‍💨'},
-  {m:6500,    key:'obj_football', emoji:'⚽'},
-  {m:7000,    key:'obj_deathzone', emoji:'💀'},
-  {m:8849,    key:'obj_everest', emoji:'🏔️'},
-  {m:10000,   key:'obj_balloon_burst', emoji:'🎈'},
-  {m:26000,   key:'obj_sr71', emoji:'✈️'},
-  {m:38969,   key:'obj_baumgartner', emoji:'🪂'},
-  {m:100000,  key:'obj_karman', emoji:'🌌'},
-  {m:408000,  key:'obj_iss', emoji:'🛸'},
-  {m:384400000, key:'obj_moon', emoji:'🌕'},
-  {m:149600000000, key:'obj_sun', emoji:'☀️'}
+  {m:0.001,   label:'Ant', emoji:'🐜'},
+  {m:0.015,   label:'Grape', emoji:'🍇'},
+  {m:0.040,   label:'Strawberry', emoji:'🍓'},
+  {m:0.070,   label:'Mouse', emoji:'🐭'},
+  {m:0.112,   label:'Apple', emoji:'🍎'},
+  {m:0.240,   label:'Basketball', emoji:'🏀'},
+  {m:0.300,   label:'Tulip', emoji:'🌷'},
+  {m:0.450,   label:'Sunflower', emoji:'🌻'},
+  {m:0.600,   label:'Cat', emoji:'🐱'},
+  {m:0.900,   label:'Dog', emoji:'🐕'},
+  {m:1.750,   label:'Human', emoji:'🧍'},
+  {m:2.400,   label:'Horse', emoji:'🐴'},
+  {m:4.000,   label:'Elephant', emoji:'🐘'},
+  {m:5.500,   label:'Giraffe', emoji:'🦒'},
+  {m:7.000,   label:'Young tree', emoji:'🌲'},
+  {m:8.500,   label:'House', emoji:'🏠'},
+  {m:15.00,   label:'Big oak', emoji:'🌳'},
+  {m:25.00,   label:'Sequoia', emoji:'🌲'},
+  {m:46.00,   label:'Tower of Pisa', emoji:'🗼'},
+  {m:93.00,   label:'Statue of liberty', emoji:'🗽'},
+  {m:115.0,   label:'Giant sequoia', emoji:'🌲'},
+  {m:169.0,   label:'Washington Monument', emoji:'🏛️'},
+  {m:324.0,   label:'Eiffel tower', emoji:'🗼'},
+  {m:443.0,   label:'Empire State Building', emoji:'🏙️'},
+  {m:600.0,   label:'Pterodactylus', emoji:'🦕'},
+  {m:828.0,   label:'Burj Khalifa', emoji:'🏙️'},
+  {m:1000,    label:'1 kilometer!', emoji:'🎊'},
+  {m:1100,    label:'Hot air balloon flight altitude', emoji:'🎈'},
+  {m:1178,    label:'Jeddah Tower', emoji:'🏗️'},
+  {m:1200,    label:'Monarch butterfly flight altitude', emoji:'🦋'},
+  {m:1345,    label:'Ben Nevis', emoji:'⛰️'},
+  {m:1620,    label:'5x the Eiffel Tower', emoji:'🗼'},
+  {m:1909,    label:'Mont Ventoux', emoji:'🚴'},
+  {m:2250,    label:'Mil V-12 helicopter flight height', emoji:'🚁'},
+  {m:3776,    label:'Mount Fuji', emoji:'🗻'},
+  {m:4800,    label:'Distance of a 1-hour walk', emoji:'🥾'},
+  {m:5500,    label:'Oxygen dropped to 50%', emoji:'😮‍💨'},
+  {m:6500,    label:'65 football fields stacked on top of each other', emoji:'⚽'},
+  {m:7000,    label:'Death zone', emoji:'💀'},
+  {m:8849,    label:'Mount Everest', emoji:'🏔️'},
+  {m:10000,   label:'The height a lost balloon bursts!', emoji:'🎈'},
+  {m:26000,   label:'SR-71 Blackbird maximum height', emoji:'✈️'},
+  {m:38969,   label:'Felix Baumgartner', emoji:'🪂'},
+  {m:100000,  label:'Kármán line (space)', emoji:'🌌'},
+  {m:408000,  label:'ISS Space Station', emoji:'🛸'},
+  {m:384400000, label:'The moon', emoji:'🌕'},
+  {m:149600000000, label:'The sun', emoji:'☀️'}
 ];
 
+// ═══════════════════════════════
+// STATE
+// ═══════════════════════════════
 let totalBills   = 0;
 let displayBills = 0;
 let cloudT       = 0;
@@ -429,6 +253,9 @@ let scores   = {};
 let shownMS = new Set();
 try { shownMS = new Set(JSON.parse(safeGetLS('md6_m', '[]'))); } catch(e){}
 
+// ═══════════════════════════════
+// CANVAS
+// ═══════════════════════════════
 const canvas = document.getElementById('c');
 const ctx    = canvas.getContext('2d');
 let W = 0, H = 0, GY = 0;
@@ -441,6 +268,9 @@ function resize(){
 resize();
 window.addEventListener('resize', resize);
 
+// ═══════════════════════════════
+// HELPERS
+// ═══════════════════════════════
 function fmtN(n){
   if(n>=1e15) return(n/1e15).toFixed(2)+'P';
   if(n>=1e12) return(n/1e12).toFixed(2)+'T';
@@ -459,6 +289,9 @@ function fmtH(m){
   return(m*1000).toFixed(2)+' mm';
 }
 
+// ═══════════════════════════════
+// DRAW SKY & GROUND
+// ═══════════════════════════════
 function drawSky(altM){
   const t  = Math.min(1, altM/100000);
   const r0 = Math.round(20*(1-t)),  g0 = Math.round(42*(1-t)),  b0 = Math.round(58*(1-t));
@@ -468,6 +301,38 @@ function drawSky(altM){
   sg.addColorStop(1, `rgb(${r1},${g1},${b1})`);
   ctx.fillStyle = sg;
   ctx.fillRect(0, 0, W, GY);
+
+  const sa = Math.min(1, Math.max(0,(altM-30000)/70000));
+  if(sa > 0){
+    ctx.save(); ctx.globalAlpha = sa;
+    for(let i=0;i<200;i++){
+      const f = 0.5+0.5*Math.sin(Date.now()*.001+i);
+      ctx.fillStyle = `rgba(255,255,255,${f*(0.3+(i%3)*.25)})`;
+      ctx.beginPath();
+      ctx.arc((i*137.5+50)%W,(i*97.3+10)%(GY*.9),0.4+(i%4)*.35,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  const ca = Math.min(Math.max(0,(altM-1500)/500), Math.max(0,1-(altM-12000)/3000));
+  if(ca > 0){
+    ctx.save(); ctx.globalAlpha = ca*.88;
+    cloudT += 0.00015;
+    const cd = [{x:.07,y:.26,s:90},{x:.3,y:.36,s:110},{x:.56,y:.2,s:75},{x:.76,y:.3,s:92},{x:.48,y:.44,s:65}];
+    for(const c of cd){
+      const cx = ((c.x+cloudT*.05)%1.15)*W, cy = c.y*GY;
+      ctx.fillStyle='rgba(150,160,180,.3)';
+      ctx.beginPath(); ctx.ellipse(cx,cy+c.s*.18,c.s*.7,c.s*.16,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.96)';
+      ctx.beginPath();
+      ctx.arc(cx,cy,c.s*.38,0,Math.PI*2);
+      ctx.arc(cx+c.s*.36,cy-c.s*.1,c.s*.3,0,Math.PI*2);
+      ctx.arc(cx-c.s*.3,cy+c.s*.06,c.s*.25,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
 }
 
 function drawGround(altM){
@@ -477,6 +342,9 @@ function drawGround(altM){
   ctx.fillRect(0, GY, W, H-GY);
 }
 
+// ═══════════════════════════════
+// DRAW STACK
+// ═══════════════════════════════
 function drawStack(bills){
   if(bills <= 0) return;
   const cx   = W/2;
@@ -531,8 +399,25 @@ function drawStack(bills){
   ctx.strokeStyle='rgba(34,197,94,.28)'; ctx.lineWidth=1;
   ctx.strokeRect(cx-sw/2,top,sw,sh);
   ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle='rgba(255,255,255,.12)'; ctx.lineWidth=1; ctx.setLineDash([2,6]);
+  const lx = cx-sw/2-26;
+  ctx.beginPath(); ctx.moveTo(lx,top); ctx.lineTo(cx-sw/2-10,top); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(lx,GY); ctx.lineTo(cx-sw/2-10,GY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(lx,top); ctx.lineTo(lx,GY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,.4)';
+  ctx.font='9px DM Mono,monospace';
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  ctx.fillText(fmtH(bills*BILL_M), lx-4, top+sh*.5);
+  ctx.restore();
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
 }
 
+// ═══════════════════════════════
+// DRAW OBJECTS 
+// ═══════════════════════════════
 function drawObjects(bills){
   if(bills <= 0) return;
   const altM    = bills * BILL_M;
@@ -543,6 +428,7 @@ function drawObjects(bills){
   
   const stackR  = stackCX + stackSW/2 + stackDepth + 14;
   const stackL  = stackCX - stackSW/2 - 14;
+  
   const stackPx = Math.min(bills * 0.5, maxH);
   const MIN_PX  = Math.max(15, stackPx * 0.25);  
 
@@ -551,13 +437,17 @@ function drawObjects(bills){
     const obj   = OBJECTS[i];
     const ph    = obj.m * pxPerM;
     const ratio = obj.m / altM;
+    
     if(ratio > 8) break;
     if(ratio < 0.0001) continue; 
+    
     const drawH = Math.min(ph, H*0.9);
     if(drawH < MIN_PX) continue; 
+
     const opIn  = Math.min(1,(ratio-0.0005)/0.03);
     const opOut = Math.min(1,(8-ratio)/3);
     const opacity = opIn * opOut;
+    
     const emojiW = Math.max(drawH * 0.65, 30); 
     vis.push({obj, drawH, emojiW, ratio, opacity});
   }
@@ -569,7 +459,9 @@ function drawObjects(bills){
   let gapL = 16; 
   if(smaller.length > 0){
     const totW = smaller.reduce((sum, v) => sum + v.emojiW, 0);
-    if(totW + smaller.length * 16 < stackL) gapL = (stackL - totW) / smaller.length;
+    if(totW + smaller.length * 16 < stackL){
+      gapL = (stackL - totW) / smaller.length;
+    }
   }
 
   let curX = stackL;
@@ -577,15 +469,20 @@ function drawObjects(bills){
     curX -= gapL / 2;
     const cx2 = curX - v.emojiW / 2;
     if(cx2 + v.emojiW / 2 < 0) break; 
+    
     drawOneObject(v, cx2);
-    curX -= v.emojiW; curX -= gapL / 2; 
+    
+    curX -= v.emojiW; 
+    curX -= gapL / 2; 
   }
 
   const rightAvail = W - stackR; 
   let gapR = 16;
   if(bigger.length > 0){
     const totW = bigger.reduce((sum, v) => sum + v.emojiW, 0);
-    if(totW + bigger.length * 16 < rightAvail) gapR = (rightAvail - totW) / bigger.length;
+    if(totW + bigger.length * 16 < rightAvail){
+      gapR = (rightAvail - totW) / bigger.length;
+    }
   }
 
   curX = stackR;
@@ -593,16 +490,19 @@ function drawObjects(bills){
     curX += gapR / 2;
     const cx2 = curX + v.emojiW / 2;
     if(cx2 - v.emojiW / 2 > W) break;
+    
     drawOneObject(v, cx2);
-    curX += v.emojiW; curX += gapR / 2;
+    
+    curX += v.emojiW;
+    curX += gapR / 2;
   }
 }
 
-// OBJECT NAME RENDERED UNDERNEATH THE EMOJI
 function drawOneObject(v, cx2){
   const {obj, drawH, opacity} = v;
   ctx.save();
   ctx.globalAlpha = Math.max(0.04, opacity);
+
   const shRX = drawH*0.28, shRY = Math.max(3, drawH*0.036);
   const shg = ctx.createRadialGradient(cx2,GY,0,cx2,GY,shRX);
   shg.addColorStop(0,'rgba(0,0,0,.4)'); shg.addColorStop(1,'rgba(0,0,0,0)');
@@ -611,34 +511,43 @@ function drawOneObject(v, cx2){
 
   const fs = Math.min(drawH, 500);
   ctx.font = `${fs}px serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
   ctx.fillText(obj.emoji, cx2, GY);
 
   if(drawH > 14){
-    const labelText = t(obj.key);
-    const lblSz = Math.min(12, Math.max(8, 8+drawH*.06));
+    const lblSz = Math.min(13, Math.max(8, 8+drawH*.07));
     ctx.font = `600 ${lblSz}px DM Sans,sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    const tw = ctx.measureText(labelText).width;
+    const tw = ctx.measureText(obj.label).width;
     const pad = 5, ph2 = lblSz+pad;
     
-    ctx.fillStyle = 'rgba(0,0,0,.65)';
-    if(ctx.roundRect) {
+    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    if(ctx.roundRect){
       ctx.beginPath(); ctx.roundRect(cx2-tw/2-pad, GY+4, tw+pad*2, ph2, ph2/2); ctx.fill();
     } else {
-      ctx.fillRect(cx2-tw/2-pad, GY+4, tw+pad*2, ph2);
+      ctx.fillRect(cx2-tw/2-pad, GY+4, tw+pad*2, ph2); 
     }
+    
     ctx.fillStyle = '#fff';
-    ctx.fillText(labelText, cx2, GY+4+pad/2);
+    ctx.fillText(obj.label, cx2, GY+4+pad/2);
+    
+    // Show exact height below the label
+    ctx.font = `${Math.max(8, lblSz - 2)}px DM Mono,monospace`;
+    ctx.fillStyle = 'rgba(255,255,255,.6)';
+    ctx.fillText(fmtH(obj.m), cx2, GY + 4 + ph2 + 2);
   }
   ctx.restore();
 }
 
+// ═══════════════════════════════
+// HUD & CLICK & LOOP
+// ═══════════════════════════════
 let bannerTO = null;
 function showBanner(obj){
   document.getElementById('mse').textContent = obj.emoji;
-  document.getElementById('msn').textContent = t(obj.key);
-  document.getElementById('mss').textContent = `${fmtH(obj.m)} · ${fmtN(Math.round(obj.m/BILL_M))} clicks`;
+  document.getElementById('msn').textContent = obj.label;
+  document.getElementById('mss').textContent = `${fmtH(obj.m)} hoog · ${fmtN(Math.round(obj.m/BILL_M))} klikken`;
   const el = document.getElementById('msb');
   el.classList.add('show');
   if(bannerTO) clearTimeout(bannerTO);
@@ -654,18 +563,18 @@ function updateHUD(){
   else if(altM>=1000){ae.textContent=(altM/1000).toFixed(4);ue.textContent='kilometer';}
   else if(altM>=1){ae.textContent=altM.toFixed(4);ue.textContent='meter';}
   else if(altM>=.01){ae.textContent=(altM*100).toFixed(3);ue.textContent='centimeter';}
-  else{ae.textContent=(altM*1000).toFixed(3);ue.textContent=t('unitMm');}
+  else{ae.textContent=(altM*1000).toFixed(3);ue.textContent='millimeter';}
 
   let next = null;
   for(const o of OBJECTS) if(o.m > altM){ next=o; break; }
   document.getElementById('nxt').textContent = next
-    ? `${next.emoji} ${t(next.key)} — ${fmtN(Math.ceil((next.m-altM)/BILL_M))} ${t('clicksLeft')}`
-    : t('beyondMilestones');
+    ? `${next.emoji} ${next.label} — nog ${fmtN(Math.ceil((next.m-altM)/BILL_M))} klikken`
+    : '🌌 Beyond all milestones!';
   document.getElementById('bnum').textContent = fmtN(Math.round(totalBills));
 
   for(const obj of OBJECTS){
-    if(obj.m > 0 && altM >= obj.m && !shownMS.has(obj.key)){
-      shownMS.add(obj.key);
+    if(obj.m > 0 && altM >= obj.m && !shownMS.has(obj.label)){
+      shownMS.add(obj.label);
       safeSetLS('md6_m', JSON.stringify([...shownMS]));
       showBanner(obj);
       break;
@@ -673,7 +582,7 @@ function updateHUD(){
   }
 }
 
-function updateScoreboard(){}
+function updateScoreboard(){} // leaderboard staat op leaderboard.html
 
 function spawnBill(){
   const btn = document.getElementById('cbtn');
@@ -686,32 +595,41 @@ function spawnBill(){
   setTimeout(()=>el.remove(), 850);
 }
 
+// naam-input verwijderd
+
+// ═══════════════════════════════
+// ACHIEVEMENTS (SP only)
+// ═══════════════════════════════
 const ACHIEVEMENTS = [
-  { id:'click_1',      icon:'👆', nameKey:'ach_click_1_name', descKey:'ach_click_1_desc', check: s => s.clicks >= 1 },
-  { id:'click_10',     icon:'✌️',  nameKey:'ach_click_10_name', descKey:'ach_click_10_desc', check: s => s.clicks >= 10 },
-  { id:'click_100',    icon:'💪',  nameKey:'ach_click_100_name', descKey:'ach_click_100_desc', check: s => s.clicks >= 100 },
-  { id:'click_1k',     icon:'🔥',  nameKey:'ach_click_1k_name', descKey:'ach_click_1k_desc', check: s => s.clicks >= 1000 },
-  { id:'click_10k',    icon:'⚡',  nameKey:'ach_click_10k_name', descKey:'ach_click_10k_desc', check: s => s.clicks >= 10000 },
-  { id:'click_100k',   icon:'🌪️',  nameKey:'ach_click_100k_name', descKey:'ach_click_100k_desc', check: s => s.clicks >= 100000 },
-  { id:'h_1mm',        icon:'🐜',  nameKey:'ach_h_1mm_name', descKey:'ach_h_1mm_desc', check: s => s.altM >= 0.001 },
-  { id:'h_1m',         icon:'📏',  nameKey:'ach_h_1m_name', descKey:'ach_h_1m_desc', check: s => s.altM >= 1 },
-  { id:'h_10m',        icon:'🏠',  nameKey:'ach_h_10m_name', descKey:'ach_h_10m_desc', check: s => s.altM >= 10 },
-  { id:'h_100m',       icon:'🏗️',  nameKey:'ach_h_100m_name', descKey:'ach_h_100m_desc', check: s => s.altM >= 100 },
-  { id:'speed_10s',    icon:'⏱️',  nameKey:'ach_speed_10s_name', descKey:'ach_speed_10s_desc', check: s => s.recentClicks >= 10 },
-  { id:'speed_50s',    icon:'🚀',  nameKey:'ach_speed_50s_name', descKey:'ach_speed_50s_desc', check: s => s.recentClicks >= 50 },
-  { id:'sec_5min',     icon:'⌛',  nameKey:'ach_sec_5min_name', descKey:'ach_sec_5min_desc', check: s => s.playSeconds >= 300 },
-  { id:'sec_1h',       icon:'🕐',  nameKey:'ach_sec_1h_name', descKey:'ach_sec_1h_desc', check: s => s.playSeconds >= 3600 },
-  { id:'comeback',     icon:'👋',  nameKey:'ach_comeback_name', descKey:'ach_comeback_desc', check: s => s.returnVisit },
+  // Click counts
+  { id:'click_1',      icon:'👆', name:'First Click!',        desc:'Click for the very first time.',           check: s => s.clicks >= 1 },
+  { id:'click_10',     icon:'✌️',  name:'Warming Up',          desc:'Clicked 10 times.',                        check: s => s.clicks >= 10 },
+  { id:'click_100',    icon:'💪',  name:'Persistent',          desc:'Clicked 100 times.',                       check: s => s.clicks >= 100 },
+  { id:'click_1k',     icon:'🔥',  name:'Getting There',       desc:'Clicked 1,000 times.',                     check: s => s.clicks >= 1000 },
+  { id:'click_10k',    icon:'⚡',  name:'Fingers of Steel',    desc:'Clicked 10,000 times.',                    check: s => s.clicks >= 10000 },
+  { id:'click_100k',   icon:'🌪️',  name:'Click Hurricane',     desc:'Clicked 100,000 times.',                   check: s => s.clicks >= 100000 },
+  // Height achievements
+  { id:'h_1mm',        icon:'🐜',  name:'Off the Ground',      desc:'Reached 1 millimeter.',                    check: s => s.altM >= 0.001 },
+  { id:'h_1m',         icon:'📏',  name:'One Meter!',          desc:'Exactly 1 meter high.',                    check: s => s.altM >= 1 },
+  { id:'h_10m',        icon:'🏠',  name:'Rooftop',             desc:'10 meters — almost a rooftop!',            check: s => s.altM >= 10 },
+  { id:'h_100m',       icon:'🏗️',  name:'Skyscraper',          desc:'Reached 100 meters.',                      check: s => s.altM >= 100 },
+  // Speed
+  { id:'speed_10s',    icon:'⏱️',  name:'Quick Start',         desc:'10 clicks within 10 seconds.',             check: s => s.recentClicks >= 10 },
+  { id:'speed_50s',    icon:'🚀',  name:'Rocket Launch',       desc:'50 clicks within 10 seconds.',             check: s => s.recentClicks >= 50 },
+  // Playtime & hidden
+  { id:'sec_5min',     icon:'⌛',  name:'Five Minutes',        desc:'Played for 5 minutes.',                    check: s => s.playSeconds >= 300 },
+  { id:'sec_1h',       icon:'🕐',  name:'Addicted',            desc:'Played for one hour.',                     check: s => s.playSeconds >= 3600 },
+  { id:'comeback',     icon:'👋',  name:'Welcome Back!',       desc:'Reopened the game after a previous session.', check: s => s.returnVisit },
 ];
 
 let unlockedAch = new Set();
 try { unlockedAch = new Set(JSON.parse(safeGetLS('md6_ach', '[]'))); } catch(e){}
 
-let spPlaySeconds = 0;
-let spPlayTimer = null;
-let recentClickBuf = [];
-let achPanelOpen = false;
-let newAchCount = 0;
+let spPlaySeconds  = 0;
+let spPlayTimer    = null;
+let recentClickBuf = []; // timestamps for speed check
+let achPanelOpen   = false;
+let newAchCount    = 0;
 
 function getAchState(){
   const now = Date.now();
@@ -744,55 +662,102 @@ function showAchToast(ach){
   const wrap = document.getElementById('ach-toast');
   const el = document.createElement('div');
   el.className = 'ach-toast-item';
-  el.innerHTML = `<div class="ati-icon">${ach.icon}</div><div class="ati-text"><div class="ati-top">${t('achUnlockedTitle')}</div><div class="ati-name">${t(ach.nameKey)}</div></div>`;
+  el.innerHTML = `<div class="ati-icon">${ach.icon}</div><div class="ati-text"><div class="ati-top">Achievement Unlocked!</div><div class="ati-name">${ach.name}</div></div>`;
   wrap.appendChild(el);
-  setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(), 400); }, 3500);
+  setTimeout(()=>{
+    el.classList.add('out');
+    setTimeout(()=>el.remove(), 400);
+  }, 3500);
 }
 
 function updateAchBadge(){
+  const btn   = document.getElementById('ach-btn');
   const badge = document.getElementById('ach-badge');
   if(newAchCount > 0 && !achPanelOpen){
-    badge.textContent = newAchCount; badge.style.display = 'inline';
-  } else { badge.style.display = 'none'; }
+    badge.textContent = newAchCount;
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 function renderAchPanel(){
-  const list = document.getElementById('ach-list');
-  const total = ACHIEVEMENTS.length;
+  const list     = document.getElementById('ach-list');
+  const total    = ACHIEVEMENTS.length;
   const unlocked = unlockedAch.size;
-  document.getElementById('ach-prog-txt').textContent = `${unlocked} / ${total} ${t('unlockedText')}`;
-  document.getElementById('ach-pct').textContent = Math.round(unlocked/total*100) + '%';
-  document.getElementById('ach-bar').style.width = (unlocked/total*100) + '%';
+  document.getElementById('ach-prog-txt').textContent = `${unlocked} / ${total} unlocked`;
+  document.getElementById('ach-pct').textContent      = Math.round(unlocked/total*100) + '%';
+  document.getElementById('ach-bar').style.width      = (unlocked/total*100) + '%';
   list.innerHTML = '';
   for(const ach of ACHIEVEMENTS){
     const done = unlockedAch.has(ach.id);
-    const row = document.createElement('div');
+    const row  = document.createElement('div');
     row.className = 'ach-row' + (done ? ' unlocked' : '');
-    row.innerHTML = `<div class="ach-icon">${ach.icon}</div><div class="ach-info"><div class="ach-name">${t(ach.nameKey)}</div><div class="ach-desc">${t(ach.descKey)}</div></div><div class="ach-check">✓</div>`;
+    row.innerHTML = `<div class="ach-icon">${ach.icon}</div><div class="ach-info"><div class="ach-name">${ach.name}</div><div class="ach-desc">${ach.desc}</div></div><div class="ach-check">✓</div>`;
     list.appendChild(row);
   }
 }
 
 function openAchPanel(){
-  achPanelOpen = true; newAchCount = 0; updateAchBadge(); renderAchPanel();
+  achPanelOpen = true;
+  newAchCount  = 0;
+  updateAchBadge();
+  renderAchPanel();
   document.getElementById('ach-box').classList.add('open');
 }
 function closeAchPanel(){
   achPanelOpen = false;
   document.getElementById('ach-box').classList.remove('open');
 }
+
 document.getElementById('ach-btn').addEventListener('click', ()=> achPanelOpen ? closeAchPanel() : openAchPanel());
 document.getElementById('ach-close').addEventListener('click', closeAchPanel);
 
-// ROBUST FIXED MINIGAMES
+// ═══════════════════════════════
+// MINI GAMES (SP only)
+// ═══════════════════════════════
+// Each minigame unlocks when the linked OBJECTS milestone is reached
 const MINIGAMES = [
-  { id: 'mg_mouse', nameKey: 'mg_mouse_name', icon: '🐭', unlockObjKey: 'obj_mouse', lockKey: 'mg_mouse_lock', build: buildMouseCannonGame },
-  { id: 'mg_basketball', nameKey: 'mg_basket_name', icon: '🏀', unlockObjKey: 'obj_basketball', lockKey: 'mg_basket_lock', build: buildBasketballGame },
-  { id: 'mg_cat', nameKey: 'mg_cat_name', icon: '🐱', unlockObjKey: 'obj_cat', lockKey: 'mg_cat_lock', build: buildCatGame },
-  { id: 'mg_horse', nameKey: 'mg_horse_name', icon: '🐴', unlockObjKey: 'obj_horse', lockKey: 'mg_horse_lock', build: buildHorseGame },
+  {
+    id: 'mg_mouse',
+    name: 'Mouse Catcher',
+    icon: '🐭',
+    unlockObj: 'Mouse',
+    unlockDesc: 'Unlock by reaching the mouse (0.07 m)',
+    build: buildMouseCannonGame,
+  },
+  {
+    id: 'mg_basketball',
+    name: 'Basketball Shoot',
+    icon: '🏀',
+    unlockObj: 'Basketball',
+    unlockDesc: 'Unlock by reaching basketball (0.24 m)',
+    build: buildBasketballGame,
+  },
+  {
+    id: 'mg_cat',
+    name: 'Dodge the Cats',
+    icon: '🐱',
+    unlockObj: 'Cat',
+    unlockDesc: 'Unlock by reaching the cat (0.6 m)',
+    build: buildCatGame,
+  },
+  {
+    id: 'mg_horse',
+    name: 'Horse Runner',
+    icon: '🐴',
+    unlockObj: 'Horse',
+    unlockDesc: 'Unlock by reaching the horse (2.4 m)',
+    build: buildHorseGame,
+  },
 ];
 
-let unlockedMg = new Set();
+let unlockedMg    = new Set();
+let mgPanelOpen   = false;
+let newMgCount    = 0;
+let activeMgId    = null;
+let mgLoops       = {};   // id -> cancel fn
+
 try { unlockedMg = new Set(JSON.parse(safeGetLS('md6_mg','[]'))); } catch(e){}
 
 function checkMinigameUnlocks(){
@@ -800,16 +765,30 @@ function checkMinigameUnlocks(){
   const altM = totalBills * BILL_M;
   for(const mg of MINIGAMES){
     if(unlockedMg.has(mg.id)) continue;
-    const obj = OBJECTS.find(o => t(o.key) === t(mg.unlockObjKey) || o.key === mg.unlockObjKey);
+    const obj = OBJECTS.find(o => o.label === mg.unlockObj);
     if(obj && altM >= obj.m){
       unlockedMg.add(mg.id);
       safeSetLS('md6_mg', JSON.stringify([...unlockedMg]));
+      newMgCount++;
+      updateMgBadge();
+      renderMgPanel();
+      // toast
+      const wrap = document.getElementById('ach-toast');
+      const el = document.createElement('div');
+      el.className = 'ach-toast-item mg-toast';
+      el.innerHTML = `<div class="ati-icon">${mg.icon}</div><div class="ati-text"><div class="ati-top">Mini Game Unlocked!</div><div class="ati-name">${mg.name}</div></div>`;
+      wrap.appendChild(el);
+      setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(),400); }, 3500);
     }
   }
 }
 
-let activeMgId = null;
-let mgLoops = {};
+function updateMgBadge(){
+  const badge = document.getElementById('mg-badge');
+  if(newMgCount > 0 && !mgPanelOpen){
+    badge.textContent = newMgCount; badge.style.display = 'inline';
+  } else { badge.style.display = 'none'; }
+}
 
 function renderMgPanel(){
   const list = document.getElementById('mg-list');
@@ -819,26 +798,31 @@ function renderMgPanel(){
     const row = document.createElement('div');
     row.className = 'mg-row ' + (isUnlocked ? 'unlocked' : 'locked');
     row.id = 'mgrow-' + mg.id;
-    const playBtn = isUnlocked ? `<button class="mg-play" data-mg="${mg.id}">${t('playBtn')}</button>` : '';
+    const playBtn = isUnlocked ? `<button class="mg-play" data-mg="${mg.id}">▶ Play</button>` : '';
     row.innerHTML = `
       <div class="mg-header">
         <div class="mg-hicon">${mg.icon}</div>
         <div class="mg-hinfo">
-          <div class="mg-hname">${t(mg.nameKey)}</div>
-          <div class="mg-hlock">${isUnlocked ? t('unlockedLabel') : '🔒 ' + t(mg.lockKey)}</div>
+          <div class="mg-hname">${mg.name}</div>
+          <div class="mg-hlock">${isUnlocked ? '✓ Unlocked' : '🔒 ' + mg.unlockDesc}</div>
         </div>
         ${playBtn}
       </div>
       <div class="mg-game" id="mggame-${mg.id}"></div>`;
     list.appendChild(row);
   }
+  // attach play buttons
   list.querySelectorAll('.mg-play').forEach(btn => {
     btn.addEventListener('click', ()=> toggleMgGame(btn.dataset.mg));
   });
 }
 
 function toggleMgGame(id){
-  if(activeMgId === id){ stopMgGame(id); return; }
+  if(activeMgId === id){
+    // close
+    stopMgGame(id);
+    return;
+  }
   if(activeMgId) stopMgGame(activeMgId);
   activeMgId = id;
   const row     = document.getElementById('mgrow-'+id);
@@ -857,66 +841,120 @@ function stopMgGame(id){
   if(activeMgId === id) activeMgId = null;
 }
 
+// ── GAME 1: Muizen vangen ─────────────────────────────
 function buildMouseCannonGame(container, id){
   const W=288, H=170;
-  container.innerHTML=`<canvas class="mg-canvas" id="mgc-${id}" width="${W}" height="${H}"></canvas><div class="mg-score" id="mgs-${id}">${t('scoreLabel')}: 0 · ${t('bestLabel')}: ${safeGetLS('mg_hi_'+id,'0')}</div>`;
+  container.innerHTML=`<canvas class="mg-canvas" id="mgc-${id}" width="${W}" height="${H}"></canvas><div class="mg-score" id="mgs-${id}">Score: 0 · Best: ${safeGetLS('mg_hi_'+id,'0')}</div>`;
   const cv=document.getElementById('mgc-'+id);
   const ctx=cv.getContext('2d');
-  let score=0, tcnt=0, running=true;
+  let score=0, t=0, running=true;
   let mice=[];
 
   function spawnMouse(){
     mice.push({
-      x: Math.random()*(W-40)+20, y: Math.random()*(H-40)+20,
-      vx: (Math.random()-.5)*2.2, vy: (Math.random()-.5)*2.2,
-      r: 16, life: 250+Math.floor(Math.random()*100),
+      x: Math.random()*(W-30)+15,
+      y: Math.random()*(H-30)+15,
+      vx: (Math.random()-.5)*2.6,
+      vy: (Math.random()-.5)*2.6,
+      r: 14,
+      life: 200+Math.floor(Math.random()*80),
+      maxLife: 280,
     });
   }
+
   for(let i=0;i<3;i++) spawnMouse();
 
-  cv.addEventListener('pointerdown', e=>{
+  cv.addEventListener('click', e=>{
     const rect=cv.getBoundingClientRect();
     const sx=(e.clientX-rect.left)*(W/rect.width);
     const sy=(e.clientY-rect.top)*(H/rect.height);
     let caught=false;
     mice=mice.filter(m=>{
-      if(!caught && Math.hypot(sx-m.x,sy-m.y)<m.r+12){ score++; caught=true; return false; }
+      if(!caught && Math.hypot(sx-m.x,sy-m.y)<m.r+10){ score++; caught=true; return false; }
       return true;
     });
   });
 
   function loop(){
     if(!running) return;
-    tcnt++;
-    if(tcnt%60===0) spawnMouse();
-    if(mice.length>12) mice.shift();
+    t++;
+    if(t%70===0) spawnMouse();
+    if(mice.length>10) mice.shift();
 
     ctx.fillStyle='#0e1a10'; ctx.fillRect(0,0,W,H);
-    mice=mice.filter(m=>{ m.life--; if(m.life<=0){ score=0; return false; } return true; });
+
+    // grid lines for depth
+    ctx.strokeStyle='rgba(255,255,255,.03)'; ctx.lineWidth=1;
+    for(let gx=0;gx<W;gx+=32){ ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke(); }
+    for(let gy=0;gy<H;gy+=32){ ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke(); }
+
+    mice=mice.filter(m=>{ 
+      m.life--;
+      if(m.life<=0){ score=0; return false; }
+      return true;
+    });
     for(const m of mice){
       m.x+=m.vx; m.y+=m.vy;
       if(m.x<m.r||m.x>W-m.r){ m.vx*=-1; m.x=Math.max(m.r,Math.min(W-m.r,m.x)); }
       if(m.y<m.r||m.y>H-m.r){ m.vy*=-1; m.y=Math.max(m.r,Math.min(H-m.r,m.y)); }
+
+      const fade=Math.min(1, m.life/40);
+      ctx.globalAlpha=fade;
       ctx.font='26px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText('🐭',m.x,m.y);
+      // life ring
+      ctx.beginPath();
+      ctx.arc(m.x,m.y,m.r+3, -Math.PI/2, -Math.PI/2 + Math.PI*2*(m.life/m.maxLife));
+      ctx.strokeStyle='#22c55e'; ctx.lineWidth=2; ctx.stroke();
+      ctx.globalAlpha=1;
     }
+
+    ctx.font='9px DM Mono,monospace'; ctx.fillStyle='rgba(255,255,255,.22)'; ctx.textAlign='left';
+    ctx.fillText(`Mice: ${mice.length}`, 6, 13);
+
     const hi=Math.max(score,parseInt(safeGetLS('mg_hi_'+id,'0')));
     safeSetLS('mg_hi_'+id,hi);
-    document.getElementById('mgs-'+id).textContent=`${t('scoreLabel')}: ${score} · ${t('bestLabel')}: ${hi}`;
+    document.getElementById('mgs-'+id).textContent=`Score: ${score} · Best: ${hi}`;
     requestAnimationFrame(loop);
   }
   loop();
   mgLoops[id]=()=>{running=false;};
 }
 
+// ── GAME 2: Basketball shoot ──────────────────────────
 function buildBasketballGame(container, id){
   const W=288, H=200;
-  container.innerHTML=`<canvas class="mg-canvas" id="mgc-${id}" width="${W}" height="${H}"></canvas><div class="mg-score" id="mgs-${id}">${t('scoreLabel')}: 0 · ${t('bestLabel')}: ${safeGetLS('mg_hi_'+id,'0')}</div>`;
+  container.innerHTML=`<canvas class="mg-canvas" id="mgc-${id}" width="${W}" height="${H}"></canvas>`;
   const cv=document.getElementById('mgc-'+id);
   const ctx=cv.getContext('2d');
+
+  const GRAVITY = 0.38;
+  const BALL_R  = 11;
+  const HOOP_X  = W-70, HOOP_Y=65, HOOP_W=42, RIM_R=5;
+
   let score=0, running=true;
   let ball={ x:44, y:H-30, vx:0, vy:0, flying:false };
   let dragStart=null, dragCur=null;
+  let streak=0; // consecutive makes for streak bonus
+
+  // trajectory preview dots
+  function previewPoints(sx,sy,vx,vy,n=28){
+    const pts=[];
+    let px=sx,py=sy,pvx=vx,pvy=vy;
+    for(let i=0;i<n;i++){
+      pvy+=GRAVITY; px+=pvx; py+=pvy;
+      pts.push({x:px,y:py});
+      if(py>H) break;
+    }
+    return pts;
+  }
+
+  function dragVel(){
+    if(!dragStart||!dragCur) return {vx:0,vy:0};
+    const dx=(dragStart.x-dragCur.x)*0.09;
+    const dy=(dragStart.y-dragCur.y)*0.09;
+    return {vx:dx, vy:dy};
+  }
 
   function getPos(e){
     const r=cv.getBoundingClientRect();
@@ -924,87 +962,232 @@ function buildBasketballGame(container, id){
     return {x:(src.clientX-r.left)*(W/r.width), y:(src.clientY-r.top)*(H/r.height)};
   }
 
-  cv.addEventListener('pointerdown', e=>{ if(!ball.flying){ dragStart=getPos(e); dragCur=getPos(e); } });
-  cv.addEventListener('pointermove', e=>{ if(dragStart&&!ball.flying) dragCur=getPos(e); });
-  cv.addEventListener('pointerup',   e=>{ if(dragStart&&!ball.flying){ launch(); } });
+  cv.addEventListener('mousedown', e=>{ if(!ball.flying){ dragStart=getPos(e); dragCur=getPos(e); } });
+  cv.addEventListener('mousemove', e=>{ if(dragStart&&!ball.flying) dragCur=getPos(e); });
+  cv.addEventListener('mouseup',   e=>{ if(dragStart&&!ball.flying){ launch(); } });
+  cv.addEventListener('touchstart', e=>{ e.preventDefault(); if(!ball.flying){ dragStart=getPos(e); dragCur=getPos(e); } },{passive:false});
+  cv.addEventListener('touchmove',  e=>{ e.preventDefault(); if(dragStart&&!ball.flying) dragCur=getPos(e); },{passive:false});
+  cv.addEventListener('touchend',   e=>{ e.preventDefault(); if(dragStart&&!ball.flying) launch(); },{passive:false});
 
   function launch(){
-    const vx=(dragStart.x-dragCur.x)*0.08;
-    const vy=(dragStart.y-dragCur.y)*0.08;
+    const {vx,vy}=dragVel();
     ball.vx=vx; ball.vy=vy; ball.flying=true;
     dragStart=null; dragCur=null;
   }
-  function resetBall(){ ball={x:44,y:H-30,vx:0,vy:0,flying:false}; }
+
+  function resetBall(){ ball={x:44,y:H-30,vx:0,vy:0,flying:false}; dragStart=null; dragCur=null; }
+
+  function drawHoop(){
+    // backboard
+    ctx.fillStyle='#e5e7eb';
+    ctx.fillRect(W-20, HOOP_Y-30, 8, 55);
+    ctx.fillStyle='#dc2626'; ctx.fillRect(W-20, HOOP_Y-18, 8, 24);
+    // left rim
+    ctx.beginPath(); ctx.arc(HOOP_X, HOOP_Y, RIM_R, 0, Math.PI*2);
+    ctx.fillStyle='#ea580c'; ctx.fill();
+    // right rim
+    ctx.beginPath(); ctx.arc(HOOP_X+HOOP_W, HOOP_Y, RIM_R, 0, Math.PI*2);
+    ctx.fill();
+    // rim bar
+    ctx.beginPath(); ctx.moveTo(HOOP_X,HOOP_Y); ctx.lineTo(HOOP_X+HOOP_W,HOOP_Y);
+    ctx.strokeStyle='#f97316'; ctx.lineWidth=3; ctx.stroke();
+    // net
+    const nx=HOOP_X, nw=HOOP_W;
+    ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){
+      ctx.beginPath();
+      ctx.moveTo(nx+nw*i/4, HOOP_Y+2);
+      ctx.lineTo(nx+nw*(i*0.7/4+0.15), HOOP_Y+28);
+      ctx.stroke();
+    }
+    for(let j=1;j<=3;j++){
+      ctx.beginPath();
+      ctx.moveTo(nx+nw*0.05, HOOP_Y+28*j/3.5);
+      ctx.lineTo(nx+nw*0.95, HOOP_Y+28*j/3.5);
+      ctx.stroke();
+    }
+  }
+
+  function checkScore(){
+    const cx=HOOP_X+HOOP_W/2, cy=HOOP_Y;
+    // ball centre must pass through hoop window going downward
+    if(ball.vy>0 &&
+       ball.x > HOOP_X+RIM_R+1 && ball.x < HOOP_X+HOOP_W-RIM_R-1 &&
+       Math.abs(ball.y - cy) < 10){
+      streak++;
+      const pts = streak>=3 ? 2 : 1;
+      score += pts;
+      // flash text
+      flashText = {text: streak>=3?`+${pts} 🔥 x${streak}!`:`+${pts}`, x:cx, y:cy-20, life:50};
+      resetBall();
+    }
+  }
+
+  function checkRimCollision(){
+    // bounce off left and right rim circles
+    for(const rx of [HOOP_X, HOOP_X+HOOP_W]){
+      const dx=ball.x-rx, dy=ball.y-HOOP_Y;
+      const d=Math.hypot(dx,dy);
+      if(d < BALL_R+RIM_R){
+        const nx=dx/d, ny=dy/d;
+        const dot=ball.vx*nx+ball.vy*ny;
+        ball.vx=(ball.vx-2*dot*nx)*0.55;
+        ball.vy=(ball.vy-2*dot*ny)*0.55;
+        ball.x=rx+nx*(BALL_R+RIM_R+1);
+        ball.y=HOOP_Y+ny*(BALL_R+RIM_R+1);
+        streak=0; // rim hit resets streak
+      }
+    }
+  }
+
+  let flashText=null;
 
   function loop(){
     if(!running) return;
-    ctx.fillStyle='#7c3f00'; ctx.fillRect(0,0,W,H);
-    if(ball.flying){
-      ball.vy+=0.35; ball.x+=ball.vx; ball.y+=ball.vy;
-      if(ball.y>H-18){ ball.y=H-18; ball.vy*=-0.4; ball.vx*=0.75; if(Math.abs(ball.vy)<0.8){ score=0; resetBall(); } }
-      if(ball.x<12||ball.x>W-12) ball.vx*=-0.5;
-      if(ball.x>W-70 && ball.x<W-30 && ball.y>50 && ball.y<75 && ball.vy>0){
-        score++; resetBall();
-      }
-    }
-    ctx.strokeStyle='#fff'; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.moveTo(W-70,50); ctx.lineTo(W-30,50); ctx.stroke();
 
-    ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    // background: court
+    ctx.fillStyle='#7c3f00'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#6d3500';
+    for(let lx=0;lx<W;lx+=24){ ctx.fillRect(lx,0,12,H); }
+    // floor line
+    ctx.strokeStyle='rgba(255,255,255,.15)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,H-18); ctx.lineTo(W,H-18); ctx.stroke();
+
+    drawHoop();
+
+    if(ball.flying){
+      ball.vy+=GRAVITY;
+      ball.x+=ball.vx; ball.y+=ball.vy;
+      // floor
+      if(ball.y>H-18){
+        ball.y=H-18; ball.vy*=-0.42; ball.vx*=0.78;
+        streak=0;
+        if(Math.abs(ball.vy)<0.8){ score=0; resetBall(); }
+      }
+      // walls
+      if(ball.x<BALL_R){ ball.x=BALL_R; ball.vx*=-0.5; }
+      if(ball.x>W-BALL_R){ ball.x=W-BALL_R; ball.vx*=-0.5; }
+
+      checkRimCollision();
+      checkScore();
+    }
+
+    // trajectory preview when dragging
+    if(dragStart&&dragCur&&!ball.flying){
+      const {vx,vy}=dragVel();
+      const pts=previewPoints(ball.x,ball.y,vx,vy);
+      for(let i=0;i<pts.length;i++){
+        ctx.globalAlpha=(1-i/pts.length)*0.5;
+        ctx.beginPath(); ctx.arc(pts[i].x,pts[i].y,2,0,Math.PI*2);
+        ctx.fillStyle='#fff'; ctx.fill();
+      }
+      ctx.globalAlpha=1;
+      // drag arrow
+      ctx.strokeStyle='rgba(255,255,255,.3)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(dragStart.x,dragStart.y); ctx.lineTo(dragCur.x,dragCur.y); ctx.stroke();
+    }
+
+    // ball with spin shadow
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,.4)'; ctx.shadowBlur=8; ctx.shadowOffsetY=4;
+    ctx.font=`${BALL_R*2}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText('🏀',ball.x,ball.y);
+    ctx.restore();
+
+    // flash score text
+    if(flashText){
+      ctx.globalAlpha=flashText.life/50;
+      ctx.font='bold 14px DM Sans,sans-serif'; ctx.fillStyle='#fde047';
+      ctx.textAlign='center'; ctx.fillText(flashText.text,flashText.x,flashText.y-=(50-flashText.life)*0.08);
+      ctx.globalAlpha=1;
+      if(--flashText.life<=0) flashText=null;
+    }
+
+    // hint
+    if(!ball.flying&&!dragStart){
+      ctx.font='9px DM Sans,sans-serif'; ctx.fillStyle='rgba(255,255,255,.3)'; ctx.textAlign='left';
+      ctx.fillText('Drag to shoot',6,13);
+    }
+
     const hi=Math.max(score,parseInt(safeGetLS('mg_hi_'+id,'0')));
     safeSetLS('mg_hi_'+id,hi);
-    document.getElementById('mgs-'+id).textContent=`${t('scoreLabel')}: ${score} · ${t('bestLabel')}: ${hi}`;
+    // draw score on canvas top-right so it's always visible
+    ctx.font='bold 10px DM Mono,monospace';
+    ctx.textAlign='right'; ctx.textBaseline='top';
+    ctx.fillStyle='rgba(0,0,0,.5)';
+    ctx.fillRect(W-110, 4, 106, 16);
+    ctx.fillStyle='#a5b4fc';
+    ctx.fillText(`Score: ${score}  Best: ${hi}${streak>=3?' 🔥':''}`, W-4, 6);
     requestAnimationFrame(loop);
   }
   loop();
   mgLoops[id]=()=>{running=false;};
 }
 
+// ── GAME 3: Kat ontwijken ─────────────────────────────
 function buildCatGame(container, id){
   const W=288,H=160;
-  container.innerHTML=`<canvas class="mg-canvas" id="mgc-${id}" width="${W}" height="${H}"></canvas><div class="mg-score" id="mgs-${id}">${t('timeLabel')}: 0s · ${t('bestLabel')}: ${safeGetLS('mg_hi_'+id,'0')}s</div>`;
+  container.innerHTML=`<canvas class="mg-canvas" id="mgc-${id}" width="${W}" height="${H}"></canvas><div class="mg-score" id="mgs-${id}">Time: 0s · Best: ${safeGetLS('mg_hi_'+id,'0')}s</div>`;
   const cv=document.getElementById('mgc-'+id);
   const ctx=cv.getContext('2d');
-  let running=true, alive=true, tcnt=0;
+  let running=true, alive=true, t=0;
   let player={x:W/2,y:H/2};
   let cats=[];
   let mx=W/2,my=H/2;
 
-  cv.addEventListener('pointermove',e=>{
+  cv.addEventListener('mousemove',e=>{
     const r=cv.getBoundingClientRect();
     mx=(e.clientX-r.left)*(W/r.width);
     my=(e.clientY-r.top)*(H/r.height);
   });
-  cv.addEventListener('pointerdown',()=>{ if(!alive){alive=true;tcnt=0;cats=[];player={x:W/2,y:H/2};} });
+  cv.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    const r=cv.getBoundingClientRect();
+    mx=(e.touches[0].clientX-r.left)*(W/r.width);
+    my=(e.touches[0].clientY-r.top)*(H/r.height);
+  },{passive:false});
+  cv.addEventListener('click',()=>{ if(!alive){alive=true;t=0;cats=[];player={x:W/2,y:H/2};} });
 
-  function spawnCat(){ cats.push({x:Math.random()*W, y:-20, spd:1.0+Math.min(tcnt/350,2.2)}); }
+  function spawnCat(){
+    const side=Math.floor(Math.random()*4);
+    let x,y;
+    if(side===0){x=Math.random()*W;y=-20;}
+    else if(side===1){x=W+20;y=Math.random()*H;}
+    else if(side===2){x=Math.random()*W;y=H+20;}
+    else{x=-20;y=Math.random()*H;}
+    const spd=1.2+Math.min(t/300,2.5);
+    cats.push({x,y,spd});
+  }
 
   function loop(){
     if(!running) return;
     ctx.fillStyle='#0d0d1a'; ctx.fillRect(0,0,W,H);
     if(alive){
-      tcnt++;
-      if(tcnt%140===0) spawnCat();
-      player.x+=(mx-player.x)*.2; player.y+=(my-player.y)*.2;
+      t++;
+      if(t%150===0) spawnCat();
+      player.x+=(mx-player.x)*.18;
+      player.y+=(my-player.y)*.18;
+      player.x=Math.max(12,Math.min(W-12,player.x));
+      player.y=Math.max(12,Math.min(H-12,player.y));
       for(const c of cats){
         const dx=player.x-c.x, dy=player.y-c.y, d=Math.hypot(dx,dy);
         c.x+=dx/d*c.spd; c.y+=dy/d*c.spd;
-        if(d<16) alive=false;
+        if(d<18){ alive=false; }
         ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('🐱',c.x,c.y);
       }
+      ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText('💵',player.x,player.y);
-      const secs=Math.floor(tcnt/60);
+      const secs=Math.floor(t/60);
       const hi=Math.max(secs,parseInt(safeGetLS('mg_hi_'+id,'0')));
       safeSetLS('mg_hi_'+id,hi);
-      document.getElementById('mgs-'+id).textContent=`${t('timeLabel')}: ${secs}s · ${t('bestLabel')}: ${hi}s`;
+      document.getElementById('mgs-'+id).textContent=`Time: ${secs}s · Best: ${hi}s`;
     } else {
-      ctx.fillStyle='rgba(255,50,50,.15)'; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='rgba(255,50,50,.12)'; ctx.fillRect(0,0,W,H);
       ctx.font='bold 14px DM Sans,sans-serif'; ctx.fillStyle='#fff'; ctx.textAlign='center';
-      ctx.fillText(t('gotCaught'),W/2,H/2-10);
-      ctx.font='10px DM Sans,sans-serif'; ctx.fillStyle='rgba(255,255,255,.5)';
-      ctx.fillText(t('clickPlayAgain'),W/2,H/2+12);
+      ctx.fillText('You got caught! 🐱',W/2,H/2-10);
+      ctx.font='10px DM Sans,sans-serif'; ctx.fillStyle='rgba(255,255,255,.4)';
+      ctx.fillText('Click to play again',W/2,H/2+12);
     }
     requestAnimationFrame(loop);
   }
@@ -1012,133 +1195,250 @@ function buildCatGame(container, id){
   mgLoops[id]=()=>{running=false;};
 }
 
+// ── GAME 4: Paard Springt (dino-runner style) ─────────
 function buildHorseGame(container, id){
   const W=288, H=160;
-  container.innerHTML=`<canvas class="mg-canvas" id="mgc-${id}" width="${W}" height="${H}"></canvas><div class="mg-score" id="mgs-${id}">${t('distanceLabel')}: 0 m · ${t('bestLabel')}: ${safeGetLS('mg_hi_'+id,'0')} m</div>`;
+  container.innerHTML=`<canvas class="mg-canvas" id="mgc-${id}" width="${W}" height="${H}"></canvas><div class="mg-score" id="mgs-${id}">Distance: 0 m · Best: ${safeGetLS('mg_hi_'+id,'0')} m</div>`;
   const cv=document.getElementById('mgc-'+id);
   const ctx=cv.getContext('2d');
+
   const GROUND = H - 28;
-  let running=true, alive=true, dist=0, speed=2.5, tcnt=0;
-  let horse = { x:50, y:GROUND, vy:0, onGround:true };
-  let obstacle = { x: W + 50, w: 16, h: 26 };
+  let running=true, alive=true, dist=0, speed=2.2, t=0;
+  let horse = { x:50, y:GROUND, vy:0, onGround:true, frame:0, frameT:0 };
+  let obstacles=[], clouds=[];
+  // pre-seed some clouds
+  for(let i=0;i<4;i++) clouds.push({x:Math.random()*W, y:20+Math.random()*40, w:30+Math.random()*30, spd:0.4+Math.random()*0.3});
 
-  function reset(){ alive=true; dist=0; speed=2.5; tcnt=0; horse={x:50,y:GROUND,vy:0,onGround:true}; obstacle.x=W+50; }
-  function jump(){ if(horse.onGround){ horse.vy=-8.2; horse.onGround=false; } }
+  function reset(){
+    alive=true; dist=0; speed=2.2; t=0;
+    horse={x:50,y:GROUND,vy:0,onGround:true,frame:0,frameT:0};
+    obstacles=[];
+  }
 
-  cv.addEventListener('pointerdown', ()=>{ if(!alive) reset(); else jump(); });
+  function jump(){
+    if(horse.onGround){ horse.vy=-8.5; horse.onGround=false; }
+  }
+
+  cv.addEventListener('click', ()=>{ if(!alive) reset(); else jump(); });
+  cv.addEventListener('keydown', e=>{ if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); if(!alive) reset(); else jump(); } });
+  cv.addEventListener('touchstart', e=>{ e.preventDefault(); if(!alive) reset(); else jump(); }, {passive:false});
+
+  // obstacle types: fence, bush, rock
+  const OBS_TYPES = [
+    { emoji:'🌵', w:20, h:32 },
+    { emoji:'🪨', w:24, h:20 },
+    { emoji:'🌾', w:18, h:26 },
+  ];
+
+  function spawnObstacle(){
+    const type = OBS_TYPES[Math.floor(Math.random()*OBS_TYPES.length)];
+    const gap  = Math.random() < 0.3 ? 20 : 0; // occasionally double obstacles
+    obstacles.push({...type, x:W+10, gap});
+    if(gap){ obstacles.push({...OBS_TYPES[Math.floor(Math.random()*OBS_TYPES.length)], x:W+10+28, gap:0}); }
+  }
+
+  let nextObs = 80;
+
+  // horse leg animation frames (simple pixel legs)
+  function drawHorse(h){
+    const py = h.y;
+    ctx.save();
+    ctx.translate(h.x, py);
+
+    // shadow
+    ctx.fillStyle='rgba(0,0,0,.2)';
+    ctx.beginPath(); ctx.ellipse(0,4,16,4,0,0,Math.PI*2); ctx.fill();
+
+    // body emoji
+    ctx.font='28px serif';
+    ctx.textAlign='center';
+    ctx.textBaseline='bottom';
+    // gallop: slight rotation while running
+    const tilt = h.onGround ? Math.sin(h.frameT*0.3)*0.08 : -0.15;
+    ctx.rotate(tilt);
+    ctx.fillText('🐴', 0, 0);
+    ctx.restore();
+  }
 
   function loop(){
     if(!running) return;
-    ctx.fillStyle='#87ceeb'; ctx.fillRect(0,0,W,GROUND);
+
+    // background
+    const skyG = ctx.createLinearGradient(0,0,0,GROUND);
+    skyG.addColorStop(0,'#87ceeb'); skyG.addColorStop(1,'#c8e8f8');
+    ctx.fillStyle=skyG; ctx.fillRect(0,0,W,GROUND);
+
+    // clouds
+    for(const c of clouds){
+      c.x -= c.spd;
+      if(c.x + c.w < 0) { c.x=W+10; c.y=15+Math.random()*35; }
+      ctx.fillStyle='rgba(255,255,255,.85)';
+      ctx.beginPath(); ctx.ellipse(c.x,c.y,c.w/2,10,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(c.x+10,c.y-8,c.w/3,8,0,0,Math.PI*2); ctx.fill();
+    }
+
+    // ground
     ctx.fillStyle='#5c4a1e'; ctx.fillRect(0,GROUND,W,H-GROUND);
+    ctx.fillStyle='#6aaa3a'; ctx.fillRect(0,GROUND,W,6);
+    // ground detail lines
+    ctx.strokeStyle='rgba(0,0,0,.1)'; ctx.lineWidth=1;
+    for(let lx=(t*speed*0.5)%40; lx<W; lx+=40){
+      ctx.beginPath(); ctx.moveTo(lx,GROUND+10); ctx.lineTo(lx+20,GROUND+10); ctx.stroke();
+    }
 
     if(alive){
-      tcnt++; dist += speed/55;
-      obstacle.x -= speed;
-      if(obstacle.x < -30){ obstacle.x = W + Math.random()*80; }
+      t++;
+      dist += speed/60;
+      speed = Math.min(6, 2.2 + dist * 0.025);
 
+      // horse physics
+      horse.frameT++;
       if(!horse.onGround){
-        horse.vy += 0.42; horse.y += horse.vy;
+        horse.vy += 0.45;
+        horse.y  += horse.vy;
         if(horse.y >= GROUND){ horse.y=GROUND; horse.vy=0; horse.onGround=true; }
       }
 
-      if(Math.abs(horse.x - obstacle.x) < 14 && horse.y >= GROUND - obstacle.h){
-        alive = false;
+      // obstacles
+      nextObs--;
+      if(nextObs <= 0){
+        spawnObstacle();
+        nextObs = Math.round(90 + Math.random()*60 - dist*0.5);
+        nextObs = Math.max(nextObs, 45);
+      }
+      obstacles = obstacles.filter(o=>o.x > -40);
+      for(const o of obstacles){
+        o.x -= speed;
+        // draw
+        ctx.font=`${o.h}px serif`;
+        ctx.textAlign='center'; ctx.textBaseline='bottom';
+        ctx.fillText(o.emoji, o.x, GROUND+2);
+        // hitbox check
+        if(Math.abs(o.x - horse.x) < 14 && horse.y > GROUND - o.h + 10){
+          alive=false;
+        }
       }
 
-      ctx.font='28px serif'; ctx.textAlign='center'; ctx.textBaseline='bottom';
-      ctx.fillText('🐴', horse.x, horse.y);
-      ctx.fillStyle='#333'; ctx.fillRect(obstacle.x-8, GROUND-obstacle.h, obstacle.h, obstacle.h);
+      drawHorse(horse);
+
+      // hint
+      ctx.font='8px DM Sans,sans-serif'; ctx.fillStyle='rgba(0,0,0,.3)'; ctx.textAlign='left';
+      ctx.fillText('Click / space to jump', 5, 13);
 
       const m=Math.round(dist);
       const hi=Math.max(m,parseInt(safeGetLS('mg_hi_'+id,'0')));
       safeSetLS('mg_hi_'+id,hi);
-      document.getElementById('mgs-'+id).textContent=`${t('distanceLabel')}: ${m} m · ${t('bestLabel')}: ${hi} m`;
+      document.getElementById('mgs-'+id).textContent=`Distance: ${m} m · Best: ${hi} m`;
+
     } else {
+      // death screen overlay
       ctx.fillStyle='rgba(0,0,0,.45)'; ctx.fillRect(0,0,W,H);
       ctx.font='bold 15px DM Sans,sans-serif'; ctx.fillStyle='#fff'; ctx.textAlign='center';
-      ctx.fillText(t('wipedOut'), W/2, H/2-12);
+      ctx.fillText('🐴 Wiped out!', W/2, H/2-12);
       ctx.font='10px DM Sans,sans-serif'; ctx.fillStyle='rgba(255,255,255,.5)';
-      ctx.fillText(t('clickPlayAgain'), W/2, H/2+10);
+      ctx.fillText('Click to play again', W/2, H/2+10);
     }
+
     requestAnimationFrame(loop);
   }
   loop();
   mgLoops[id]=()=>{running=false;};
 }
 
-let mgPanelOpen = false;
 function openMgPanel(){
-  mgPanelOpen = true; renderMgPanel();
+  mgPanelOpen=true; newMgCount=0; updateMgBadge(); renderMgPanel();
   document.getElementById('mg-box').classList.add('open');
 }
 function closeMgPanel(){
-  mgPanelOpen = false;
+  mgPanelOpen=false;
   if(activeMgId) stopMgGame(activeMgId);
   document.getElementById('mg-box').classList.remove('open');
 }
-document.getElementById('mg-btn').addEventListener('click', ()=> mgPanelOpen ? closeMgPanel() : openMgPanel());
-document.getElementById('mg-close').addEventListener('click', closeMgPanel);
+document.getElementById('mg-btn').addEventListener('click',()=>mgPanelOpen?closeMgPanel():openMgPanel());
+document.getElementById('mg-close').addEventListener('click',closeMgPanel);
 
-let gameMode = null;
+// ═══════════════════════════════
+// GAME MODE
+// ═══════════════════════════════
+let gameMode = null; // 'sp' or 'mp'
+
+// ═══════════════════════════════
+// FIREBASE & SYNC (only in MP)
+// ═══════════════════════════════
 let billsRef, scoresRef;
 
 function initFirebase(){
-  try {
-    if (typeof firebase !== 'undefined') {
-      firebase.initializeApp({
-        apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
-        authDomain: "money-digger-9b05e.firebaseapp.com",
-        databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "money-digger-9b05e",
-        storageBucket: "money-digger-9b05e.firebasestorage.app",
-        messagingSenderId: "883506536944",
-        appId: "1:883506536944:web:921b342dff76154fcbbd35"
-      });
-      const db = firebase.database();
-      billsRef = db.ref('totalBills');
-      scoresRef = db.ref('scores');
-      const onlineRef = db.ref('online');
-      const myRef = onlineRef.push();
-      myRef.set(true);
-      myRef.onDisconnect().remove();
-      onlineRef.on('value', snap => {
-        document.getElementById('online').textContent = `● ${snap.numChildren()} online`;
-      });
+try {
+  if (typeof firebase !== 'undefined') {
+    firebase.initializeApp({
+      apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+      authDomain: "money-digger-9b05e.firebaseapp.com",
+      databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "money-digger-9b05e",
+      storageBucket: "money-digger-9b05e.firebasestorage.app",
+      messagingSenderId: "883506536944",
+      appId: "1:883506536944:web:921b342dff76154fcbbd35"
+    });
+    
+    const db = firebase.database();
+    billsRef = db.ref('totalBills');
+    scoresRef = db.ref('scores');
+    const onlineRef = db.ref('online');
+    const myRef = onlineRef.push();
 
-      scoresRef.on('value', snap => {
-        scores = {};
-        let berekendTotaal = 0;
-        snap.forEach(child => {
-          const rec = child.val();
-          if(rec === null || rec === undefined) return;
-          if (typeof rec === 'number') {
-            scores[child.key] = (scores[child.key] || 0) + rec;
-            berekendTotaal += rec;
-            return;
-          }
-          const did   = child.key;
-          const clicks= rec.clicks|| 0;
-          if(did === deviceId){
-            myClicks = clicks;
-            myName   = rec.name || myName;
-            safeSetLS('pg_player_name', myName);
-            safeSetLS('md6_n', myName);
-          }
-          scores[rec.name || 'Unknown'] = (scores[rec.name || 'Unknown']||0) + clicks;
-          berekendTotaal += clicks;
-        });
-        if (gameMode !== 'sp') {
-          totalBills = berekendTotaal;
+    myRef.set(true);
+    myRef.onDisconnect().remove();
+    onlineRef.on('value', snap => {
+      document.getElementById('online').textContent = `● ${snap.numChildren()} online`;
+    });
+
+scoresRef.on('value', snap => {
+      scores = {};
+      let berekendTotaal = 0;
+
+      snap.forEach(child => {
+        const rec = child.val();
+        if(rec === null || rec === undefined) return;
+        
+        if (typeof rec === 'number') {
+          scores[child.key] = (scores[child.key] || 0) + rec;
+          berekendTotaal += rec;
+          return;
         }
-        updateScoreboard();
-      });
-    }
-  } catch(e) {
-    document.getElementById('online').textContent = t('offline');
-  }
-}
 
+        const did   = child.key;
+        const name  = rec.name  || 'Onbekend';
+        const clicks= rec.clicks|| 0;
+        
+        if(did === deviceId){
+          myClicks = clicks;
+          myName   = rec.name || myName;
+          safeSetLS('pg_player_name', myName);
+          safeSetLS('md6_n', myName);
+        }
+        
+        scores[name] = (scores[name]||0) + clicks;
+        berekendTotaal += clicks;
+      });
+      
+      if (typeof gameMode !== 'undefined' && gameMode !== 'sp') {
+          totalBills = berekendTotaal;
+      }
+      
+      updateScoreboard();
+    });
+  } else {
+    throw new Error("Firebase kon niet laden");
+  }
+} catch(e) {
+  console.warn("Local / offline mode started:", e);
+  document.getElementById('online').textContent = "● Offline mode";
+}
+} // end initFirebase
+
+// startGame now also triggers Firebase for MP
+const _origStart = startGame;
+// Override startGame to also call initFirebase for mp
 function startGame(mode){
   gameMode = mode;
   const menu = document.getElementById('menu');
@@ -1146,11 +1446,14 @@ function startGame(mode){
   setTimeout(()=>{ menu.style.display='none'; }, 500);
 
   if(mode === 'sp'){
-    document.getElementById('online').textContent = t('singleplayerMode');
+    document.getElementById('online').textContent = '● Singleplayer';
     totalBills   = parseInt(safeGetLS('md6_sp_bills', '0')) || 0;
     displayBills = totalBills;
-    document.getElementById('sp-btns').style.display = 'flex';
+    // Show achievements button
+    const achBtn = document.getElementById('sp-btns');
+    achBtn.style.display = 'flex';
     renderAchPanel();
+    // Start play timer
     spPlayTimer = setInterval(()=>{ spPlaySeconds++; checkAchievements(); }, 1000);
   } else {
     initFirebase();
@@ -1163,12 +1466,13 @@ document.getElementById('btn-sp').addEventListener('click', ()=> startGame('sp')
 document.getElementById('btn-mp').addEventListener('click', ()=> startGame('mp'));
 
 document.getElementById('cbtn').addEventListener('click', ()=>{
-  if(!gameMode) return;
+  if(!gameMode) return; // menu still open
   myClicks++; 
   totalBills++; 
   spawnBill();
   
   if(gameMode === 'sp'){
+    // Save singleplayer progress locally
     safeSetLS('md6_sp_bills', totalBills);
     scores[myName] = myClicks;
     updateScoreboard();
@@ -1178,23 +1482,30 @@ document.getElementById('cbtn').addEventListener('click', ()=>{
     return;
   }
 
-  try {
+try {
     if(scoresRef && typeof scoresRef.transaction === 'function') {
+      
       scoresRef.child(deviceId).transaction(rec => {
         if(!rec || typeof rec !== 'object') rec = { clicks: 0, name: myName };
         rec.clicks = (rec.clicks||0) + 1;
         rec.name = myName;
         return rec;
       });
+    } else {
+      scores[myName] = myClicks;
+      updateScoreboard();
     }
   } catch(e) {}
 });
 
+let loopRunning = false;
 function loop(){
-  if(!gameMode) return;
+  if(!gameMode) return; // wait for menu choice
   requestAnimationFrame(loop);
+  
   displayBills += (totalBills - displayBills) * 0.1;
   const b = Math.round(displayBills);
+  
   ctx.clearRect(0, 0, W, H);
   drawSky(b * BILL_M);
   drawGround(b * BILL_M);
@@ -1203,6 +1514,7 @@ function loop(){
   updateHUD();
 }
 
+// Draw static background while on menu
 (function menuBg(){
   if(gameMode) return;
   ctx.clearRect(0,0,W,H);
