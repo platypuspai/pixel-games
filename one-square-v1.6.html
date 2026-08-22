@@ -64,8 +64,6 @@ body {
 .s-btn-home:hover { background:#253545; }
 .s-btn-fs    { background:#1a1a2a; border-color:#4a4a8a; color:#aaf; }
 .s-btn-fs:hover { background:#25253a; }
-.s-btn-lang  { background:#2a1a3a; border-color:#6a2a8a; color:#f8f; }
-.s-btn-lang:hover { background:#3a254a; }
 #mp-status { font-size: 7px; color: #5a5; text-align:center; }
 canvas { display: block; image-rendering: pixelated; }
 :fullscreen #top-bar { width: 100vw; }
@@ -102,15 +100,13 @@ canvas { display: block; image-rendering: pixelated; }
   <button id="btn-settings" title="Settings">⚙</button>
   <div id="settings-panel" class="hidden">
     <div class="settings-row">
-      <label id="lbl-name">Name</label>
+      <label>Name</label>
       <input id="settings-name" type="text" maxlength="12" placeholder="your name..." />
     </div>
     <button class="s-btn s-btn-name" id="btn-save-name">Save name</button>
     <hr class="settings-sep">
     <button class="s-btn s-btn-mp" id="btn-toggle-mp">🌐 Go to Multiplayer</button>
     <div id="mp-status" class="hidden"></div>
-    <hr class="settings-sep">
-    <button class="s-btn s-btn-lang" id="btn-lang">🌍 Lang: NL</button>
     <hr class="settings-sep">
     <button class="s-btn s-btn-reset" id="btn-reset">🗑 Reset singleplayer world</button>
     <hr class="settings-sep">
@@ -132,81 +128,7 @@ canvas { display: block; image-rendering: pixelated; }
 
 <script>
 // ═══════════════════════════════════════════════════════
-//  LOCALSTORAGE MULTI-LANGUAGE SYSTEM (NL / EN / FR)
-// ═══════════════════════════════════════════════════════
-const LANGUAGES = ["nl", "en", "fr"];
-const LANG_NAMES = { nl: "NL", en: "EN", fr: "FR" };
-
-let currentLangIndex = parseInt(localStorage.getItem("onesquare_lang_index"), 10);
-if (isNaN(currentLangIndex) || currentLangIndex < 0 || currentLangIndex >= LANGUAGES.length) {
-  currentLangIndex = 0; // Standaard Nederlands (0)
-}
-let currentLang = LANGUAGES[currentLangIndex];
-
-const TRANSLATIONS = {
-  nl: {
-    saveName: "Naam opslaan",
-    saved: "✓ Opgeslagen!",
-    toMultiplayer: "🌐 Ga naar Multiplayer",
-    toSingleplayer: "🏠 Ga naar Singleplayer",
-    resetWorld: "🗑 Reset singleplayer wereld",
-    goToWebsite: "🏠 Ga naar website",
-    fullscreen: "⛶ Volledig scherm",
-    exitFullscreen: "✕ Verlaat volledig scherm",
-    namePlaceholder: "jouw naam...",
-    langLabel: "🌍 Taal: ",
-    playBtn: "Speel ▶",
-    nameLabel: "Naam"
-  },
-  en: {
-    saveName: "Save name",
-    saved: "✓ Saved!",
-    toMultiplayer: "🌐 Go to Multiplayer",
-    toSingleplayer: "🏠 Go to Singleplayer",
-    resetWorld: "🗑 Reset singleplayer world",
-    goToWebsite: "🏠 Go to website",
-    fullscreen: "⛶ Fullscreen",
-    exitFullscreen: "✕ Exit fullscreen",
-    namePlaceholder: "your name...",
-    langLabel: "🌍 Lang: ",
-    playBtn: "Play ▶",
-    nameLabel: "Name"
-  },
-  fr: {
-    saveName: "Sauvegarder",
-    saved: "✓ Enregistré !",
-    toMultiplayer: "🌐 Mode Multijoueur",
-    toSingleplayer: "🏠 Mode Solo",
-    resetWorld: "🗑 Réinitialiser le monde",
-    goToWebsite: "🏠 Aller au site web",
-    fullscreen: "⛶ Plein écran",
-    exitFullscreen: "✕ Quitter plein écran",
-    namePlaceholder: "votre nom...",
-    langLabel: "🌍 Langue : ",
-    playBtn: "Jouer ▶",
-    nameLabel: "Nom"
-  }
-};
-
-function t(key) {
-  return TRANSLATIONS[currentLang][key] || key;
-}
-
-function updateTexts() {
-  document.getElementById("btn-save-name").textContent = t("saveName");
-  document.getElementById("btn-toggle-mp").textContent = isMultiplayer ? t("toSingleplayer") : t("toMultiplayer");
-  document.getElementById("btn-reset").textContent = t("resetWorld");
-  document.getElementById("btn-home").textContent = t("goToWebsite");
-  document.getElementById("btn-fs").textContent = document.fullscreenElement ? t("exitFullscreen") : t("fullscreen");
-  document.getElementById("btn-lang").textContent = t("langLabel") + LANG_NAMES[currentLang];
-  document.getElementById("settings-name").placeholder = t("namePlaceholder");
-  document.getElementById("name-input").placeholder = t("namePlaceholder");
-  document.getElementById("name-confirm").textContent = t("playBtn");
-  document.getElementById("lbl-name").textContent = t("nameLabel");
-}
-
-// ═══════════════════════════════════════════════════════
-//  FIREBASE CONFIG (zelfde project als platformer)[cite: 6]
+//  FIREBASE CONFIG (zelfde project als platformer)
 // ═══════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
@@ -219,7 +141,7 @@ const FIREBASE_CONFIG = {
 };
 
 // ═══════════════════════════════════════════════════════
-//  EMBEDDED TEXTURES (standalone, geen externe files)[cite: 6]
+//  EMBEDDED TEXTURES (standalone, geen externe files)
 // ═══════════════════════════════════════════════════════
 window._imgSrcs = {
   'dirt.png':    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACU0lEQVR4nCXLy5LjNAAF0Kun3247cdIZmh6YomcxRbGh+HsW/AB/wIoUQ6enHUfxU5JliQVnf4gEOIEPyATWFQwgAAcoYIEAcI7ZIYoxaVAKnkv89uvPeRz5zQanE8EkJc5ZAB6UCXkbpmr/OGkLyn//40+abiDzFXMXr8OP+1y6YVUXoVXm58+nis3dUxmZ9p9oHU8ZSwG6bfjhWB/K+PzX3+pyfhAkF+H9awc7Tt2le71wN/fv/07dxfSdALgAnDGRYB8OcV2Wqn1jJPzy5TtCyE3dvj/VxPsvn3+6DWMsGAP4BlDGEYjqdZH1u+awGd1eO+89l3Ge5eNi+6Uv6mZedABoLNHb8K1fjk/Pu8ePXmS9CTyt3u82KZtRB+PF128KIjOeCwZ6tyBUMpl4KlrVG+s9FYRFZVVvhG+E36fl+dOLcYHH2biBAoiiSGudJMn5fLbWxnFsrRVChBAIIS8vLyGEtm23bWMALwWmUdllJLk8Nbuh7xLB8yw5n18ZBQhzembB5Ylk2ALAzYpC4PihCd7mVaKnNWKQZH2skzQis16G7rXt7jzO9s2h4qAEyNIkioVZps2teZoA3hq9qyuzjL1SCL7ZVfu6cKudHTgFrkr1dwVnUsmKNL5d72UhrPciTg9pRThX40KZpIwFgM+Aj/LmqXZ6WvUU1WUO/vBQXC6XY3FI8+L1vTu/3faPCRfU/B/Uyj8eTkP75gQZNhmSWm0kPjx3K+6jc0nVfKrr5ni93WeAFBLWggIUqFLMMwjAAEGgAzgBlRgMNiBLyTiH/wBja0E8/rQXwwAAAABJRU5ErkJggg==',
@@ -548,7 +470,6 @@ const settingsPanel=document.getElementById("settings-panel");
 const settingsNameInput=document.getElementById("settings-name");
 const btnSaveName=document.getElementById("btn-save-name");
 const btnSettingsToggle=document.getElementById("btn-settings");
-const btnLang = document.getElementById("btn-lang");
 
 function setStatus(msg,color="#5a5"){
   if(msg){statusEl.textContent=msg;statusEl.style.color=color;statusEl.classList.remove("hidden");}
@@ -615,7 +536,7 @@ function enterMultiplayer() {
 
   isMultiplayer=true;
   modeBadge.textContent="🌐 MP";
-  btnToggle.textContent=t("toSingleplayer");
+  btnToggle.textContent="🏠 Go to Singleplayer";
   btnToggle.classList.add("in-mp");
   btnReset.style.display="none";
   spawnPlayer();
@@ -639,7 +560,7 @@ function exitMultiplayer() {
   hotbar=loadSPHotbar();
   isMultiplayer=false;
   modeBadge.textContent="🎮 SP";
-  btnToggle.textContent=t("toMultiplayer");
+  btnToggle.textContent="🌐 Go to Multiplayer";
   btnToggle.classList.remove("in-mp");
   btnReset.style.display="";
   setStatus("");
@@ -658,14 +579,6 @@ btnReset.addEventListener("click",()=>{
   saveSPWorld();
   saveSPHotbar();
   spawnPlayer();
-});
-
-// Language button action (cycles through NL -> EN -> FR)
-btnLang.addEventListener("click", () => {
-  currentLangIndex = (currentLangIndex + 1) % LANGUAGES.length;
-  currentLang = LANGUAGES[currentLangIndex];
-  localStorage.setItem("onesquare_lang_index", currentLangIndex);
-  updateTexts();
 });
 
 // Called after every world change
@@ -859,8 +772,8 @@ btnSaveName.addEventListener("click", () => {
   if(!n) return;
   myName = n;
   localStorage.setItem("onesquare_name", myName);
-  btnSaveName.textContent = t("saved");
-  setTimeout(() => { btnSaveName.textContent = t("saveName"); }, 1500);
+  btnSaveName.textContent = "✓ Saved!";
+  setTimeout(() => { btnSaveName.textContent = "Save name"; }, 1500);
 });
 settingsNameInput.addEventListener("keydown", e => {
   if(e.key === "Enter") btnSaveName.click();
@@ -877,14 +790,14 @@ const fsBtn = document.getElementById("btn-fs");
 fsBtn.addEventListener("click", () => {
   if(!document.fullscreenElement) {
     document.body.requestFullscreen().catch(() => {});
-    fsBtn.textContent = t("exitFullscreen");
+    fsBtn.textContent = "✕ Exit fullscreen";
   } else {
     document.exitFullscreen();
   }
 });
 document.addEventListener("fullscreenchange", () => {
   if(!document.fullscreenElement) {
-    fsBtn.textContent = t("fullscreen");
+    fsBtn.textContent = "⛶ Fullscreen";
   }
 });
 
@@ -904,8 +817,6 @@ function startGame() {
 
 nameConfirm.addEventListener("click", startGame);
 nameInput.addEventListener("keydown", e => { if(e.key === "Enter") startGame(); });
-
-updateTexts();
 
 if(myName) {
   nameInput.value = myName;
