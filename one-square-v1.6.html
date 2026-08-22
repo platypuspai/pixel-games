@@ -79,14 +79,30 @@ canvas { display: block; image-rendering: pixelated; }
 
 <script>
 // ═══════════════════════════════════════════════════════
-//  LOCALSTORAGE LANGUAGE SYSTEM (Gelezen vanaf index)
+//  LOCALSTORAGE LANGUAGE SYSTEM (Flexibel gelezen vanaf index)
 // ═══════════════════════════════════════════════════════
-const LANGUAGES = ["nl", "en", "fr"];
-let currentLangIndex = parseInt(localStorage.getItem("onesquare_lang_index"), 10);
-if (isNaN(currentLangIndex) || currentLangIndex < 0 || currentLangIndex >= LANGUAGES.length) {
-  currentLangIndex = 0; // Standaard NL
+function getLanguageFromStorage() {
+  // Controleer veelgebruikte sleutels die je index zou kunnen gebruiken
+  let lang = localStorage.getItem("onesquare_lang") || 
+             localStorage.getItem("lang") || 
+             localStorage.getItem("taal");
+  
+  if (lang) lang = lang.toLowerCase().trim();
+
+  // Accepteer alleen nl, en, of fr
+  if (["nl", "en", "fr"].includes(lang)) {
+    return lang;
+  }
+  // Als index het opslaat als een nummer (0=nl, 1=en, 2=fr)
+  let idx = parseInt(localStorage.getItem("onesquare_lang_index"), 10);
+  if (!isNaN(idx) && idx >= 0 && idx <= 2) {
+    return ["nl", "en", "fr"][idx];
+  }
+
+  return "nl"; // Fallback
 }
-let currentLang = LANGUAGES[currentLangIndex];
+
+let currentLang = getLanguageFromStorage();
 
 const TRANSLATIONS = {
   nl: {
@@ -126,8 +142,17 @@ function updateTexts() {
   document.getElementById("btn-fs").textContent = document.fullscreenElement ? t("exitFullscreen") : t("fullscreen");
 }
 
+// Luister naar live veranderingen in localStorage (als de gebruiker de index aanpast in een ander tabblad)
+window.addEventListener("storage", () => {
+  const newLang = getLanguageFromStorage();
+  if (newLang !== currentLang) {
+    currentLang = newLang;
+    updateTexts();
+  }
+});
+
 // ═══════════════════════════════════════════════════════
-//  FIREBASE CONFIG (Zelfde project als platformer)
+//  FIREBASE CONFIG
 // ═══════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
@@ -231,7 +256,7 @@ if(!myPlayerId) {
   localStorage.setItem("onesquare_playerid", myPlayerId);
 }
 
-let myName = "Speler";
+let myName = "Speler"; // Standaardnaam, wordt overschreven via Firebase
 
 const MY_COLOR    = "#e74c3c";
 const REMOTE_COLOR = "#3d8be8";
@@ -441,7 +466,7 @@ function placeBlock(bx,by) {
 }
 
 // ═══════════════════════════════════════════════════════
-//  FIREBASE MULTIPLAYER & FIREBASE NAME FETCHING
+//  FIREBASE MULTIPLAYER & NAAM OPHALEN
 // ═══════════════════════════════════════════════════════
 let db=null, fbInited=false;
 let myFbRef=null, myOnlineRef=null, myHotbarRef=null;
@@ -470,19 +495,15 @@ function initFirebase() {
   } catch(e) { console.warn("Firebase init failed",e); }
 }
 
-// Naam automatisch ophalen van Firebase
+// Haal naam op vanuit Firebase zodat hij niet hoeft te worden ingevuld[cite: 6]
 function fetchNameFromFirebase() {
   initFirebase();
   if(!db) return;
-  db.ref("onesquare/players/" + myPlayerId + "/name").once("value").then(snap => {
+  db.ref("onesquare/players/" + myPlayerId + "/name").on("value", snap => {
     const val = snap.val();
     if(val) {
       myName = val;
-    } else {
-      myName = "Speler_" + myPlayerId.slice(0,4);
     }
-  }).catch(() => {
-    myName = "Speler";
   });
 }
 
@@ -773,7 +794,7 @@ document.addEventListener("fullscreenchange", () => {
   }
 });
 
-// Start game and sync directly
+// Start de game direct op zonder invulschermen!
 updateTexts();
 fetchNameFromFirebase();
 requestAnimationFrame(loop);
