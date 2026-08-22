@@ -35,17 +35,6 @@ body {
   display: flex; flex-direction: column; gap: 6px;
 }
 #settings-panel.hidden { display: none; }
-.settings-row {
-  display: flex; gap: 4px; align-items: center;
-}
-.settings-row label {
-  font-size: 7px; color: #777; width: 52px; flex-shrink: 0;
-}
-.settings-row input[type=text] {
-  flex: 1; background: #2a2a2a; border: 1px solid #444; border-radius: 2px;
-  color: #eee; font-family: monospace; font-size: 8px; padding: 2px 4px; outline: none;
-}
-.settings-row input[type=text]:focus { border-color: #777; }
 .settings-sep {
   border: none; border-top: 1px solid #2e2e2e; margin: 2px 0;
 }
@@ -58,41 +47,14 @@ body {
 .s-btn-mp.in-mp { background:#1a1a4a; border-color:#2a2a9a; color:#88f; }
 .s-btn-reset { background:#3a1a1a; border-color:#7a3a3a; color:#f88; }
 .s-btn-reset:hover { background:#4a2a2a; }
-.s-btn-name  { background:#2a2a1a; border-color:#6a6a2a; color:#ff8; }
-.s-btn-name:hover { background:#3a3a1a; }
 .s-btn-home  { background:#1a2a3a; border-color:#2a5a8a; color:#8af; }
 .s-btn-home:hover { background:#253545; }
 .s-btn-fs    { background:#1a1a2a; border-color:#4a4a8a; color:#aaf; }
 .s-btn-fs:hover { background:#25253a; }
-.s-btn-lang  { background:#2a1a3a; border-color:#6a2a8a; color:#f8f; }
-.s-btn-lang:hover { background:#3a254a; }
 #mp-status { font-size: 7px; color: #5a5; text-align:center; }
 canvas { display: block; image-rendering: pixelated; }
 :fullscreen #top-bar { width: 100vw; }
 :fullscreen canvas { width: 100vw !important; height: calc(100vh - 20px) !important; image-rendering: pixelated; }
-#name-modal {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
-  display: flex; align-items: center; justify-content: center; z-index: 100;
-}
-#name-modal.hidden { display: none; }
-#name-box {
-  background: #1a1a1a; border: 1px solid #444; border-radius: 6px;
-  padding: 18px 22px; display: flex; flex-direction: column; gap: 10px;
-  font-family: monospace; color: #eee; text-align: center;
-}
-#name-box h2 { font-size: 13px; color: #aaa; letter-spacing: 1px; }
-#name-box input {
-  background: #2a2a2a; border: 1px solid #555; border-radius: 3px;
-  color: #fff; font-family: monospace; font-size: 12px;
-  padding: 5px 8px; outline: none; text-align: center;
-}
-#name-box input:focus { border-color: #888; }
-#name-box button {
-  background: #2a4a2a; border: 1px solid #3a7a3a; border-radius: 3px;
-  color: #6f6; font-family: monospace; font-size: 11px;
-  padding: 5px 0; cursor: pointer;
-}
-#name-box button:hover { background: #3a5a3a; }
 </style>
 </head>
 <body>
@@ -101,16 +63,8 @@ canvas { display: block; image-rendering: pixelated; }
   <span id="mode-badge">🎮 SP</span>
   <button id="btn-settings" title="Settings">⚙</button>
   <div id="settings-panel" class="hidden">
-    <div class="settings-row">
-      <label id="lbl-name">Name</label>
-      <input id="settings-name" type="text" maxlength="12" placeholder="your name..." />
-    </div>
-    <button class="s-btn s-btn-name" id="btn-save-name">Save name</button>
-    <hr class="settings-sep">
     <button class="s-btn s-btn-mp" id="btn-toggle-mp">🌐 Go to Multiplayer</button>
     <div id="mp-status" class="hidden"></div>
-    <hr class="settings-sep">
-    <button class="s-btn s-btn-lang" id="btn-lang">🌍 Lang: NL</button>
     <hr class="settings-sep">
     <button class="s-btn s-btn-reset" id="btn-reset">🗑 Reset singleplayer world</button>
     <hr class="settings-sep">
@@ -119,72 +73,45 @@ canvas { display: block; image-rendering: pixelated; }
   </div>
 </div>
 <canvas id="game" width="200" height="200"></canvas>
-<div id="name-modal">
-  <div id="name-box">
-    <h2>ONE SQUARE v1.6</h2>
-    <input id="name-input" type="text" maxlength="12" placeholder="your name..." />
-    <button id="name-confirm">Play ▶</button>
-  </div>
-</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
 // ═══════════════════════════════════════════════════════
-//  LOCALSTORAGE MULTI-LANGUAGE SYSTEM (NL / EN / FR)
+//  LOCALSTORAGE LANGUAGE SYSTEM (Gelezen vanaf index)
 // ═══════════════════════════════════════════════════════
 const LANGUAGES = ["nl", "en", "fr"];
-const LANG_NAMES = { nl: "NL", en: "EN", fr: "FR" };
-
 let currentLangIndex = parseInt(localStorage.getItem("onesquare_lang_index"), 10);
 if (isNaN(currentLangIndex) || currentLangIndex < 0 || currentLangIndex >= LANGUAGES.length) {
-  currentLangIndex = 0; // Standaard Nederlands (0)
+  currentLangIndex = 0; // Standaard NL
 }
 let currentLang = LANGUAGES[currentLangIndex];
 
 const TRANSLATIONS = {
   nl: {
-    saveName: "Naam opslaan",
-    saved: "✓ Opgeslagen!",
     toMultiplayer: "🌐 Ga naar Multiplayer",
     toSingleplayer: "🏠 Ga naar Singleplayer",
     resetWorld: "🗑 Reset singleplayer wereld",
     goToWebsite: "🏠 Ga naar website",
     fullscreen: "⛶ Volledig scherm",
-    exitFullscreen: "✕ Verlaat volledig scherm",
-    namePlaceholder: "jouw naam...",
-    langLabel: "🌍 Taal: ",
-    playBtn: "Speel ▶",
-    nameLabel: "Naam"
+    exitFullscreen: "✕ Verlaat volledig scherm"
   },
   en: {
-    saveName: "Save name",
-    saved: "✓ Saved!",
     toMultiplayer: "🌐 Go to Multiplayer",
     toSingleplayer: "🏠 Go to Singleplayer",
     resetWorld: "🗑 Reset singleplayer world",
     goToWebsite: "🏠 Go to website",
     fullscreen: "⛶ Fullscreen",
-    exitFullscreen: "✕ Exit fullscreen",
-    namePlaceholder: "your name...",
-    langLabel: "🌍 Lang: ",
-    playBtn: "Play ▶",
-    nameLabel: "Name"
+    exitFullscreen: "✕ Exit fullscreen"
   },
   fr: {
-    saveName: "Sauvegarder",
-    saved: "✓ Enregistré !",
     toMultiplayer: "🌐 Mode Multijoueur",
     toSingleplayer: "🏠 Mode Solo",
     resetWorld: "🗑 Réinitialiser le monde",
     goToWebsite: "🏠 Aller au site web",
     fullscreen: "⛶ Plein écran",
-    exitFullscreen: "✕ Quitter plein écran",
-    namePlaceholder: "votre nom...",
-    langLabel: "🌍 Langue : ",
-    playBtn: "Jouer ▶",
-    nameLabel: "Nom"
+    exitFullscreen: "✕ Quitter plein écran"
   }
 };
 
@@ -193,20 +120,14 @@ function t(key) {
 }
 
 function updateTexts() {
-  document.getElementById("btn-save-name").textContent = t("saveName");
   document.getElementById("btn-toggle-mp").textContent = isMultiplayer ? t("toSingleplayer") : t("toMultiplayer");
   document.getElementById("btn-reset").textContent = t("resetWorld");
   document.getElementById("btn-home").textContent = t("goToWebsite");
   document.getElementById("btn-fs").textContent = document.fullscreenElement ? t("exitFullscreen") : t("fullscreen");
-  document.getElementById("btn-lang").textContent = t("langLabel") + LANG_NAMES[currentLang];
-  document.getElementById("settings-name").placeholder = t("namePlaceholder");
-  document.getElementById("name-input").placeholder = t("namePlaceholder");
-  document.getElementById("name-confirm").textContent = t("playBtn");
-  document.getElementById("lbl-name").textContent = t("nameLabel");
 }
 
 // ═══════════════════════════════════════════════════════
-//  FIREBASE CONFIG (zelfde project als platformer)[cite: 6]
+//  FIREBASE CONFIG (Zelfde project als platformer)
 // ═══════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
@@ -219,7 +140,7 @@ const FIREBASE_CONFIG = {
 };
 
 // ═══════════════════════════════════════════════════════
-//  EMBEDDED TEXTURES (standalone, geen externe files)[cite: 6]
+//  EMBEDDED TEXTURES
 // ═══════════════════════════════════════════════════════
 window._imgSrcs = {
   'dirt.png':    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACU0lEQVR4nCXLy5LjNAAF0Kun3247cdIZmh6YomcxRbGh+HsW/AB/wIoUQ6enHUfxU5JliQVnf4gEOIEPyATWFQwgAAcoYIEAcI7ZIYoxaVAKnkv89uvPeRz5zQanE8EkJc5ZAB6UCXkbpmr/OGkLyn//40+abiDzFXMXr8OP+1y6YVUXoVXm58+nis3dUxmZ9p9oHU8ZSwG6bfjhWB/K+PzX3+pyfhAkF+H9awc7Tt2le71wN/fv/07dxfSdALgAnDGRYB8OcV2Wqn1jJPzy5TtCyE3dvj/VxPsvn3+6DWMsGAP4BlDGEYjqdZH1u+awGd1eO+89l3Ge5eNi+6Uv6mZedABoLNHb8K1fjk/Pu8ePXmS9CTyt3u82KZtRB+PF128KIjOeCwZ6tyBUMpl4KlrVG+s9FYRFZVVvhG+E36fl+dOLcYHH2biBAoiiSGudJMn5fLbWxnFsrRVChBAIIS8vLyGEtm23bWMALwWmUdllJLk8Nbuh7xLB8yw5n18ZBQhzembB5Ylk2ALAzYpC4PihCd7mVaKnNWKQZH2skzQis16G7rXt7jzO9s2h4qAEyNIkioVZps2teZoA3hq9qyuzjL1SCL7ZVfu6cKudHTgFrkr1dwVnUsmKNL5d72UhrPciTg9pRThX40KZpIwFgM+Aj/LmqXZ6WvUU1WUO/vBQXC6XY3FI8+L1vTu/3faPCRfU/B/Uyj8eTkP75gQZNhmSWm0kPjx3K+6jc0nVfKrr5ni93WeAFBLWggIUqFLMMwjAAEGgAzgBlRgMNiBLyTiH/wBja0E8/rQXwwAAAABJRU5ErkJggg==',
@@ -280,11 +201,11 @@ const MYSTERY_TEX = new Image();
 MYSTERY_TEX.src = "mystery.png";
 
 // ═══════════════════════════════════════════════════════
-//  CONSTANTS — grotere wereld
+//  CONSTANTS
 // ═══════════════════════════════════════════════════════
 const BLOCK_SIZE   = 16;
-const WORLD_W      = 60;   // was 25 — veel meer ruimte
-const WORLD_H      = 18;   // was 11
+const WORLD_W      = 60;
+const WORLD_H      = 18;
 const HOTBAR_SLOTS = 8;
 const CANVAS_W     = 200;
 const CANVAS_H     = 200;
@@ -299,27 +220,21 @@ const LADDER_SINK  = 0.4;
 const ONE_BLOCK_X  = Math.floor(WORLD_W / 2);
 const ONE_BLOCK_Y  = Math.floor(WORLD_H / 2);
 
-const HOTBAR_SLOTS_N = HOTBAR_SLOTS;
-
 // ═══════════════════════════════════════════════════════
-//  MODE: singleplayer / multiplayer
+//  MODE & PLAYER ID
 // ═══════════════════════════════════════════════════════
 let isMultiplayer = false;
 
-// ═══════════════════════════════════════════════════════
-//  PLAYER ID (persistent)
-// ═══════════════════════════════════════════════════════
 let myPlayerId = localStorage.getItem("onesquare_playerid");
 if(!myPlayerId) {
   myPlayerId = Math.random().toString(36).slice(2, 10);
   localStorage.setItem("onesquare_playerid", myPlayerId);
 }
 
-let myName = localStorage.getItem("onesquare_name") || "";
+let myName = "Speler";
 
-// You are always red for yourself, others see you as blue
-const MY_COLOR    = "#e74c3c"; // rood (alleen jij ziet dit)
-const REMOTE_COLOR = "#3d8be8"; // blauw (zo zien anderen eruit voor jou)
+const MY_COLOR    = "#e74c3c";
+const REMOTE_COLOR = "#3d8be8";
 
 // ═══════════════════════════════════════════════════════
 //  STORAGE HELPERS
@@ -346,16 +261,10 @@ function saveMPHotbar() {
   try { localStorage.setItem("onesquare_mp_hotbar_" + myPlayerId, JSON.stringify(hotbar)); } catch(e) {}
 }
 
-// ═══════════════════════════════════════════════════════
-//  WORLD STATE
-// ═══════════════════════════════════════════════════════
 let world  = loadSPWorld();
 let hotbar = loadSPHotbar();
 let selectedSlot = 0;
 
-// ═══════════════════════════════════════════════════════
-//  CANVAS
-// ═══════════════════════════════════════════════════════
 const canvas = document.getElementById("game");
 const ctx    = canvas.getContext("2d");
 
@@ -446,7 +355,7 @@ class Player {
       if(this.vy>0&&(this.isBlockSolid(left2,bot2)||this.isBlockSolid(right2,bot2))){this.py=bot2*BLOCK_SIZE-this.h;this.vy=0;this.onGround=true;}
     }
     if(this.py+this.h>=FLOOR_Y){this.py=FLOOR_Y-this.h;this.vy=0;this.onGround=true;}
-    if(this.py<0){this.py=0;this.vy=0;} // ceiling = top of canvas
+    if(this.py<0){this.py=0;this.vy=0;}
     camX=this.px-CANVAS_W/2+this.w/2;
     camX=Math.max(0,Math.min(WORLD_W*BLOCK_SIZE-CANVAS_W,camX));
   }
@@ -532,7 +441,7 @@ function placeBlock(bx,by) {
 }
 
 // ═══════════════════════════════════════════════════════
-//  FIREBASE MULTIPLAYER
+//  FIREBASE MULTIPLAYER & FIREBASE NAME FETCHING
 // ═══════════════════════════════════════════════════════
 let db=null, fbInited=false;
 let myFbRef=null, myOnlineRef=null, myHotbarRef=null;
@@ -545,10 +454,7 @@ const modeBadge=document.getElementById("mode-badge");
 const btnToggle=document.getElementById("btn-toggle-mp");
 const btnReset=document.getElementById("btn-reset");
 const settingsPanel=document.getElementById("settings-panel");
-const settingsNameInput=document.getElementById("settings-name");
-const btnSaveName=document.getElementById("btn-save-name");
 const btnSettingsToggle=document.getElementById("btn-settings");
-const btnLang = document.getElementById("btn-lang");
 
 function setStatus(msg,color="#5a5"){
   if(msg){statusEl.textContent=msg;statusEl.style.color=color;statusEl.classList.remove("hidden");}
@@ -564,11 +470,26 @@ function initFirebase() {
   } catch(e) { console.warn("Firebase init failed",e); }
 }
 
+// Naam automatisch ophalen van Firebase
+function fetchNameFromFirebase() {
+  initFirebase();
+  if(!db) return;
+  db.ref("onesquare/players/" + myPlayerId + "/name").once("value").then(snap => {
+    const val = snap.val();
+    if(val) {
+      myName = val;
+    } else {
+      myName = "Speler_" + myPlayerId.slice(0,4);
+    }
+  }).catch(() => {
+    myName = "Speler";
+  });
+}
+
 function enterMultiplayer() {
   initFirebase();
   if(!db){setStatus("❌ offline","#f66");return;}
 
-  // Load MP world from Firebase
   fbWorldRef=db.ref("onesquare/world");
   const fbPlayersRef=db.ref("onesquare/players");
   const fbOnlineRef=db.ref("onesquare/online");
@@ -580,19 +501,14 @@ function enterMultiplayer() {
   myOnlineRef.onDisconnect().remove();
 
   myHotbarRef=db.ref("onesquare/hotbars/"+myPlayerId);
-
-  // Load hotbar for MP
   hotbar=loadMPHotbar();
 
-  // Listen to online count
   const onlineL=fbOnlineRef.on("value",snap=>{setStatus("● "+snap.numChildren()+" online");});
   fbListeners.push(()=>fbOnlineRef.off("value",onlineL));
 
-  // Listen to world — éénmalig laden dan live updates
   const worldL=fbWorldRef.on("value",snap=>{
     const val=snap.val();
     if(val) {
-      // Firebase returns an object, not a real array — convert it
       const arr=Array.from({length:WORLD_H},()=>Array(WORLD_W).fill(null));
       for(let r=0;r<WORLD_H;r++) {
         if(!val[r]) continue;
@@ -607,7 +523,6 @@ function enterMultiplayer() {
   });
   fbListeners.push(()=>fbWorldRef.off("value",worldL));
 
-  // Listen to other players
   const addL=fbPlayersRef.on("child_added",snap=>{if(snap.key!==myPlayerId&&snap.val())remotePlayers[snap.key]=snap.val();});
   const chgL=fbPlayersRef.on("child_changed",snap=>{if(snap.key!==myPlayerId&&snap.val())remotePlayers[snap.key]=snap.val();});
   const remL=fbPlayersRef.on("child_removed",snap=>{delete remotePlayers[snap.key];});
@@ -622,7 +537,6 @@ function enterMultiplayer() {
 }
 
 function exitMultiplayer() {
-  // Remove listeners
   fbListeners.forEach(fn=>fn());
   fbListeners=[];
   if(myFbRef){myFbRef.remove();myFbRef=null;}
@@ -631,10 +545,8 @@ function exitMultiplayer() {
   fbWorldRef=null;
   remotePlayers={};
 
-  // Save MP hotbar
   saveMPHotbar();
 
-  // Return to SP
   world=loadSPWorld();
   hotbar=loadSPHotbar();
   isMultiplayer=false;
@@ -660,15 +572,6 @@ btnReset.addEventListener("click",()=>{
   spawnPlayer();
 });
 
-// Language button action (cycles through NL -> EN -> FR)
-btnLang.addEventListener("click", () => {
-  currentLangIndex = (currentLangIndex + 1) % LANGUAGES.length;
-  currentLang = LANGUAGES[currentLangIndex];
-  localStorage.setItem("onesquare_lang_index", currentLangIndex);
-  updateTexts();
-});
-
-// Called after every world change
 function onWorldChanged() {
   if(isMultiplayer) {
     saveMPHotbar();
@@ -691,7 +594,7 @@ function broadcastPos() {
   fbThrottle=0;
   lastSentX=Math.round(player.px);
   lastSentY=Math.round(player.py);
-  try { myFbRef.set({px:lastSentX,py:lastSentY,name:myName,t:Date.now()}); } catch(e){}
+  try { myFbRef.update({px:lastSentX,py:lastSentY,name:myName,t:Date.now()}); } catch(e){}
 }
 
 function cleanupRemote() {
@@ -841,10 +744,6 @@ function loop(timestamp) {
 btnSettingsToggle.addEventListener("click", e => {
   e.stopPropagation();
   settingsPanel.classList.toggle("hidden");
-  if(!settingsPanel.classList.contains("hidden")) {
-    settingsNameInput.value = myName;
-    settingsNameInput.focus();
-  }
 });
 document.addEventListener("click", e => {
   if(!settingsPanel.contains(e.target) && e.target !== btnSettingsToggle) {
@@ -852,20 +751,6 @@ document.addEventListener("click", e => {
   }
 });
 settingsPanel.addEventListener("mousedown", e => e.stopPropagation());
-
-// Save name from settings
-btnSaveName.addEventListener("click", () => {
-  const n = settingsNameInput.value.trim();
-  if(!n) return;
-  myName = n;
-  localStorage.setItem("onesquare_name", myName);
-  btnSaveName.textContent = t("saved");
-  setTimeout(() => { btnSaveName.textContent = t("saveName"); }, 1500);
-});
-settingsNameInput.addEventListener("keydown", e => {
-  if(e.key === "Enter") btnSaveName.click();
-  e.stopPropagation();
-});
 
 // Home button
 document.getElementById("btn-home").addEventListener("click", () => {
@@ -888,32 +773,10 @@ document.addEventListener("fullscreenchange", () => {
   }
 });
 
-// Name modal
-const nameModal   = document.getElementById("name-modal");
-const nameInput   = document.getElementById("name-input");
-const nameConfirm = document.getElementById("name-confirm");
-
-function startGame() {
-  const n = nameInput.value.trim();
-  if(!n) return;
-  myName = n;
-  localStorage.setItem("onesquare_name", myName);
-  nameModal.classList.add("hidden");
-  requestAnimationFrame(loop);
-}
-
-nameConfirm.addEventListener("click", startGame);
-nameInput.addEventListener("keydown", e => { if(e.key === "Enter") startGame(); });
-
+// Start game and sync directly
 updateTexts();
-
-if(myName) {
-  nameInput.value = myName;
-  nameModal.classList.add("hidden");
-  requestAnimationFrame(loop);
-} else {
-  nameInput.focus();
-}
+fetchNameFromFirebase();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
