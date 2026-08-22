@@ -102,7 +102,7 @@ canvas { display: block; image-rendering: pixelated; }
   <button id="btn-settings" title="Settings">⚙</button>
   <div id="settings-panel" class="hidden">
     <div class="settings-row">
-      <label id="lbl-name-text">Name</label>
+      <label id="lbl-name">Name</label>
       <input id="settings-name" type="text" maxlength="12" placeholder="your name..." />
     </div>
     <button class="s-btn s-btn-name" id="btn-save-name">Save name</button>
@@ -110,7 +110,7 @@ canvas { display: block; image-rendering: pixelated; }
     <button class="s-btn s-btn-mp" id="btn-toggle-mp">🌐 Go to Multiplayer</button>
     <div id="mp-status" class="hidden"></div>
     <hr class="settings-sep">
-    <button class="s-btn s-btn-lang" id="btn-lang">🌍 Taal: Nederlands</button>
+    <button class="s-btn s-btn-lang" id="btn-lang">🌍 Lang: NL</button>
     <hr class="settings-sep">
     <button class="s-btn s-btn-reset" id="btn-reset">🗑 Reset singleplayer world</button>
     <hr class="settings-sep">
@@ -132,9 +132,16 @@ canvas { display: block; image-rendering: pixelated; }
 
 <script>
 // ═══════════════════════════════════════════════════════
-//  TRANSLATIONS / VERTALEN
+//  LOCALSTORAGE MULTI-LANGUAGE SYSTEM (NL / EN / FR)
 // ═══════════════════════════════════════════════════════
-let currentLang = localStorage.getItem("onesquare_lang") || "nl";
+const LANGUAGES = ["nl", "en", "fr"];
+const LANG_NAMES = { nl: "NL", en: "EN", fr: "FR" };
+
+let currentLangIndex = parseInt(localStorage.getItem("onesquare_lang_index"), 10);
+if (isNaN(currentLangIndex) || currentLangIndex < 0 || currentLangIndex >= LANGUAGES.length) {
+  currentLangIndex = 0; // Standaard Nederlands (0)
+}
+let currentLang = LANGUAGES[currentLangIndex];
 
 const TRANSLATIONS = {
   nl: {
@@ -147,8 +154,9 @@ const TRANSLATIONS = {
     fullscreen: "⛶ Volledig scherm",
     exitFullscreen: "✕ Verlaat volledig scherm",
     namePlaceholder: "jouw naam...",
-    langButton: "🌍 Taal: Nederlands",
-    playBtn: "Speel ▶"
+    langLabel: "🌍 Taal: ",
+    playBtn: "Speel ▶",
+    nameLabel: "Naam"
   },
   en: {
     saveName: "Save name",
@@ -160,8 +168,23 @@ const TRANSLATIONS = {
     fullscreen: "⛶ Fullscreen",
     exitFullscreen: "✕ Exit fullscreen",
     namePlaceholder: "your name...",
-    langButton: "🌍 Language: English",
-    playBtn: "Play ▶"
+    langLabel: "🌍 Lang: ",
+    playBtn: "Play ▶",
+    nameLabel: "Name"
+  },
+  fr: {
+    saveName: "Sauvegarder",
+    saved: "✓ Enregistré !",
+    toMultiplayer: "🌐 Mode Multijoueur",
+    toSingleplayer: "🏠 Mode Solo",
+    resetWorld: "🗑 Réinitialiser le monde",
+    goToWebsite: "🏠 Aller au site web",
+    fullscreen: "⛶ Plein écran",
+    exitFullscreen: "✕ Quitter plein écran",
+    namePlaceholder: "votre nom...",
+    langLabel: "🌍 Langue : ",
+    playBtn: "Jouer ▶",
+    nameLabel: "Nom"
   }
 };
 
@@ -175,10 +198,11 @@ function updateTexts() {
   document.getElementById("btn-reset").textContent = t("resetWorld");
   document.getElementById("btn-home").textContent = t("goToWebsite");
   document.getElementById("btn-fs").textContent = document.fullscreenElement ? t("exitFullscreen") : t("fullscreen");
-  document.getElementById("btn-lang").textContent = t("langButton");
+  document.getElementById("btn-lang").textContent = t("langLabel") + LANG_NAMES[currentLang];
   document.getElementById("settings-name").placeholder = t("namePlaceholder");
   document.getElementById("name-input").placeholder = t("namePlaceholder");
   document.getElementById("name-confirm").textContent = t("playBtn");
+  document.getElementById("lbl-name").textContent = t("nameLabel");
 }
 
 // ═══════════════════════════════════════════════════════
@@ -636,10 +660,11 @@ btnReset.addEventListener("click",()=>{
   spawnPlayer();
 });
 
-// Language button action
+// Language button action (cycles through NL -> EN -> FR)
 btnLang.addEventListener("click", () => {
-  currentLang = currentLang === "nl" ? "en" : "nl";
-  localStorage.setItem("onesquare_lang", currentLang);
+  currentLangIndex = (currentLangIndex + 1) % LANGUAGES.length;
+  currentLang = LANGUAGES[currentLangIndex];
+  localStorage.setItem("onesquare_lang_index", currentLangIndex);
   updateTexts();
 });
 
