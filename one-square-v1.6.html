@@ -68,6 +68,29 @@ body {
 canvas { display: block; image-rendering: pixelated; }
 :fullscreen #top-bar { width: 100vw; }
 :fullscreen canvas { width: 100vw !important; height: calc(100vh - 20px) !important; image-rendering: pixelated; }
+#name-modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+}
+#name-modal.hidden { display: none; }
+#name-box {
+  background: #1a1a1a; border: 1px solid #444; border-radius: 6px;
+  padding: 18px 22px; display: flex; flex-direction: column; gap: 10px;
+  font-family: monospace; color: #eee; text-align: center;
+}
+#name-box h2 { font-size: 13px; color: #aaa; letter-spacing: 1px; }
+#name-box input {
+  background: #2a2a2a; border: 1px solid #555; border-radius: 3px;
+  color: #fff; font-family: monospace; font-size: 12px;
+  padding: 5px 8px; outline: none; text-align: center;
+}
+#name-box input:focus { border-color: #888; }
+#name-box button {
+  background: #2a4a2a; border: 1px solid #3a7a3a; border-radius: 3px;
+  color: #6f6; font-family: monospace; font-size: 11px;
+  padding: 5px 0; cursor: pointer;
+}
+#name-box button:hover { background: #3a5a3a; }
 </style>
 </head>
 <body>
@@ -77,7 +100,7 @@ canvas { display: block; image-rendering: pixelated; }
   <button id="btn-settings" title="Settings">⚙</button>
   <div id="settings-panel" class="hidden">
     <div class="settings-row">
-      <label id="lbl-name">Name</label>
+      <label>Name</label>
       <input id="settings-name" type="text" maxlength="12" placeholder="your name..." />
     </div>
     <button class="s-btn s-btn-name" id="btn-save-name">Save name</button>
@@ -92,87 +115,20 @@ canvas { display: block; image-rendering: pixelated; }
   </div>
 </div>
 <canvas id="game" width="200" height="200"></canvas>
+<div id="name-modal">
+  <div id="name-box">
+    <h2>ONE SQUARE v1.6</h2>
+    <input id="name-input" type="text" maxlength="12" placeholder="your name..." />
+    <button id="name-confirm">Play ▶</button>
+  </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
 // ═══════════════════════════════════════════════════════
-//  VERTALINGSYSTEEM (Gekoppeld aan localStorage 'app_lang')
-// ═══════════════════════════════════════════════════════
-const i18n = {
-  en: {
-    title: "ONE SQUARE",
-    nameLabel: "Name",
-    namePlaceholder: "your name...",
-    btnSaveName: "Save name",
-    btnSaveNameDone: "✓ Saved!",
-    btnMp: "🌐 Go to Multiplayer",
-    btnSp: "🏠 Go to Singleplayer",
-    btnReset: "🗑 Reset singleplayer world",
-    btnHome: "🏠 Go to website",
-    btnFsEnter: "⛶ Fullscreen",
-    btnFsExit: "✕ Exit fullscreen"
-  },
-  nl: {
-    title: "EEN VIERKANT",
-    nameLabel: "Naam",
-    namePlaceholder: "jouw naam...",
-    btnSaveName: "Naam opslaan",
-    btnSaveNameDone: "✓ Opgeslagen!",
-    btnMp: "🌐 Naar Multiplayer",
-    btnSp: "🏠 Naar Singleplayer",
-    btnReset: "🗑 Reset singleplayer wereld",
-    btnHome: "🏠 Naar website",
-    btnFsEnter: "⛶ Volledig scherm",
-    btnFsExit: "✕ Scherm sluiten"
-  },
-  fr: {
-    title: "UN CARRÉ",
-    nameLabel: "Nom",
-    namePlaceholder: "votre nom...",
-    btnSaveName: "Enregistrer",
-    btnSaveNameDone: "✓ Enregistré!",
-    btnMp: "🌐 Vers Multijoueur",
-    btnSp: "🏠 Vers Solo",
-    btnReset: "🗑 Réinitialiser le monde",
-    btnHome: "🏠 Aller au site",
-    btnFsEnter: "⛶ Plein écran",
-    btnFsExit: "✕ Quitter plein écran"
-  }
-};
-
-function getLang() { return localStorage.getItem('app_lang') || 'en'; }
-function t(key) { return (i18n[getLang()] || i18n['en'])[key]; }
-
-function applyLanguage() {
-  document.getElementById('game-title').textContent = t('title');
-  document.getElementById('lbl-name').textContent = t('nameLabel');
-  document.getElementById('settings-name').placeholder = t('namePlaceholder');
-  const saveBtn = document.getElementById('btn-save-name');
-  if (saveBtn) {
-    saveBtn.textContent = saveBtn.textContent.includes('✓') ? t('btnSaveNameDone') : t('btnSaveName');
-  }
-  const toggleBtn = document.getElementById('btn-toggle-mp');
-  if (toggleBtn) {
-    toggleBtn.textContent = isMultiplayer ? t('btnSp') : t('btnMp');
-  }
-  document.getElementById('btn-reset').textContent = t('btnReset');
-  document.getElementById('btn-home').textContent = t('btnHome');
-  const fsBtnEl = document.getElementById('btn-fs');
-  if (fsBtnEl) {
-    fsBtnEl.textContent = document.fullscreenElement ? t('btnFsExit') : t('btnFsEnter');
-  }
-}
-
-window.addEventListener('storage', (e) => {
-  if (e.key === 'app_lang') applyLanguage();
-});
-
-applyLanguage();
-
-// ═══════════════════════════════════════════════════════
-//  FIREBASE CONFIG
+//  FIREBASE CONFIG (zelfde project als platformer)
 // ═══════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
@@ -185,17 +141,17 @@ const FIREBASE_CONFIG = {
 };
 
 // ═══════════════════════════════════════════════════════
-//  EMBEDDED TEXTURES
+//  EMBEDDED TEXTURES (standalone, geen externe files)
 // ═══════════════════════════════════════════════════════
 window._imgSrcs = {
   'dirt.png':    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACU0lEQVR4nCXLy5LjNAAF0Kun3247cdIZmh6YomcxRbGh+HsW/AB/wIoUQ6enHUfxU5JliQVnf4gEOIEPyATWFQwgAAcoYIEAcI7ZIYoxaVAKnkv89uvPeRz5zQanE8EkJc5ZAB6UCXkbpmr/OGkLyn//40+abiDzFXMXr8OP+1y6YVUXoVXm58+nis3dUxmZ9p9oHU8ZSwG6bfjhWB/K+PzX3+pyfhAkF+H9awc7Tt2le71wN/fv/07dxfSdALgAnDGRYB8OcV2Wqn1jJPzy5TtCyE3dvj/VxPsvn3+6DWMsGAP4BlDGEYjqdZH1u+awGd1eO+89l3Ge5eNi+6Uv6mZedABoLNHb8K1fjk/Pu8ePXmS9CTyt3u82KZtRB+PF128KIjOeCwZ6tyBUMpl4KlrVG+s9FYRFZVVvhG+E36fl+dOLcYHH2biBAoiiSGudJMn5fLbWxnFsrRVChBAIIS8vLyGEtm23bWMALwWmUdllJLk8Nbuh7xLB8yw5n18ZBQhzembB5Ylk2ALAzYpC4PihCd7mVaKnNWKQZH2skzQis16G7rXt7jzO9s2h4qAEyNIkioVZps2teZoA3hq9qyuzjL1SCL7ZVfu6cKudHTgFrkr1dwVnUsmKNL5d72UhrPciTg9pRThX40KZpIwFgM+Aj/LmqXZ6WvUU1WUO/vBQXC6XY3FI8+L1vTu/3faPCRfU/B/Uyj8eTkP75gQZNhmSWm0kPjx3K+6jc0nVfKrr5ni93WeAFBLWggIUqFLMMwjAAEGgAzgBlRgMNiBLyTiH/wBja0E8/rQXwwAAAABJRU5ErkJggg==',
   'grass.png':   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACn0lEQVR4nDXS2U4TUQAG4H/OnFk7LR1oC2JroJSgRoKJgkYhLtFovDEhPoMv40N44TN440JcolETjQIqLdiyB0opnensc2aON3r3PcAnQAJkQANEQAI4wAEGCAAAEQCQABEQABwUFIuPH3ZxFKmhMqD5vh/24+Jg0XN8qokh9yml759/enD7zjA99fTJMwoVge6KuhAj/Pj2a2kqf7pQfvHm9ehEcbw0fuJ0O+3OwqPLu3s7gRDABIWBgHorm8vZ0cz5e1VKqdOzry/OdTodKzlJdaaXVI94fW7JXAJAkMAoDRhD2Wb9kIlMMqSN3e2D3r6al1e/rHOZd/ptOStFQjxYLoJDwDlUb1aKk4OhGu4f7xu5rJTI+Zxp2w6h3IlsSqng8zwd/Plhzf/CCLoYHxnnMYkd5nY9yiQeCG7X317f4REZ0EzfCk+ObJVmZi/MIgFBCgKxvlLXZWNibIIS6WC/ncZ8qjaVhMlGo1XID42Wym7PiYIEEggUeJ5Xq9XiOG42m5ZlTU9PM8YajYYoitVqdfltXRRFRVEopWAgiKAbmpJV1lv1wnChUBra2mmpGaU6WVUNte/2Jq5WGs01TgGSgINAwst3b5zAGj5T0k3tx6vfuaKxfbgZk+jbyg89r6o5eaxW+bz0LZETDICA48ata4wxx7LTNC1fKfz6ujFkmqpMZ2bOeZ7nun0A0/OTpmnCAQEFs8NfS80zIxUFStSP5q7MaEIm6EWRHW59OpS52lrb1EWtu3uEBAR9ZHj27v2FP99bzp5DAznoRKvv6setYyXW5uYvEo+mNgRXPFs+jwgUAXLMPDo8uFSdTWU4jqPDuDm7IImy5fQQpeVcJXs6I9nyQbsNDuFf7zzAABGgQAgIQApI/5EF2gAHXPwFGMRBUVilbIQAAAAASUVORK5CYII=',
-  'stone.png':   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACjUlEQVR4nD2SwUrrQBSG50yaySTWmwQa2lQUYqsLi1koShD3uvBrXPkirn0AcesriF1YQVAD7UJtuzBaCG00tTaTZCZ30cs9qw/ODz8/fAghhBDSNA0hBAAIoaWlJYSQLMulUmkBqqouvpIkAaX09PQ0CILv7+9GoyHLcpIkGONOp+O6rm3bQRAwxtbX18MwvLi4wEmSRFFkGIbjOIqivL6+qqpKCEnTtF6vh2GoqqplWVdXV5xzWZYxxljX9bu7u6IoOOdra2u+70+nU8/zhsNhu90WQnS73ZOTk0qlkmUZFkIAwMHBAWNsPp8DwObmZrlcRgiZprm3tzcajVqtFgD8/PwghDDGeDwev7+/m6b5/PxsGAYA9Ho9SZKyLDNNs9VqTSaTx8dHQogkSbgoCtu2y+VymqY7OzvD4fDr66vZbCqKMhgM4ji+vLys1Wrb29sAwDnHADCZTLrdriRJnHNN0+r1elEUs9lsa2urUqkcHR0xxnq9HmMMIYQBgBDieR6lNM/zfr+f5/nNzU2pVPJ9HwB83xdCNJtNSilCCHPOsyzTNO3p6YlSqus659x1XUKI67qfn5+e5ymKUhRFFEX/GlRVnc1m1WqVUuo4jhBiZWWFMQYAg8GAc359fT2fz3Vd/zdakqR2u12r1cIwfHh4YIzd39/HcYwxPjw8FEIcHx9blpWmKee8tLy8HEXR7u4uQogQsr+/nySJ53kA8PLyEsfxxsZGv993HIdSSinF0+n0z58/hmHc3t7atr1QoNPpfHx8OI4zGo0opY1Go1qtjsdjxhgQQs7Ozt7e3lZXV39/fymlQghZlvM8F0IURZGmqWVZQRCYpnl+fo4wxv+VXui9uP+8CMiyvOC/6CVByxifm2sAAAAASUVORK5CYII=',
-  'log.png':     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACH0lEQVR4nD3EzY7UOBQG0M/2dRw7lapUq0E0aNjPkvd/AXa8Q2+QGuiqyp8d2/d6FkhzFkcF4Hkab/dFAUOPlGAAAAQUoAFhwLzBdlBN70XIk/r27d+4v01T760R5rQyGddYmmbTNW68xIPolIv//v0H5dqEH9IWbfh2v3WmS1Gm6ck62tNyPo8xZ+20SO2lFQGRwuXieu9IF6OzSLXWdLqmuP76/XbUP37o1z2L6i2JAbQ0pHW2SkpaT96ZVnvS+djItOvonIHvbdpT6AxBegtNgAKkyLbsBrojO4ZTb/vHn/vJD6Ef5Khph+88BKVAO8CZU9pEio5rdeakxGl0x85Kuk77knAerNXeaq8AnYEmGqKep4+d9efxiYvkyEO4MEPDCqvn6eNxsBQ4QANg5vf3dxHhonmeY4zOuZeXF2PM6+srACJyzjEzAwRgPIev9h9rS017cP6IrbZjn+fp6dz5T/sRY9kstAsBAAmwphsQG+cjz9JS5kaiRZWY51S337d1vA4QEpgCaNsBSj3Wh/NdGIctRhd6F9z1wxNDcj3EIJw8g401SkHHjAq9xFybydx+/kIzdlnTY95TFZBrwLIdb++P+7pzAzWA6HS9fjHWq4NDWKbp8/0+18p+GIpE21WYcLlMCucKUOjtuiky5/mRFfvT+CklEh6EOWez7NHoa5PQ2bHy0FutBqAB9u8aSvA/DVSg91gjGBgcrUf9D624R8eKD6q1AAAAAElFTkSuQmCC',
+  'stone.png':   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACjUlEQVR4nD2SwUrrQBSG50yaySTWmwQa2lQUYqsLi1koShD3uvBRXPkirn0AcesriF1YQVAD7UJtuzBaCG00tTaTZCZ30cs9qw/ODz8/fAghhBDSNA0hBAAIoaWlJYSQLMulUmkBqqouvpIkAaX09PQ0CILv7+9GoyHLcpIkGONOp+O6rm3bQRAwxtbX18MwvLi4wEmSRFFkGIbjOIqivL6+qqpKCEnTtF6vh2GoqqplWVdXV5xzWZYxxljX9bu7u6IoOOdra2u+70+nU8/zhsNhu90WQnS73ZOTk0qlkmUZFkIAwMHBAWNsPp8DwObmZrlcRgiZprm3tzcajVqtFgD8/PwghDDGeDwev7+/m6b5/PxsGAYA9Ho9SZKyLDNNs9VqTSaTx8dHQogkSbgoCtu2y+VymqY7OzvD4fDr66vZbCqKMhgM4ji+vLys1Wrb29sAwDnHADCZTLrdriRJnHNN0+r1elEUs9lsa2urUqkcHR0xxnq9HmMMIYQBgBDieR6lNM/zfr+f5/nNzU2pVPJ9HwB83xdCNJtNSilCCHPOsyzTNO3p6YlSqus659x1XUKI67qfn5+e5ymKUhRFFEX/GlRVnc1m1WqVUuo4jhBiZWWFMQYAg8GAc359fT2fz3Vd/zdakqR2u12r1cIwfHh4YIzd39/HcYwxPjw8FEIcHx9blpWmKee8tLy8HEXR7u4uQogQsr+/nySJ53kA8PLyEsfxxsZGv993HIdSSinF0+n0z58/hmHc3t7atr1QoNPpfHx8OI4zGo0opY1Go1qtjsdjxhgQQs7Ozt7e3lZXV39/fymlQghZlvM8F0IURZGmqWVZQRCYpnl+fo4wxv+VXui9uP+8CMiyvOC/6CVByxifm2sAAAAASUVORK5CYII=',
+  'log.png':     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACH0lEQVR4nD3EzY7UOBQG0M/2dRw7lapUq0E0aNjPkvd/AXa8Q2+QGuiqyp8d2/d6FkhzFkcF4Hkab/dFAUOPlGAAAAQUoAFhwLzBdlBN70XIk/r27d+4v01T760R5rQyGddYmmbTNW68xIPolIv//v0H5dqEH9IWbfh2v3WmS1Gm6ck62tNyPo8xZ+20SO2lFQGRwuXieu9IF6OzSLXWdLqmuP76/XbUP37o1z2L6i2JAbQ0pHW2SkpaT96ZVnvS+djItOvonIHvbdpT6AxBegtNgAKkyLbsBrojO4ZTb/vHn/vJD6Ef5Khph+88BKVAO8CZU9pEio5rdeakxGl0x85Kuk77knAerNXeaq8AnYEmGqKep4+d9efxiYvkyEO4MEPDCqvn6eNxsBQ4QANg5vf3dxEhonmeY4zOuZeXF2PM6+srACJyzjEzAwRgPIev9h9rS017cP6IrbZjn+fp6dz5T/sRY9kstAsBAAmwphsQG+cjz9JS5kaiRZWY51S337d1vA4QEpgCaNsBSj3Wh/NdGIctRhd6F9z1wxNDcj3EIJw8g401SkHHjAq9xFybydx+/kIzdlnTY95TFZBrwLIdb++P+7pzAzWA6HS9fjHWq4NDWKbp8/0+18p+GIpE21WYcLlMCucKUOjtuiky5/mRFfvT+CklEh6EOWez7NHoa5PQ2bHy0FutBqAB9u8aSvA/DVSg91gjGBgcrUf9D624R8eKD6q1AAAAAElFTkSuQmCC',
   'mystery.png': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACp0lEQVR4nAXBz2scVQAH8O/7NfNm5+3O7ibbNTXNJhYSk0sPhUKL1EulFFG8eBNPgjf/h957EPwPPIkHexGpeK5YaItsq1JsaJOY7M9kd3Zm3vx8b/x8iHTBBGDBXMAABJKiLMEclBasRmkAipoAJaoKnBIM/3wgXZpmJ0JOKdN6Vfq+m+fLtV5vsbCMtq1VWeZ0Oztbg695M8BkfHTvznfCxdO/PhLeLHCJtVaQQhdz2cLkTH5y5wksfnz4TWcNVGu8e8VRAR7/8SUQCW7ydElMrhpNGJvn862B++i3L8II/Q26isFVE1H64vfhdekOWaWmx/bTj9+ES8Di9eHnmT2CXcn2s8Px3SQ6pgRcR1CKtbrzxeKEZVc//ODfp09urXcHWSR23/v+8fP3HbtQHZNluq73BQNlBh3/ymwcUtigbd4e36A0PZ+fxvG4FaDXI/13ZKZDwWSd+yYDJwSj0aS32TVEWyxPR/Pt/g0dOYzKKEZZRhej/1yPC0EY4dSCWsBv0jSLq6qoTNzw3apgaWIPDn569vw6Z67faIJWSTalPPd8UNTwpDI1Z9wBqW2d6SK8efvRi39uCZkuVyGlQnoOpbTdWU80qONgFXLp9svKKau6ve5XdJzWiM1Lt3UulbDWmc4Ka9RsapoKNM3BWNMW27zeTWJWmpLJ6uWry90N783JRLV8QK0F1wTZs7YRRqCqg0SXe9sPhbndbh/MLqK8tPsHZ+fzYntnK0r1eFLOT/b3Br/6KrAcPIzQCjZqg53Bt4ennylppeMNh5c54dPR0m3Q/qWr13Z/qCsk2soGOAPCsPz79X1rVxfTi2534+zocHNzs0wFspXwhMnlz7981e5sUSaSGES6cDwYAxA0HWiNoIU4Bgy4g6KCpfAkaopkhVaA/wEmaFDu9TutHAAAAABJRU5ErkJggg==',
   'wool.png':    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAAB6klEQVR4nE2SuQ7iQAyGnUkgHBLikEBAAc/Gk9DR0/MavAQFPQUEEiARkEtMMmQOb2GW3c4eeezvt39wHAcAAMC2bQosy3Ic55f+gkajQQEEQbDf77XWVVUholJKCBGGIaXX6xURN5vNer0GAAYAWZb1er37/V6WJef8fD5zzkejUZqmxpjJZBKG4WKx0FrX63VgjL3f7zAMEfF4PMZxjIiIKKV8Pp+cc6UUDUHELyIiCiF+dcaY8/lsjEHEsizpXWvt+77rugAAP1Bqlue5MSaO47Isi6JQSj2fz/f7/Z3QbrdPpxMiep5HzTjnUkqtNSISKiImSfL9QBMIyRgjpfwVIeLr9TocDoT6+Xwcx7EAIAxDx3GMMZzz+XwupazValEU2bbd7/cZY0EQ2LY9Ho8tywIA0FqXZSmlpLmn0ynP89vtRqqUUp/Ph1C/SHmeJ0lSVZVS6v+N+b7/k0FH/KehKApEDIIAEekUURRRb1poFEVFUTQaDUZYzWYziqLpdFpVFXmm0+nYtp2mKWPMsixEbDabQgio1+vb7ZZwtdYkw/O8LMt837/dbo/HQ2sthFgulwDAqqoSQux2Ozp5t9v1PG82m7muOxwOx+PxYDBgjK1Wq8vl8tXQarUoIKvXajVKyQjfVf619x99A+NZhCMj0QAAAABJRU5ErkJggg==',
   'glass.png':   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAABKElEQVR4nJ3TT0rDQBiG8Sczk9SkSdqC2BRaKXQh3sKt4Cm8gDfyFKI3kG5cuC7FLEIRtBjTsTFO/rgo7k3e/fNbfZ/1tF43rutS5DmO49CYH4qiIPT6SCnR2Y4gCEjTlDAMSdOMKIrYZZq6rrGeX+Lm/qNPl13aW4SjJAAX9itXg10rYDwZI7Zv7wC4do+7z6AVsNlsEJPoBICH/ahVDOD0FKLQ+9bh38qyREiszsBisUAYYzoDq9UK4ft+Z2A+nyO01p0BYwzi6zvvDFSmRMxms86AbdsIp+e2Dm/OhwAoSyEc96hVfD2VKKUA8H0f9bhcgn/2b+A2qSA5nL9SYGVV08RxzOlsSp7nmHyP53mEfkCSJBwPR9R1zWBw+JPiu0JKibRB64JfSCpn6IJKEQUAAAAASUVORK5CYII=',
-  'ladder.png':  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACKklEQVR4nC3RS4tcVRRA4bXP495bt6orle6BlJKoQ0UMopYDFUQHthP9u0FBIyIGk4FDESQ469AxJl19X+ecfbaDzvoJ60McDXz3+Tvnh7daEOhaJ+Ad3iHQwDcfvf3F+6+34DwhVgJM/z1brdqNY6qsqEArZMVBgNaV0PoApsg+8MF7+7MVlNl81IpKSCU7HFhAMW0c5ttJ+gcPn4SlUEt25ofrocbOxabUFGIzjmO/6lJKUtU0FZlk3RpIDwG+PuxrtfuPLzJEjxdyoYJBA99++uayzD88flocoYDAlFVVowehFBQAJ6hhMOUyzkmhVGTnuffu/u5pP7x41vd913VP/32O86p6dns3Xr0EmqYZs9n67MGvf7qshBCmaVLVnObLy0sHu+2JF4ZhiDEGLyLStu2yLGpI7/CV88PezL5/dEFDSdwUG+ZEA+eH/TAMv/91dcw4rXhhmQYzdcKSEAiCQE4ET3BoXhx1yQByAp99fOe0ReejmXX9+ng8Gs57H7zM82xamhCya7W79eNvT4LCUsjeliV5oauqqtXqdrsNXjSnKsF8MBdCuzaQEImVrz68u2rj/V/+zhAF4dVQgwBffnJnWvLPf1yUQNCCN0qal5pvpKphEAS1V3bBSfR2IjNb4XDvtf3ayjRM6k9u3R7HcV7GzWqDc8fj0VFPN00Rf8Xmp4f/BG+sgy3XLxrREx9jermLMqS89iml9Maum6fB6RR8m66fN/A/WpksJvn1R50AAAAASUVORK5CYII=',
+  'ladder.png':  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACKklEQVR4nC3RS4tcVRRA4bXP495bt6orle6BlJKoQ0UMopYDFUQHthP9u0FBIyIGk4FDESQ469AxJl19X+ecfbaDzvoJ60McDXz3+Tvnh7daEOhaJ+Ad3iHQwDcfvf3F+6+34DwhVgJM/z1brdqNY6qsqEArZMVBgNaV0PoApsg+8MF7+7MVlNl81IpKSCU7HFhAMW0c5ttJ+gcPn4SlUEt25ofrocbOxabUFGIzjmO/6lJKUtU0FZlk3RpIDwG+PuxrtfuPLzJEjxdyoYJBA99++uayzD88flocoYDAlFVVowehFBQAJ6hhMOUyzkmhVGTnuffu/u5pP7x41vd913VP/32O86p6dns3Xr0EmqYZs9n67MGvf7qshBCmaVLVnObLy0sHu+2JF4ZhiDEGLyLStu2yLGpI7/CV88PezL5/dEFDSdwUG+ZEA+eH/TAMv/91dcw4rXhhmQYzdcKSEAiCQE4ET3BoXhx1yQByAp99fOe0ReejmXX9+ng8Gs57H7zM82xamhCya7W79eNvT4LCUsjeliV5oauqqtXqdrsNXjSnKsF8MBdCuzaQEImVrz68u2rj/V/+zhAF4dVQgwBffnJnWvLPf1yUQNCCN0qal5pvpKphEAS1V3bBSfR2IyNb4XDvtf3ayjRM6k9u3R7HcV7GzWqDc8fj0VFPN00Rf8Xmp4f/BG+sgy3XLxrREx9jermLMqS89iml9Maum6fB6RR8m66fN/A/WpksJvn1R50AAAAASUVORK5CYII=',
   'chicken.png': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect x="5" y="1" width="6" height="5" fill="%23388e3c"/><rect x="6" y="3" width="1" height="1" fill="%23111"/><rect x="9" y="3" width="1" height="1" fill="%23111"/><rect x="6" y="6" width="4" height="3" fill="%230288d1"/><rect x="4" y="6" width="2" height="1" fill="%23388e3c"/><rect x="10" y="6" width="2" height="1" fill="%23388e3c"/><rect x="5" y="10" width="6" height="4" fill="%23ffffff"/><rect x="4" y="11" width="1" height="2" fill="%23dddddd"/><rect x="11" y="11" width="1" height="2" fill="%23dddddd"/><rect x="6" y="7" width="4" height="4" fill="%23ffffff"/><rect x="6" y="8" width="1" height="1" fill="%23111"/><rect x="9" y="8" width="1" height="1" fill="%23111"/><rect x="7" y="9" width="2" height="1" fill="%23ffb300"/><rect x="7" y="10" width="1" height="1" fill="%23e53935"/><rect x="6" y="14" width="1" height="2" fill="%23ffb300"/><rect x="9" y="14" width="1" height="2" fill="%23ffb300"/></svg>'
 };
 const _origImage = window.Image;
@@ -246,11 +202,11 @@ const MYSTERY_TEX = new Image();
 MYSTERY_TEX.src = "mystery.png";
 
 // ═══════════════════════════════════════════════════════
-//  CONSTANTS
+//  CONSTANTS — grotere wereld
 // ═══════════════════════════════════════════════════════
 const BLOCK_SIZE   = 16;
-const WORLD_W      = 60;
-const WORLD_H      = 18;
+const WORLD_W      = 60;   // was 25 — veel meer ruimte
+const WORLD_H      = 18;   // was 11
 const HOTBAR_SLOTS = 8;
 const CANVAS_W     = 200;
 const CANVAS_H     = 200;
@@ -265,10 +221,15 @@ const LADDER_SINK  = 0.4;
 const ONE_BLOCK_X  = Math.floor(WORLD_W / 2);
 const ONE_BLOCK_Y  = Math.floor(WORLD_H / 2);
 
+const HOTBAR_SLOTS_N = HOTBAR_SLOTS;
+
+// ═══════════════════════════════════════════════════════
+//  MODE: singleplayer / multiplayer
+// ═══════════════════════════════════════════════════════
 let isMultiplayer = false;
 
 // ═══════════════════════════════════════════════════════
-//  PLAYER ID & NAME (Leest direct uit localStorage / Firebase key)
+//  PLAYER ID (persistent)
 // ═══════════════════════════════════════════════════════
 let myPlayerId = localStorage.getItem("onesquare_playerid");
 if(!myPlayerId) {
@@ -276,11 +237,11 @@ if(!myPlayerId) {
   localStorage.setItem("onesquare_playerid", myPlayerId);
 }
 
-// Haalt de naam direct op (valideert via localStorage of geeft een standaardnaam als fallback)
-let myName = localStorage.getItem("onesquare_name") || localStorage.getItem("username") || "Player";
+let myName = localStorage.getItem("onesquare_name") || "";
 
-const MY_COLOR     = "#e74c3c";
-const REMOTE_COLOR = "#3d8be8";
+// You are always red for yourself, others see you as blue
+const MY_COLOR    = "#e74c3c"; // rood (alleen jij ziet dit)
+const REMOTE_COLOR = "#3d8be8"; // blauw (zo zien anderen eruit voor jou)
 
 // ═══════════════════════════════════════════════════════
 //  STORAGE HELPERS
@@ -307,13 +268,22 @@ function saveMPHotbar() {
   try { localStorage.setItem("onesquare_mp_hotbar_" + myPlayerId, JSON.stringify(hotbar)); } catch(e) {}
 }
 
+// ═══════════════════════════════════════════════════════
+//  WORLD STATE
+// ═══════════════════════════════════════════════════════
 let world  = loadSPWorld();
 let hotbar = loadSPHotbar();
 let selectedSlot = 0;
 
+// ═══════════════════════════════════════════════════════
+//  CANVAS
+// ═══════════════════════════════════════════════════════
 const canvas = document.getElementById("game");
 const ctx    = canvas.getContext("2d");
 
+// ═══════════════════════════════════════════════════════
+//  HOTBAR HELPERS
+// ═══════════════════════════════════════════════════════
 function addToHotbar(id) {
   for(let i=0;i<HOTBAR_SLOTS;i++) { if(hotbar[i]&&hotbar[i].id===id){hotbar[i].count++;return;} }
   for(let i=0;i<HOTBAR_SLOTS;i++) { if(!hotbar[i]){hotbar[i]={id,count:1};return;} }
@@ -398,7 +368,7 @@ class Player {
       if(this.vy>0&&(this.isBlockSolid(left2,bot2)||this.isBlockSolid(right2,bot2))){this.py=bot2*BLOCK_SIZE-this.h;this.vy=0;this.onGround=true;}
     }
     if(this.py+this.h>=FLOOR_Y){this.py=FLOOR_Y-this.h;this.vy=0;this.onGround=true;}
-    if(this.py<0){this.py=0;this.vy=0;}
+    if(this.py<0){this.py=0;this.vy=0;} // ceiling = top of canvas
     camX=this.px-CANVAS_W/2+this.w/2;
     camX=Math.max(0,Math.min(WORLD_W*BLOCK_SIZE-CANVAS_W,camX));
   }
@@ -519,6 +489,7 @@ function enterMultiplayer() {
   initFirebase();
   if(!db){setStatus("❌ offline","#f66");return;}
 
+  // Load MP world from Firebase
   fbWorldRef=db.ref("onesquare/world");
   const fbPlayersRef=db.ref("onesquare/players");
   const fbOnlineRef=db.ref("onesquare/online");
@@ -530,14 +501,19 @@ function enterMultiplayer() {
   myOnlineRef.onDisconnect().remove();
 
   myHotbarRef=db.ref("onesquare/hotbars/"+myPlayerId);
+
+  // Load hotbar for MP
   hotbar=loadMPHotbar();
 
+  // Listen to online count
   const onlineL=fbOnlineRef.on("value",snap=>{setStatus("● "+snap.numChildren()+" online");});
   fbListeners.push(()=>fbOnlineRef.off("value",onlineL));
 
+  // Listen to world — éénmalig laden dan live updates
   const worldL=fbWorldRef.on("value",snap=>{
     const val=snap.val();
     if(val) {
+      // Firebase returns an object, not a real array — convert it
       const arr=Array.from({length:WORLD_H},()=>Array(WORLD_W).fill(null));
       for(let r=0;r<WORLD_H;r++) {
         if(!val[r]) continue;
@@ -552,6 +528,7 @@ function enterMultiplayer() {
   });
   fbListeners.push(()=>fbWorldRef.off("value",worldL));
 
+  // Listen to other players
   const addL=fbPlayersRef.on("child_added",snap=>{if(snap.key!==myPlayerId&&snap.val())remotePlayers[snap.key]=snap.val();});
   const chgL=fbPlayersRef.on("child_changed",snap=>{if(snap.key!==myPlayerId&&snap.val())remotePlayers[snap.key]=snap.val();});
   const remL=fbPlayersRef.on("child_removed",snap=>{delete remotePlayers[snap.key];});
@@ -559,13 +536,14 @@ function enterMultiplayer() {
 
   isMultiplayer=true;
   modeBadge.textContent="🌐 MP";
-  btnToggle.textContent=t('btnSp');
+  btnToggle.textContent="🏠 Go to Singleplayer";
   btnToggle.classList.add("in-mp");
   btnReset.style.display="none";
   spawnPlayer();
 }
 
 function exitMultiplayer() {
+  // Remove listeners
   fbListeners.forEach(fn=>fn());
   fbListeners=[];
   if(myFbRef){myFbRef.remove();myFbRef=null;}
@@ -574,13 +552,15 @@ function exitMultiplayer() {
   fbWorldRef=null;
   remotePlayers={};
 
+  // Save MP hotbar
   saveMPHotbar();
 
+  // Return to SP
   world=loadSPWorld();
   hotbar=loadSPHotbar();
   isMultiplayer=false;
   modeBadge.textContent="🎮 SP";
-  btnToggle.textContent=t('btnMp');
+  btnToggle.textContent="🌐 Go to Multiplayer";
   btnToggle.classList.remove("in-mp");
   btnReset.style.display="";
   setStatus("");
@@ -601,6 +581,7 @@ btnReset.addEventListener("click",()=>{
   spawnPlayer();
 });
 
+// Called after every world change
 function onWorldChanged() {
   if(isMultiplayer) {
     saveMPHotbar();
@@ -785,40 +766,65 @@ document.addEventListener("click", e => {
 });
 settingsPanel.addEventListener("mousedown", e => e.stopPropagation());
 
+// Save name from settings
 btnSaveName.addEventListener("click", () => {
   const n = settingsNameInput.value.trim();
   if(!n) return;
   myName = n;
   localStorage.setItem("onesquare_name", myName);
-  btnSaveName.textContent = t('btnSaveNameDone');
-  setTimeout(() => { btnSaveName.textContent = t('btnSaveName'); }, 1500);
+  btnSaveName.textContent = "✓ Saved!";
+  setTimeout(() => { btnSaveName.textContent = "Save name"; }, 1500);
 });
 settingsNameInput.addEventListener("keydown", e => {
   if(e.key === "Enter") btnSaveName.click();
   e.stopPropagation();
 });
 
+// Home button
 document.getElementById("btn-home").addEventListener("click", () => {
   window.open("https://platypuspai.github.io/pixel-games/", "_blank");
 });
 
+// Fullscreen button
 const fsBtn = document.getElementById("btn-fs");
 fsBtn.addEventListener("click", () => {
   if(!document.fullscreenElement) {
     document.body.requestFullscreen().catch(() => {});
-    fsBtn.textContent = t('btnFsExit');
+    fsBtn.textContent = "✕ Exit fullscreen";
   } else {
     document.exitFullscreen();
   }
 });
 document.addEventListener("fullscreenchange", () => {
   if(!document.fullscreenElement) {
-    fsBtn.textContent = t('btnFsEnter');
+    fsBtn.textContent = "⛶ Fullscreen";
   }
 });
 
-// Start de game direct op
-requestAnimationFrame(loop);
+// Name modal
+const nameModal   = document.getElementById("name-modal");
+const nameInput   = document.getElementById("name-input");
+const nameConfirm = document.getElementById("name-confirm");
+
+function startGame() {
+  const n = nameInput.value.trim();
+  if(!n) return;
+  myName = n;
+  localStorage.setItem("onesquare_name", myName);
+  nameModal.classList.add("hidden");
+  requestAnimationFrame(loop);
+}
+
+nameConfirm.addEventListener("click", startGame);
+nameInput.addEventListener("keydown", e => { if(e.key === "Enter") startGame(); });
+
+if(myName) {
+  nameInput.value = myName;
+  nameModal.classList.add("hidden");
+  requestAnimationFrame(loop);
+} else {
+  nameInput.focus();
+}
 </script>
 </body>
 </html>
