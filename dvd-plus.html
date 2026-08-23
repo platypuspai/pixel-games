@@ -278,7 +278,6 @@
     let playerName = localStorage.getItem(LB_KEY) || 'Guest';
     let playerCode = localStorage.getItem(CODE_KEY) || '';
 
-    // Valideer of genereer een 20-cijferige code als deze er nog niet is
     if (!playerCode || playerCode.length !== 20) {
         playerCode = Array.from({length: 20}, () => Math.floor(Math.random() * 10)).join('');
         localStorage.setItem(CODE_KEY, playerCode);
@@ -422,7 +421,7 @@
         return img;
     }
 
-    // STRIKT GESPAREN PER UNIEKE 20-CIJFERIGE CODE
+    // FIREBASE SAVE & LOAD VOOR ALLE STATS (Money, DVDp, Upgrades, Skins, Tiers/DVDs)
     function getUserDbRef() {
         return db.ref('scores/dvdPlus/' + playerCode);
     }
