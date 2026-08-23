@@ -1451,25 +1451,33 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 </script>
 <!-- EINDE SLANG EASTER EGG -->
 
-</body>
-    <!-- De advertentiebanner onderaan het scherm -->
-    <div id="bottom-ad-banner">
-        
-        <!-- JOUW ADSTERRA CODE -->
-        <script type="text/javascript">
-          atOptions = {
-            'key' : '8f9f857555d5db196ebd997d614a739b',
-            'format' : 'iframe',
-            'height' : 90,
-            'width' : 728,
-            'params' : {}
-          };
-        </script>
-        <script src="https://www.highperformanceformat.com/8f9f857555d5db196ebd997d614a739b/invoke.js"></script>
-        
-        <!-- De sluitknop voor je bezoekers -->
-        <button onclick="closeAd()" id="close-ad-btn">×</button>
-    </div>
+<!-- De advertentiebanner onderaan het scherm met ingebouwde styling -->
+<div id="bottom-ad-banner" style="position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 728px; height: 90px; background-color: #222; border-top: 2px solid #ff4444; z-index: 9999; display: flex; justify-content: center; align-items: center; box-shadow: 0 -5px 15px rgba(0,0,0,0.5);">
+    
+    <!-- JOUW ADSTERRA CODE -->
+    <script type="text/javascript">
+      atOptions = {
+        'key' : '8f9f857555d5db196ebd997d614a739b',
+        'format' : 'iframe',
+        'height' : 90,
+        'width' : 728,
+        'params' : {}
+      };
+    </script>
+    <script type="text/javascript" src="https://highperformanceformat.com"></script>
+    
+    <!-- De sluitknop voor je bezoekers -->
+    <button onclick="closeAd()" id="close-ad-btn" style="position: absolute; top: -20px; right: 5px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold; padding: 2px 8px;">×</button>
+</div>
 
+<!-- Het script om de balk te sluiten -->
+<script type="text/javascript">
+function closeAd() {
+    var adBanner = document.getElementById("bottom-ad-banner");
+    if (adBanner) {
+        adBanner.style.display = "none";
+    }
+}
+</script>
 </body>
 </html>
