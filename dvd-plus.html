@@ -421,9 +421,9 @@
         return img;
     }
 
-    // FIREBASE SAVE & LOAD VOOR ALLE STATS (Money, DVDp, Upgrades, Skins, Tiers/DVDs)
+    // Aangepast naar 'dvdPlusScores' zodat het als root-map in Firebase verschijnt[cite: 11]
     function getUserDbRef() {
-        return db.ref('scores/dvdPlus/' + playerCode);
+        return db.ref('dvdPlusScores/' + playerCode);
     }
 
     function loadProgressFromFirebase() {
