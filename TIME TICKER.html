@@ -214,7 +214,7 @@
     }
     const db = firebase.database();
 
-    // 2. Variabelen & Feiten (Alleen emoji's, zonder custom HTML)
+    // 2. Variabelen & Feiten
     const LB_KEY = 'pg_player_name';
     const CODE_KEY = 'pg_player_code'; 
     
@@ -271,9 +271,8 @@
         
         let s = totalSeconds;
         
-        // Berekeningen
         const y = Math.floor(s / 31536000); s %= 31536000;
-        const mo = Math.floor(s / 2592000); s %= 2592000; // ~30 dagen per maand
+        const mo = Math.floor(s / 2592000); s %= 2592000;
         const w = Math.floor(s / 604800); s %= 604800;
         const d = Math.floor(s / 86400); s %= 86400;
         const h = Math.floor(s / 3600); s %= 3600;
@@ -291,7 +290,7 @@
         return parts.join(" ");
     }
 
-    // 5. Authenticatie Controle (Stille inlog via LocalStorage)
+    // 5. Authenticatie Controle
     function checkUserAuth() {
         if (!playerName) {
             showAuthModal();
@@ -330,9 +329,10 @@
         loadProgressFromFirebase();
     }
 
+    // Aangepast naar 'timeTickerScores' zodat het netjes als root-map in Firebase komt te staan
     function getUserDbRef() {
         let safeKey = playerCode ? playerCode : playerName.replace(/[^a-zA-Z0-9]/g, "");
-        return db.ref('scores/timeTicker/' + safeKey);
+        return db.ref('timeTickerScores/' + safeKey);
     }
 
     // 6. Data Laden & Firebase
@@ -365,7 +365,7 @@
         });
     }
 
-    // 7. De Ticker Loop (Elke seconde update)
+    // 7. De Ticker Loop
     setInterval(() => {
         if (playerName && document.getElementById('auth-modal').style.display === 'none') {
             scoreTime++;
@@ -379,11 +379,9 @@
     }, 1000);
 
     function updateUI() {
-        // Formatteer hoofdscore met de formatTime functie
         const mainScoreEl = document.getElementById('main-score-val');
         if(mainScoreEl) mainScoreEl.innerText = formatTime(scoreTime);
 
-        // De 18 feiten berekenen via de meegeleverde 'calc' functies
         factDefs.forEach((fact, index) => {
             const valElement = document.getElementById(`fact-val-${index}`);
             if (valElement) {
