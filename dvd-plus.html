@@ -182,32 +182,6 @@
         }
         .notification.show { opacity: 1; }
 
-        /* Modal Overlay (Inloggen) */
-        .modal-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.85);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 2000; backdrop-filter: blur(5px);
-        }
-        .modal {
-            background: var(--card); border: 2px solid var(--accent-yellow);
-            padding: 30px; max-width: 420px; width: 90%;
-            border-radius: 4px; text-align: center;
-        }
-        .modal h2 { font-family: 'Press Start 2P', monospace; font-size: 0.8rem; color: var(--accent-yellow); margin-bottom: 15px; }
-        .modal p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
-        .modal input {
-            width: 100%; padding: 12px; margin-bottom: 12px;
-            background: var(--bg); border: 1px solid var(--border);
-            color: #fff; font-family: 'Inconsolata', monospace; font-size: 1rem; outline: none;
-        }
-        .modal input:focus { border-color: var(--accent-yellow); }
-        .modal button {
-            width: 100%; padding: 14px; background: var(--accent-yellow); color: #000;
-            border: none; font-family: 'Press Start 2P', monospace; font-size: 0.6rem;
-            cursor: pointer; margin-top: 10px; transition: filter 0.2s;
-        }
-        .modal button:hover { filter: brightness(1.2); }
-
         @media (max-width: 850px) {
             .game-layout { grid-template-columns: 1fr; }
             .panel { height: auto; max-height: 500px; }
@@ -286,17 +260,6 @@
 
 <div id="notification" class="notification"></div>
 
-<!-- AUTH MODAL -->
-<div class="modal-overlay" id="auth-modal" style="display:none;">
-    <div class="modal">
-        <h2>LOGIN / ACCOUNT CODE</h2>
-        <p>Voer je naam in en je 20-cijferige code om je voortgang te koppelen en op te slaan.</p>
-        <input type="text" id="inp-name" placeholder="Jouw Spelernaam" maxlength="18" autocomplete="off">
-        <input type="text" id="inp-code" placeholder="Jouw code (20 cijfers)" autocomplete="off">
-        <button onclick="saveUserAndConnect()">► START GAME</button>
-    </div>
-</div>
-
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
@@ -309,11 +272,12 @@
     }
     const db = firebase.database();
 
+    // Stille inlog: haalt de gegevens rechtstreeks uit de opslag van de browser
     const LB_KEY = 'pg_player_name';
     const CODE_KEY = 'pg_player_code'; 
     
-    let playerName = localStorage.getItem(LB_KEY) || '';
-    let playerCode = localStorage.getItem(CODE_KEY) || '';
+    let playerName = localStorage.getItem(LB_KEY) || 'Guest';
+    let playerCode = localStorage.getItem(CODE_KEY) || 'GUEST_NO_CODE';
 
     // Variabelen voor de game
     let money = 0;
@@ -324,7 +288,6 @@
     let dvds = [];
     let lastTime = 0;
     let isPaused = false;
-    let gameStarted = false;
     
     let stats = {
         moneyPerBounce: 1, 
@@ -455,52 +418,7 @@
         return img;
     }
 
-    // ==== AUTHENTICATIE LOGICA ====
-    function checkUserAuth() {
-        if (!playerCode || !playerName) {
-            showAuthModal();
-        } else {
-            hideAuthModal();
-            startGame();
-        }
-    }
-
-    function showAuthModal() {
-        document.getElementById('inp-name').value = playerName;
-        document.getElementById('inp-code').value = playerCode;
-        document.getElementById('auth-modal').style.display = 'flex';
-    }
-
-    function hideAuthModal() {
-        document.getElementById('auth-modal').style.display = 'none';
-    }
-
-    function saveUserAndConnect() {
-        const nameInput = document.getElementById('inp-name').value.trim();
-        const codeInput = document.getElementById('inp-code').value.trim();
-
-        if (!nameInput || !codeInput) {
-            alert('Voer een geldige naam en code in!');
-            return;
-        }
-
-        playerName = nameInput.substring(0, 18);
-        playerCode = codeInput;
-
-        localStorage.setItem(LB_KEY, playerName);
-        localStorage.setItem(CODE_KEY, playerCode);
-
-        hideAuthModal();
-        startGame();
-    }
-
-    function startGame() {
-        if (gameStarted) return;
-        gameStarted = true;
-        loadProgressFromFirebase();
-        requestAnimationFrame(gameLoop);
-    }
-
+    // ==== GEBRUIKT DIRECT DE CODE UIT LOCALSTORAGE ====
     function getUserDbRef() {
         return db.ref('dvdPlusScores/' + playerCode);
     }
@@ -1225,14 +1143,13 @@
             dvds.forEach(dvd => { dvd.draw(); });
         }
 
-        if (gameStarted) {
-            requestAnimationFrame(gameLoop);
-        }
+        requestAnimationFrame(gameLoop);
     }
 
-    // Start de check in plaats van direct de game te laden
+    // Direct inladen vanuit localStorage en starten!
     window.onload = () => {
-        checkUserAuth();
+        loadProgressFromFirebase();
+        requestAnimationFrame(gameLoop);
     };
 </script>
 </body>
