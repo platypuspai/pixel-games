@@ -1451,31 +1451,104 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 </script>
 <!-- EINDE SLANG EASTER EGG -->
 
-<!-- De advertentiebanner onderaan het scherm met ingebouwde styling -->
-<div id="bottom-ad-banner" style="position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 728px; height: 90px; background-color: #222; border-top: 2px solid #ff4444; z-index: 9999; display: flex; justify-content: center; align-items: center; box-shadow: 0 -5px 15px rgba(0,0,0,0.5);">
+<!-- === ADSTERRA RECLAME BALK ONDERAAN (RESPONSIVE) === -->
+<div id="pixel-games-ad-balk">
     
-    <!-- JOUW NIEUWE CORRECTE ADSTERRA CODE -->
-    <script type="text/javascript">
-      atOptions = {
-        'key' : '8f9f857555d5db196ebd997d614a739b',
-        'format' : 'iframe',
-        'height' : 90,
-        'width' : 728,
-        'params' : {}
-      };
-    </script>
-    <script type="text/javascript" src="https://www.highrevenueformat.com/8f9f857555d5db196ebd997d614a739b/invoke.js"></script>
+    <!-- 💻 COMPUTER BANNER (728x90) -->
+    <div class="ad-desktop-only">
+        <script type="text/javascript">
+          atOptions = {
+            'key' : '8f9f857555d5db196ebd997d614a739b',
+            'format' : 'iframe',
+            'height' : 90,
+            'width' : 728,
+            'params' : {}
+          };
+        </script>
+        <script type="text/javascript" src="https://www.highrevenueformat.com/8f9f857555d5db196ebd997d614a739b/invoke.js"></script>
+    </div>
+
+    <!-- 📱 GSM BANNER (320x50) -->
+    <div class="ad-mobile-only">
+        <script type="text/javascript">
+          atOptions = {
+            'key' : 'f88d03b2176ccd225bcbe5f12005236c',
+            'format' : 'iframe',
+            'height' : 50,
+            'width' : 320,
+            'params' : {}
+          };
+        </script>
+        <script type="text/javascript" src="https://www.highrevenueformat.com/f88d03b2176ccd225bcbe5f12005236c/invoke.js"></script>
+    </div>
     
-    <!-- De sluitknop voor je bezoekers -->
-    <button onclick="closeAd()" id="close-ad-btn" style="position: absolute; top: -20px; right: 5px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold; padding: 2px 8px;">×</button>
+    <!-- Universele Sluitknop -->
+    <button onclick="sluitReclameBalk()" id="pixel-games-ad-sluitknop">×</button>
 </div>
 
-<!-- Het script om de balk te sluiten -->
+<!-- INGEBOUWDE RETRO STYLING (CSS) -->
+<style>
+/* De basis container die altijd onderaan het scherm plakt */
+#pixel-games-ad-balk {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 999999 !important; /* Zorgt dat het ALTIJD bovenop je games ligt */
+    background-color: #1c1c1c !important; /* Donkere retro achtergrond die past bij Plixo-Arcade */
+    border-top: 3px solid #ff4444 !important; /* Rood retro randje */
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.7) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+/* Standaard instelling voor computers */
+@media (min-width: 769px) {
+    #pixel-games-ad-balk {
+        width: 728px !important;
+        height: 90px !important;
+    }
+    .ad-desktop-only { display: block !important; }
+    .ad-mobile-only { display: none !important; }
+}
+
+/* Instelling speciaal voor gsm's en kleine schermen */
+@media (max-width: 768px) {
+    #pixel-games-ad-balk {
+        width: 320px !important;
+        height: 50px !important;
+    }
+    .ad-desktop-only { display: none !important; }
+    .ad-mobile-only { display: block !important; }
+}
+
+/* De Sluitknop styling */
+#pixel-games-ad-sluitknop {
+    position: absolute !important;
+    top: -22px !important;
+    right: 5px !important;
+    background-color: #ff4444 !important;
+    color: white !important;
+    border: 2px solid #1c1c1c !important;
+    border-radius: 4px !important;
+    font-family: monospace !important;
+    font-weight: bold !important;
+    font-size: 14px !important;
+    padding: 0px 8px !important;
+    cursor: pointer !important;
+}
+#pixel-games-ad-sluitknop:hover {
+    background-color: #cc0000 !important;
+}
+</style>
+
+<!-- SCRIPT OM DE RECLAME WEG TE KLIKKEN -->
 <script type="text/javascript">
-function closeAd() {
-    var adBanner = document.getElementById("bottom-ad-banner");
-    if (adBanner) {
-        adBanner.style.display = "none";
+function sluitReclameBalk() {
+    var adElement = document.getElementById("pixel-games-ad-balk");
+    if (adElement) {
+        adElement.style.setProperty('display', 'none', 'important');
     }
 }
 </script>
