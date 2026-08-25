@@ -1452,53 +1452,50 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 <!-- EINDE SLANG EASTER EGG -->
 
 
-<!-- === ADSTERRA RESPONSIVE RECLAMEBALK === -->
-<div id="pixel-games-ad-container">
+<!-- === ADSTERRA NATIVE AD BALK ONDERAAN === -->
+<div id="pixel-games-native-ad-balk">
     
-    <!-- COMPUTER BALK (728x90) -->
-    <div class="ad-box-desktop">
-        <iframe src="about:blank" id="ad-frame-pc" style="width:728px; height:90px; border:none; scrolling:no;"></iframe>
-    </div>
-
-    <!-- GSM BALK (320x50) -->
-    <div class="ad-box-mobile">
-        <iframe src="about:blank" id="ad-frame-gsm" style="width:320px; height:50px; border:none; scrolling:no;"></iframe>
-    </div>
+    <!-- JOUW NIEUWE NATIVE ADSTERRA CODE -->
+    <script async="async" data-cfasync="false" src="https://profitableratecpmnetwork.com"></script>
+    <div id="container-3536dcd037eedf6efe111f207d1f3ca8"></div>
     
-    <!-- Sluitknop -->
-    <button onclick="sluitAdBalk()" id="pixel-games-ad-sluitknop">×</button>
+    <!-- De retro sluitknop -->
+    <button onclick="sluitNativeAdBalk()" id="pixel-games-native-ad-sluitknop">×</button>
 </div>
 
-<!-- STYLING (CSS) -->
+<!-- RETRO RESPONSIVE STYLING (CSS) -->
 <style>
-#pixel-games-ad-container {
+#pixel-games-native-ad-balk {
     position: fixed !important;
     bottom: 0 !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    z-index: 999999 !important;
-    background-color: #1c1c1c !important;
-    border-top: 3px solid #ff4444 !important;
+    z-index: 999999 !important; /* Zorgt dat het ALTIJD bovenop je games ligt */
+    background-color: #1c1c1c !important; /* Donkere retro achtergrond die past bij Plixo-Arcade */
+    border-top: 3px solid #ff4444 !important; /* Rood retro randje */
     box-shadow: 0 -5px 20px rgba(0,0,0,0.7) !important;
+    padding: 10px !important;
+    box-sizing: border-box !important;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
-    overflow: visible !important;
+    width: 100% !important;
 }
 
+/* Automatische breedte op basis van het apparaat */
 @media (min-width: 769px) {
-    #pixel-games-ad-container { width: 728px !important; height: 90px !important; }
-    .ad-box-desktop { display: block !important; }
-    .ad-box-mobile { display: none !important; }
+    #pixel-games-native-ad-balk {
+        max-width: 728px !important; /* Computer breedte */
+    }
 }
-
 @media (max-width: 768px) {
-    #pixel-games-ad-container { width: 320px !important; height: 50px !important; }
-    .ad-box-desktop { display: none !important; }
-    .ad-box-mobile { display: block !important; }
+    #pixel-games-native-ad-balk {
+        max-width: 100% !important; /* Mobiele telefoons vullen */
+    }
 }
 
-#pixel-games-ad-sluitknop {
+/* De Sluitknop styling */
+#pixel-games-native-ad-sluitknop {
     position: absolute !important;
     top: -22px !important;
     right: 5px !important;
@@ -1508,40 +1505,22 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     border-radius: 4px !important;
     font-family: monospace !important;
     font-weight: bold !important;
+    font-size: 14px !important;
     padding: 0px 8px !important;
     cursor: pointer !important;
 }
+#pixel-games-native-ad-sluitknop:hover {
+    background-color: #cc0000 !important;
+}
 </style>
 
-<!-- VEILIGE SCRIPT INJECTIE -->
+<!-- SCRIPT OM DE RECLAME WEG TE KLIKKEN -->
 <script type="text/javascript">
-window.addEventListener('DOMContentLoaded', function() {
-    var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-    
-    if (width > 768) {
-        var adFramePC = document.getElementById('ad-frame-pc');
-        if (adFramePC) {
-            var doc = adFramePC.contentWindow.document;
-            doc.open();
-            doc.write('<script>atOptions={"key":"8f9f857555d5db196ebd997d614a739b","format":"iframe","height":90,"width":728,"params":{}};\<\/script>');
-            doc.write('<script src="https://highrevenueformat.com">\<\/script>');
-            doc.close();
-        }
-    } else {
-        var adFrameGSM = document.getElementById('ad-frame-gsm');
-        if (adFrameGSM) {
-            var doc = adFrameGSM.contentWindow.document;
-            doc.open();
-            doc.write('<script>atOptions={"key":"f88d03b2176ccd225bcbe5f12005236c","format":"iframe","height":50,"width":320,"params":{}};\<\/script>');
-            doc.write('<script src="https://highrevenueformat.com">\<\/script>');
-            doc.close();
-        }
+function sluitNativeAdBalk() {
+    var adElement = document.getElementById("pixel-games-native-ad-balk");
+    if (adElement) {
+        adElement.style.setProperty('display', 'none', 'important');
     }
-});
-
-function sluitAdBalk() {
-    var el = document.getElementById("pixel-games-ad-container");
-    if (el) { el.style.setProperty('display', 'none', 'important'); }
 }
 </script>
 </body>
