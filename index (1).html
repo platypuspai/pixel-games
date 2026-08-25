@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plixo-Arcade</title>
+    <!-- Behoud hier eventuele bestaande links naar je eigen style.css of fonts -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ======================================================================= -->
+    <!-- === ADSTERRA NATIVE AD BALK (Bovenaan de body geplaatst voor stabiliteit) === -->
+    <!-- ======================================================================= -->
+    <div id="pixel-games-native-ad-balk">
+        <!-- Jouw officiële en werkende Adsterra Native Banner code -->
+        <script async="async" data-cfasync="false" src="https://pl31016066.profitableratecpmnetwork.com/3536dcd037eedf6efe111f207d1f3ca8/invoke.js"></script>
+        <div id="container-3536dcd037eedf6efe111f207d1f3ca8"></div>
+        
+        <!-- De retro sluitknop waarmee spelers de balk handmatig kunnen sluiten -->
+        <button onclick="sluitNativeAdBalk()" id="pixel-games-native-ad-sluitknop">×</button>
+    </div>
+
+    <!-- INGEBOUWDE RETRO RESPONSIVE STYLING SPECIFIEK VOOR DE AD-BALK -->
+    <style>
+    #pixel-games-native-ad-balk {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 999999 !important; /* Forceert weergave bovenop alle game canvas elementen */
+        background-color: #1c1c1c !important; /* Matcht met de donkere interface van Plixo-Arcade */
+        border-top: 3px solid #ff4444 !important; /* Karakteristiek rood retro randje */
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.7) !important;
+        padding: 10px !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+
+    /* Computer (Desktop) Schermen */
+    @media (min-width: 769px) {
+        #pixel-games-native-ad-balk {
+            max-width: 728px !important;
+        }
+    }
+    
+    /* Mobiel (GSM) Schermen */
+    @media (max-width: 768px) {
+        #pixel-games-native-ad-balk {
+            max-width: 100% !important;
+        }
+    }
+
+    /* De Sluitknop styling */
+    #pixel-games-native-ad-sluitknop {
+        position: absolute !important;
+        top: -22px !important;
+        right: 5px !important;
+        background-color: #ff4444 !important;
+        color: white !important;
+        border: 2px solid #1c1c1c !important;
+        border-radius: 4px !important;
+        font-family: monospace !important;
+        font-weight: bold !important;
+        font-size: 14px !important;
+        padding: 0px 8px !important;
+        cursor: pointer !important;
+    }
+    #pixel-games-native-ad-sluitknop:hover {
+        background-color: #cc0000 !important;
+    }
+    </style>
+
+    <!-- INTERN SCRIPT OM DE BANNER COMPLEET TE VERBERGEN NA KLIK OP HET KRUISJE -->
+    <script type="text/javascript">
+    function sluitNativeAdBalk() {
+        var adElement = document.getElementById("pixel-games-native-ad-balk");
+        if (adElement) {
+            adElement.style.setProperty('display', 'none', 'important');
+        }
+    }
+    </script>
+    <!-- ======================================================================= -->
+
+
+    <!-- HIERONDER STAAT JOUW BESTAANDE WEBSITE STRUCTUUR (PLIXO-ARCADE) -->
+    <header>
+        <div class="lang-selector">
+            <span>English</span>
+            <span>Nederlands</span>
+            <span>Français</span>
+        </div>
+        <h1>PLIXO-ARCADE</h1>
+        <p class="subtitle">10 GAMES · PLAY IN BROWSER · SCHOOL PROJECT</p>
+    </header>
+
+    <nav>
+        <button class="nav-btn active">▶ HOME</button>
+        <button class="nav-btn">✉ CONTACT</button>
+        <button class="nav-btn">ℹ INFO</button>
+        <button class="nav-btn">LEADERBOARD</button>
+    </nav>
+
+    <main class="games-grid">
+        <!-- Game 10: DVD+ -->
+        <div class="game-card">
+            <div class="game-icon-placeholder">DVD</div>
+            <span class="game-number">// 10 · SIMULATION & IDLE</span>
+            <h2>DVD+</h2>
+            <p>The ultimate DVD bouncing simulator with upgrades, skins, and predictions!</p>
+            <button class="play-btn">▶ PLAY</button>
+        </div>
+
+        <!-- Game 01: Dino World -->
+        <div class="game-card">
+            <div class="game-icon-placeholder">🦖</div>
+            <span class="game-number">// 01 · SIMULATION</span>
+            <h2>Dino World</h2>
+            <p>Would the dinosaurs survive without the asteroid? Find out!</p>
+            <div class="btn-group">
+                <button class="play-btn">▶ PLAY</button>
+                <button class="ext-btn">⬡ EXTENSION</button>
+            </div>
+        </div>
+
+        <!-- Game 02: Mini Browser Platformer -->
+        <div class="game-card">
+            <div class="game-icon-placeholder">🧱</div>
+            <span class="game-number">// 02 · PLATFORMER</span>
+            <h2>Mini Browser Platformer</h2>
+            <p>Jump, run and win!</p>
+            <div class="btn-group">
+                <button class="play-btn">▶ PLAY</button>
+                <button class="ext-btn">⬡ EXTENSION</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Rust van de website elementen (Contact, Info, Leaderboards etc.) sluiten hieronder aan -->
+
+</body>
+</html>
