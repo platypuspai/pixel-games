@@ -1452,10 +1452,10 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 <!-- EINDE SLANG EASTER EGG -->
 
 
-<!-- === AD BALK === -->
+<!-- === RECLAME BALK ONDERAAN === -->
 <div id="pixel-games-native-ad-balk">
     
-    <!-- CODE -->
+    <!-- CODE VAN_DASHBOARD -->
     <script async="async" data-cfasync="false" src="https://profitableratecpmnetwork.com"></script>
     <div id="container-3536dcd037eedf6efe111f207d1f3ca8"></div>
     
@@ -1470,9 +1470,9 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     bottom: 0 !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    z-index: 999999 !important;
-    background-color: #1c1c1c !important;
-    border-top: 3px solid #ff4444 !important;
+    z-index: 999999 !important; /* Zorgt dat het ALTIJD bovenop de games ligt */
+    background-color: #1c1c1c !important; /* Donkere retro achtergrond */
+    border-top: 3px solid #ff4444 !important; /* Rood retro randje */
     box-shadow: 0 -5px 20px rgba(0,0,0,0.7) !important;
     padding: 10px !important;
     box-sizing: border-box !important;
@@ -1482,13 +1482,19 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     width: 100% !important;
 }
 
+/* Breedte op basis van apparaat */
 @media (min-width: 769px) {
-    #pixel-games-native-ad-balk { max-width: 728px !important; }
+    #pixel-games-native-ad-balk {
+        max-width: 728px !important; /* PC breedte */
+    }
 }
 @media (max-width: 768px) {
-    #pixel-games-native-ad-balk { max-width: 100% !important; }
+    #pixel-games-native-ad-balk {
+        max-width: 100% !important; /* GSM breedte */
+    }
 }
 
+/* De Sluitknop styling */
 #pixel-games-native-ad-sluitknop {
     position: absolute !important;
     top: -22px !important;
@@ -1503,12 +1509,18 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     padding: 0px 8px !important;
     cursor: pointer !important;
 }
+#pixel-games-native-ad-sluitknop:hover {
+    background-color: #cc0000 !important;
+}
 </style>
 
+<!-- SCRIPT OM DE RECLAME WEG TE KLIKKEN -->
 <script type="text/javascript">
 function sluitNativeAdBalk() {
     var adElement = document.getElementById("pixel-games-native-ad-balk");
-    if (adElement) { adElement.style.setProperty('display', 'none', 'important'); }
+    if (adElement) {
+        adElement.style.setProperty('display', 'none', 'important');
+    }
 }
 </script>
 </body>
