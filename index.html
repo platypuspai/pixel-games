@@ -1450,31 +1450,52 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 })();
 </script>
 <!-- EINDE SLANG EASTER EGG -->
-<!-- === ADSTERRA RECLAME BALK ONDERAAN === -->
-<div id="pixel-games-ad-balk">
-    <!-- Hier injecteert het script straks de juiste advertentie -->
-    <div id="ad-placement-box"></div>
+
+
+<!-- === ADSTERRA NATIVE AD BALK ONDERAAN === -->
+<div id="pixel-games-native-ad-balk">
     
-    <!-- Sluitknop -->
-    <button onclick="sluitReclameBalk()" id="pixel-games-ad-sluitknop">×</button>
+    <!-- ADSTERRA CODE -->
+    <script async="async" data-cfasync="false" src="https://profitableratecpmnetwork.com"></script>
+    <div id="container-3536dcd037eedf6efe111f207d1f3ca8"></div>
+    
+    <!-- De retro sluitknop -->
+    <button onclick="sluitNativeAdBalk()" id="pixel-games-native-ad-sluitknop">×</button>
 </div>
 
-<!-- RETRO STYLING (CSS) -->
+<!-- RETRO RESPONSIVE STYLING (CSS) -->
 <style>
-#pixel-games-ad-balk {
+#pixel-games-native-ad-balk {
     position: fixed !important;
     bottom: 0 !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    z-index: 999999 !important;
-    background-color: #1c1c1c !important;
-    border-top: 3px solid #ff4444 !important;
+    z-index: 999999 !important; /* Zorgt dat het ALTIJD bovenop de games ligt */
+    background-color: #1c1c1c !important; /* Donkere retro achtergrond */
+    border-top: 3px solid #ff4444 !important; /* Rood retro randje */
     box-shadow: 0 -5px 20px rgba(0,0,0,0.7) !important;
+    padding: 10px !important;
+    box-sizing: border-box !important;
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
+    width: 100% !important;
 }
-#pixel-games-ad-sluitknop {
+
+/* Breedte op basis van apparaat */
+@media (min-width: 769px) {
+    #pixel-games-native-ad-balk {
+        max-width: 728px !important; /* PC breedte */
+    }
+}
+@media (max-width: 768px) {
+    #pixel-games-native-ad-balk {
+        max-width: 100% !important; /* GSM breedte */
+    }
+}
+
+/* De Sluitknop styling */
+#pixel-games-native-ad-sluitknop {
     position: absolute !important;
     top: -22px !important;
     right: 5px !important;
@@ -1484,53 +1505,19 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     border-radius: 4px !important;
     font-family: monospace !important;
     font-weight: bold !important;
+    font-size: 14px !important;
     padding: 0px 8px !important;
     cursor: pointer !important;
 }
+#pixel-games-native-ad-sluitknop:hover {
+    background-color: #cc0000 !important;
+}
 </style>
 
-<!-- SLIMME APPARAAT DETECTIE & AD INJECTIE -->
+<!-- SCRIPT OM DE RECLAME WEG TE KLIKKEN -->
 <script type="text/javascript">
-(function() {
-    var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-    var container = document.getElementById('pixel-games-ad-balk');
-    var placement = document.getElementById('ad-placement-box');
-    
-    if (width > 768) {
-        // --- LAAD COMPUTER BANNER (728x90) ---
-        container.style.width = "728px";
-        container.style.height = "90px";
-        
-        window.atOptions = {
-            'key' : '8f9f857555d5db196ebd997d614a739b',
-            'format' : 'iframe',
-            'height' : 90,
-            'width' : 728,
-            'params' : {}
-        };
-        var s = document.createElement('script');
-        s.src = "https://highrevenueformat.com";
-        placement.appendChild(s);
-    } else {
-        // --- LAAD GSM BANNER (320x50) ---
-        container.style.width = "320px";
-        container.style.height = "50px";
-        
-        window.atOptions = {
-            'key' : 'f88d03b2176ccd225bcbe5f12005236c',
-            'format' : 'iframe',
-            'height' : 50,
-            'width' : 320,
-            'params' : {}
-        };
-        var s = document.createElement('script');
-        s.src = "https://highrevenueformat.com";
-        placement.appendChild(s);
-    }
-})();
-
-function sluitReclameBalk() {
-    var adElement = document.getElementById("pixel-games-ad-balk");
+function sluitNativeAdBalk() {
+    var adElement = document.getElementById("pixel-games-native-ad-balk");
     if (adElement) {
         adElement.style.setProperty('display', 'none', 'important');
     }
