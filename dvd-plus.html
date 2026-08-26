@@ -71,7 +71,6 @@
         }
         .btn-back:hover { color: #fff; border-color: #fff; }
 
-        /* LIVE STATS BALK */
         .stats-bar {
             width: 100%; max-width: 1050px;
             display: flex; gap: 12px; justify-content: center; align-items: center;
@@ -218,7 +217,6 @@
     </div>
 </div>
 
-<!-- LIVE STATS BALK -->
 <div class="stats-bar">
     <div>DMG: <span id="stat-dmg" class="stat-dmg">1</span></div>
     <div>SPD: <span id="stat-spd" class="stat-spd">1.0x</span></div>
@@ -673,10 +671,16 @@
     const ctx = canvas.getContext('2d');
     const flashEl = document.getElementById('cornerFlash');
 
+    // VASTE INTERNE RESOLUTIE VOOR STABIELE FYSISCHE BEREKENINGEN (voorkomt schermgrootte-exploits)
+    const INTERNAL_WIDTH = 1000;
+    const INTERNAL_HEIGHT = 625;
+
     function resizeCanvas() {
         const rect = canvas.parentElement.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
+        canvas.width = INTERNAL_WIDTH;
+        canvas.height = INTERNAL_HEIGHT;
+        canvas.style.width = rect.width + 'px';
+        canvas.style.height = rect.height + 'px';
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -688,14 +692,14 @@
             this.h = 42;  
             this.tier = tier; 
 
-            this.x = Math.random() * (canvas.width - this.w - 100) + 50;
-            this.y = Math.random() * (canvas.height - this.h - 100) + 50;
+            this.x = Math.random() * (INTERNAL_WIDTH - this.w - 100) + 50;
+            this.y = Math.random() * (INTERNAL_HEIGHT - this.h - 100) + 50;
 
             const corners = [
                 { x: 0, y: 0 },                                 
-                { x: canvas.width, y: 0 },                      
-                { x: 0, y: canvas.height },                     
-                { x: canvas.width, y: canvas.height }           
+                { x: INTERNAL_WIDTH, y: 0 },                      
+                { x: 0, y: INTERNAL_HEIGHT },                     
+                { x: INTERNAL_WIDTH, y: INTERNAL_HEIGHT }           
             ];
             const targetCorner = corners[Math.floor(Math.random() * corners.length)];
 
@@ -718,10 +722,10 @@
             let hitY = false;
 
             if (this.x <= 0) { this.x = 0; this.vx *= -1; hitX = true; } 
-            else if (this.x + this.w >= canvas.width) { this.x = canvas.width - this.w; this.vx *= -1; hitX = true; }
+            else if (this.x + this.w >= INTERNAL_WIDTH) { this.x = INTERNAL_WIDTH - this.w; this.vx *= -1; hitX = true; }
 
             if (this.y <= 0) { this.y = 0; this.vy *= -1; hitY = true; } 
-            else if (this.y + this.h >= canvas.height) { this.y = canvas.height - this.h; this.vy *= -1; hitY = true; }
+            else if (this.y + this.h >= INTERNAL_HEIGHT) { this.y = INTERNAL_HEIGHT - this.h; this.vy *= -1; hitY = true; }
 
             if (hitX || hitY) {
                 addProgress(1); 
@@ -901,8 +905,13 @@
         let selectingP = predictStates.find(p => p.status === 'selecting');
         if (!selectingP) return;
         const rect = canvas.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
+        
+        // Correcte conversie van muisklik op het geschaalde canvas naar interne coordinaten
+        const scaleX = INTERNAL_WIDTH / rect.width;
+        const scaleY = INTERNAL_HEIGHT / rect.height;
+        const clickX = (e.clientX - rect.left) * scaleX;
+        const clickY = (e.clientY - rect.top) * scaleY;
+
         for (let dvd of dvds) {
             let alreadyTargeted = predictStates.some(p => p.targetId === dvd.id && (p.status === 'selecting' || p.status === 'active'));
             if (!alreadyTargeted && clickX >= dvd.x && clickX <= dvd.x + dvd.w && clickY >= dvd.y && clickY <= dvd.y + dvd.h) {
@@ -949,6 +958,7 @@
         predictStates.forEach(p => {
             if (p.status === 'active') {
                 p.timer -= dt;
+                p.timer = Math.max(0, p.timer);
                 if (p.timer <= 0) {
                     p.status = 'cooldown';
                     p.cooldownTimer = stats.predictCooldownSec;
@@ -956,7 +966,7 @@
                 }
             } else if (p.status === 'cooldown') {
                 p.cooldownTimer -= dt;
-                p.cooldownTimer = Math.max(0, p.cooldownTimer); // Voorkom negatieve cooldown
+                p.cooldownTimer = Math.max(0, p.cooldownTimer); // VOLLEDIG BEVEILIGD TEGEN NEGATIEVE COOLDOWN
                 if (p.cooldownTimer <= 0) {
                     p.status = 'ready';
                 }
@@ -1234,7 +1244,7 @@
         const dt = (timestamp - lastTime) / 1000; 
         lastTime = timestamp;
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, INTERNAL_WIDTH, INTERNAL_HEIGHT);
 
         if (!isPaused) {
             dvds.forEach(dvd => { dvd.update(dt); dvd.draw(); });
