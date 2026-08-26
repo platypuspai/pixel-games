@@ -609,7 +609,6 @@
         const cacheKey = skinVal + '_flag_' + isFlag + '_code_' + flagCode + '_tier_' + tier;
         if (logoCache[cacheKey]) return logoCache[cacheKey];
         
-        // Grote canvas afmetingen voor de grote DVD's (150x70)
         const offscreen = document.createElement('canvas');
         offscreen.width = 150;
         offscreen.height = 70;
@@ -667,7 +666,6 @@
     const ctx = canvas.getContext('2d');
     const flashEl = document.getElementById('cornerFlash');
 
-    // VASTE INTERNE SPEELVELD RESOLUTIE (voorkomt schermgrootte exploits)
     const INTERNAL_WIDTH = 1000;
     const INTERNAL_HEIGHT = 625;
 
@@ -684,8 +682,8 @@
     class DVD {
         constructor(id, tier = 0) {
             this.id = id;
-            this.w = 150; // Grote DVD breedte zoals eerst
-            this.h = 70;  // Grote DVD hoogte zoals eerst
+            this.w = 150; 
+            this.h = 70;  
             this.tier = tier; 
 
             this.x = Math.random() * (INTERNAL_WIDTH - this.w - 100) + 50;
