@@ -297,13 +297,30 @@
     }
     const db = firebase.database();
 
-    const CODE_KEY = 'pg_player_code'; 
-    let playerCode = localStorage.getItem(CODE_KEY) || '';
+    // GEBRUIKT NU DE EXACTE SLEUTELS EN TEKENSETS VAN HET LEADERBOARD PLATFORM
+    const ACC_KEY = 'pg_account_code';
+    const DEV_KEY = 'pg_device_id';
+    const LB_KEY = 'pg_player_name';
 
-    if (!playerCode || playerCode.length !== 20) {
-        playerCode = Array.from({length: 20}, () => Math.floor(Math.random() * 10)).join('');
-        localStorage.setItem(CODE_KEY, playerCode);
+    function getDeviceId() {
+        let id = localStorage.getItem(DEV_KEY);
+        if (!id) { id = 'dvd-' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36); localStorage.setItem(DEV_KEY, id); }
+        return id;
     }
+    const MY_DEVICE_ID = getDeviceId();
+
+    function getOrCreateCode() {
+        let code = localStorage.getItem(ACC_KEY) || localStorage.getItem('pg_player_code');
+        if (!code || code.length !== 20) {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            code = Array.from({length: 20}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        }
+        localStorage.setItem(ACC_KEY, code);
+        return code;
+    }
+
+    const playerCode = getOrCreateCode();
+    let playerName = localStorage.getItem(LB_KEY) || 'Player';
 
     let money = 0;
     let dvdp = 0; 
@@ -448,6 +465,10 @@
     }
 
     function loadProgressFromFirebase() {
+        // Registreer de accountcode en naam direct in de platform-structuur
+        db.ref('accountCodes/' + playerCode).set({ deviceId: MY_DEVICE_ID, name: playerName }).catch(()=>{});
+        db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: playerName }).catch(()=>{});
+
         const userRef = getUserDbRef();
         userRef.once('value').then((snapshot) => {
             if (snapshot.exists()) {
@@ -488,6 +509,7 @@
             const userRef = getUserDbRef();
             userRef.set({
                 code: playerCode,
+                name: playerName,
                 money: money,
                 dvdp: dvdp,
                 level: level,
@@ -498,6 +520,7 @@
                 dvdTiers: dvdTiers, 
                 lastUpdated: Date.now()
             });
+            db.ref('accountCodes/' + playerCode).set({ deviceId: MY_DEVICE_ID, name: playerName }).catch(()=>{});
         }, 2000); 
     }
 
@@ -507,6 +530,7 @@
         dvdTiers = dvds.map(d => d.tier);
         getUserDbRef().set({
             code: playerCode,
+            name: playerName,
             money: money,
             dvdp: dvdp,
             level: level,
