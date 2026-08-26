@@ -62,7 +62,7 @@
             width: 100%; max-width: 750px;
             border-radius: 4px; padding: 30px 20px 30px 40px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.6);
-            border-left: 14px solid #ef4444; /* De bekende rode kantlijn */
+            border-left: 14px solid #ef4444;
             position: relative; z-index: 10;
             animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -113,7 +113,7 @@
         .anim-box {
             width: 50px; height: 50px;
             display: flex; justify-content: center; align-items: center;
-            font-size: 2.2rem; /* Iets grotere emojis */
+            font-size: 2.2rem;
         }
 
         /* Tekst (Titel & Beschrijving) */
@@ -128,7 +128,6 @@
             max-width: 200px; word-wrap: break-word;
         }
 
-        /* Animaties voor layout etc */
         @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeInLine { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
@@ -142,7 +141,7 @@
         }
         .back-link:hover { color: var(--accent-green); }
 
-        /* Modal Overlay (Valback als gegevens ontbreken) */
+        /* Modal Overlay */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.85);
             display: flex; align-items: center; justify-content: center;
@@ -185,7 +184,6 @@
         <div class="main-score-val" id="main-score-val">0s</div>
     </div>
 
-    <!-- De regels met de 18 feiten komen hier dynamisch onder -->
 </div>
 
 <a class="back-link" href="index.html">◄ TERUG NAAR HOME</a>
@@ -194,9 +192,8 @@
 <div class="modal-overlay" id="auth-modal" style="display:none;">
     <div class="modal">
         <h2>LOGIN / LEADERBOARD INFO</h2>
-        <p>Voer je algemene leaderboard-naam in en je code om je tijdscore op te slaan.</p>
+        <p>Voer je algemene leaderboard-naam in om je tijdscore op te slaan.</p>
         <input type="text" id="inp-name" placeholder="Jouw Spelernaam (max 18)" maxlength="18" autocomplete="off">
-        <input type="text" id="inp-code" placeholder="Jouw code (bijv. 20 cijfers)" autocomplete="off">
         <button onclick="saveUserAndConnect()">► BEVESTIGEN</button>
     </div>
 </div>
@@ -214,12 +211,33 @@
     }
     const db = firebase.database();
 
-    // 2. Variabelen & Feiten
+    // 2. Gedeelde Platform Sleutels
     const LB_KEY = 'pg_player_name';
-    const CODE_KEY = 'pg_player_code'; 
+    const ACC_KEY = 'pg_account_code'; 
+    const DEV_KEY = 'pg_device_id';
     
+    function getDeviceId() {
+        let id = localStorage.getItem(DEV_KEY);
+        if (!id) { 
+            id = 'tt-' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36); 
+            localStorage.setItem(DEV_KEY, id); 
+        }
+        return id;
+    }
+    const MY_DEVICE_ID = getDeviceId();
+
+    function getOrCreateCode() {
+        let code = localStorage.getItem(ACC_KEY);
+        if (!code || code.length !== 20) {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            code = Array.from({length: 20}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+            localStorage.setItem(ACC_KEY, code);
+        }
+        return code;
+    }
+
+    let playerCode = getOrCreateCode();
     let playerName = localStorage.getItem(LB_KEY) || '';
-    let playerCode = localStorage.getItem(CODE_KEY) || '';
     let scoreTime = 0; 
 
     const factDefs = [
@@ -243,7 +261,6 @@
         { id: 'marshmallows', icon: '🍡', title: 'Marshmallows', desc: 'Marshmallows roasted over campfires and grills globally.', calc: s => Math.floor(s * 1200).toLocaleString('en-US') + ' roasted' }
     ];
 
-    // 3. UI Opbouwen
     function buildNotebook() {
         const container = document.getElementById('notebook-container');
         
@@ -265,10 +282,8 @@
         });
     }
 
-    // 4. Tijdsformattering Functie
     function formatTime(totalSeconds) {
         if (totalSeconds === 0) return "0s";
-        
         let s = totalSeconds;
         
         const y = Math.floor(s / 31536000); s %= 31536000;
@@ -290,7 +305,6 @@
         return parts.join(" ");
     }
 
-    // 5. Authenticatie Controle
     function checkUserAuth() {
         if (!playerName) {
             showAuthModal();
@@ -302,7 +316,6 @@
 
     function showAuthModal() {
         document.getElementById('inp-name').value = playerName;
-        document.getElementById('inp-code').value = playerCode;
         document.getElementById('auth-modal').style.display = 'flex';
     }
 
@@ -312,33 +325,28 @@
 
     function saveUserAndConnect() {
         const nameInput = document.getElementById('inp-name').value.trim();
-        const codeInput = document.getElementById('inp-code').value.trim();
-
         if (!nameInput) {
             alert('Voer een geldige spelernaam in!');
             return;
         }
 
         playerName = nameInput.substring(0, 18);
-        playerCode = codeInput;
-
         localStorage.setItem(LB_KEY, playerName);
-        localStorage.setItem(CODE_KEY, playerCode);
 
         hideAuthModal();
         loadProgressFromFirebase();
     }
 
-    // Aangepast naar 'timeTickerScores' zodat het netjes als root-map in Firebase komt te staan
     function getUserDbRef() {
-        let safeKey = playerCode ? playerCode : playerName.replace(/[^a-zA-Z0-9]/g, "");
-        return db.ref('timeTickerScores/' + safeKey);
+        return db.ref('timeTickerScores/' + playerCode);
     }
 
-    // 6. Data Laden & Firebase
     function loadProgressFromFirebase() {
-        const userRef = getUserDbRef();
+        // Registreer direct in platform databanken zodat het leaderboard het herkent
+        db.ref('accountCodes/' + playerCode).set({ deviceId: MY_DEVICE_ID, name: playerName }).catch(()=>{});
+        db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: playerName }).catch(()=>{});
 
+        const userRef = getUserDbRef();
         userRef.once('value').then((snapshot) => {
             if (snapshot.exists()) {
                 const data = snapshot.val();
@@ -361,17 +369,18 @@
             name: playerName,
             score: scoreTime,
             code: playerCode,
+            deviceId: MY_DEVICE_ID,
             lastUpdated: Date.now()
         });
+        db.ref('accountCodes/' + playerCode).set({ deviceId: MY_DEVICE_ID, name: playerName }).catch(()=>{});
     }
 
-    // 7. De Ticker Loop
+    // Ticker Loop
     setInterval(() => {
         if (playerName && document.getElementById('auth-modal').style.display === 'none') {
             scoreTime++;
             updateUI();
             
-            // Sla elke 3 seconden op
             if (scoreTime % 3 === 0) {
                 saveProgressToFirebase();
             }
@@ -390,7 +399,6 @@
         });
     }
 
-    // Start!
     window.onload = () => {
         buildNotebook();
         checkUserAuth();
