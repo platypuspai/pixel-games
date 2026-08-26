@@ -297,10 +297,7 @@
     }
     const db = firebase.database();
 
-    const LB_KEY = 'pg_player_name';
     const CODE_KEY = 'pg_player_code'; 
-    
-    let playerName = localStorage.getItem(LB_KEY) || 'Guest';
     let playerCode = localStorage.getItem(CODE_KEY) || '';
 
     if (!playerCode || playerCode.length !== 20) {
@@ -490,7 +487,6 @@
             dvdTiers = dvds.map(d => d.tier);
             const userRef = getUserDbRef();
             userRef.set({
-                name: playerName,
                 code: playerCode,
                 money: money,
                 dvdp: dvdp,
@@ -510,7 +506,6 @@
         if (!playerCode) return;
         dvdTiers = dvds.map(d => d.tier);
         getUserDbRef().set({
-            name: playerName,
             code: playerCode,
             money: money,
             dvdp: dvdp,
@@ -614,53 +609,54 @@
         const cacheKey = skinVal + '_flag_' + isFlag + '_code_' + flagCode + '_tier_' + tier;
         if (logoCache[cacheKey]) return logoCache[cacheKey];
         
+        // Grote canvas afmetingen voor de grote DVD's (150x70)
         const offscreen = document.createElement('canvas');
-        offscreen.width = 90;
-        offscreen.height = 42;
+        offscreen.width = 150;
+        offscreen.height = 70;
         const octx = offscreen.getContext('2d');
         
-        octx.clearRect(0, 0, 90, 42);
+        octx.clearRect(0, 0, 150, 70);
 
         if (isFlag) {
             let flagImg = getFlagImage(flagCode);
             if (flagImg.complete && flagImg.naturalWidth !== 0) {
-                octx.drawImage(flagImg, 0, 0, 90, 42);
+                octx.drawImage(flagImg, 0, 0, 150, 70);
             }
             octx.strokeStyle = '#000';
-            octx.lineWidth = 2 + tier;
-            octx.strokeRect(1, 1, 88, 40);
+            octx.lineWidth = 3 + tier;
+            octx.strokeRect(1, 1, 148, 68);
         } else {
-            let lineWidth = 2 + tier; 
+            let lineWidth = 3 + tier; 
             octx.strokeStyle = skinVal;
             octx.lineWidth = lineWidth;
-            octx.strokeRect(1, 1, 88, 40);
+            octx.strokeRect(1, 1, 148, 68);
             octx.fillStyle = skinVal;
             
             octx.save();
-            octx.translate(10, 0);
+            octx.translate(15, 0);
             octx.transform(1, 0, -0.26, 1, 0, 0);
-            octx.font = '900 34px "Arial Black", Impact, sans-serif';
+            octx.font = '900 56px "Arial Black", Impact, sans-serif';
             octx.textAlign = 'center';
-            octx.fillText('DVD', 40, 28);
+            octx.fillText('DVD', 65, 46);
             octx.restore();
             
             octx.beginPath();
-            octx.ellipse(45, 34, 42, 7, 0, 0, Math.PI * 2);
+            octx.ellipse(75, 56, 68, 11, 0, 0, Math.PI * 2);
             octx.fill();
             
             octx.globalCompositeOperation = 'destination-out';
             octx.beginPath();
-            octx.ellipse(45, 34, 14, 2.5, 0, 0, Math.PI * 2);
+            octx.ellipse(75, 56, 22, 4, 0, 0, Math.PI * 2);
             octx.fill();
             
             octx.globalCompositeOperation = 'source-over';
             octx.fillStyle = skinVal;
-            octx.font = '900 7px "Arial Black", Impact, sans-serif';
+            octx.font = '900 11px "Arial Black", Impact, sans-serif';
             octx.textAlign = 'center';
             
             let tierLabel = tierNames[tier] || `Tier ${tier + 1}`;
             let subText = tier === 0 ? 'V I D E O' : `${tierLabel} (${Math.pow(3, tier)}X)`;
-            octx.fillText(subText, 45, 37);
+            octx.fillText(subText, 75, 60);
         }
         
         logoCache[cacheKey] = offscreen;
@@ -671,7 +667,7 @@
     const ctx = canvas.getContext('2d');
     const flashEl = document.getElementById('cornerFlash');
 
-    // VASTE INTERNE RESOLUTIE VOOR STABIELE FYSISCHE BEREKENINGEN (voorkomt schermgrootte-exploits)
+    // VASTE INTERNE SPEELVELD RESOLUTIE (voorkomt schermgrootte exploits)
     const INTERNAL_WIDTH = 1000;
     const INTERNAL_HEIGHT = 625;
 
@@ -688,8 +684,8 @@
     class DVD {
         constructor(id, tier = 0) {
             this.id = id;
-            this.w = 90; 
-            this.h = 42;  
+            this.w = 150; // Grote DVD breedte zoals eerst
+            this.h = 70;  // Grote DVD hoogte zoals eerst
             this.tier = tier; 
 
             this.x = Math.random() * (INTERNAL_WIDTH - this.w - 100) + 50;
@@ -754,9 +750,9 @@
                 const imgCanvas = getDVDCanvas('', true, skinObj.code, this.tier);
                 ctx.drawImage(imgCanvas, this.x, this.y, this.w, this.h);
             } else if (skinObj.type === 'emoji') {
-                ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 2 + this.tier;
+                ctx.strokeStyle = '#4488ff'; ctx.lineWidth = 3 + this.tier;
                 ctx.strokeRect(this.x, this.y, this.w, this.h);
-                ctx.font = '35px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.font = '50px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.fillText(skinObj.val, this.x + this.w/2, this.y + this.h/2 + 2);
             }
         }
@@ -906,7 +902,6 @@
         if (!selectingP) return;
         const rect = canvas.getBoundingClientRect();
         
-        // Correcte conversie van muisklik op het geschaalde canvas naar interne coordinaten
         const scaleX = INTERNAL_WIDTH / rect.width;
         const scaleY = INTERNAL_HEIGHT / rect.height;
         const clickX = (e.clientX - rect.left) * scaleX;
@@ -966,7 +961,7 @@
                 }
             } else if (p.status === 'cooldown') {
                 p.cooldownTimer -= dt;
-                p.cooldownTimer = Math.max(0, p.cooldownTimer); // VOLLEDIG BEVEILIGD TEGEN NEGATIEVE COOLDOWN
+                p.cooldownTimer = Math.max(0, p.cooldownTimer); 
                 if (p.cooldownTimer <= 0) {
                     p.status = 'ready';
                 }
