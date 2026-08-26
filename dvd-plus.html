@@ -71,6 +71,21 @@
         }
         .btn-back:hover { color: #fff; border-color: #fff; }
 
+        /* LIVE STATS BALK */
+        .stats-bar {
+            width: 100%; max-width: 1050px;
+            display: flex; gap: 12px; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.5); border: 1px dashed var(--border);
+            padding: 12px; border-radius: 6px; margin-bottom: 20px;
+            font-family: 'Press Start 2P', monospace; font-size: 0.45rem; color: var(--text-muted);
+            position: relative; z-index: 10; flex-wrap: wrap; text-align: center;
+        }
+        .stat-dmg { color: var(--accent-green); }
+        .stat-spd { color: var(--accent-yellow); }
+        .stat-dvds { color: var(--accent-blue); }
+        .stat-corner { color: var(--accent-pink); }
+        .stat-predict { color: var(--accent-purple); }
+
         .game-layout {
             display: grid;
             grid-template-columns: 1fr 350px;
@@ -203,6 +218,18 @@
     </div>
 </div>
 
+<!-- LIVE STATS BALK -->
+<div class="stats-bar">
+    <div>DMG: <span id="stat-dmg" class="stat-dmg">1</span></div>
+    <div>SPD: <span id="stat-spd" class="stat-spd">1.0x</span></div>
+    <div>DVDs: <span id="stat-dvds" class="stat-dvds">1</span></div>
+    <div>CORNER: <span id="stat-corner" class="stat-corner">50</span></div>
+    <div>PRED. BONUS: <span id="stat-pred-mult" class="stat-predict">+1000x</span></div>
+    <div>TIME: <span id="stat-pred-time" class="stat-predict">30s</span></div>
+    <div>COOL: <span id="stat-pred-cool" class="stat-predict">120s</span></div>
+    <div>SLOTS: <span id="stat-pred-slots" class="stat-predict">1</span></div>
+</div>
+
 <div class="game-layout">
     <div class="main-col">
         <div class="canvas-wrap">
@@ -272,14 +299,17 @@
     }
     const db = firebase.database();
 
-    // Stille inlog: haalt de gegevens rechtstreeks uit de opslag van de browser
     const LB_KEY = 'pg_player_name';
     const CODE_KEY = 'pg_player_code'; 
     
     let playerName = localStorage.getItem(LB_KEY) || 'Guest';
-    let playerCode = localStorage.getItem(CODE_KEY) || 'GUEST_NO_CODE';
+    let playerCode = localStorage.getItem(CODE_KEY) || '';
 
-    // Variabelen voor de game
+    if (!playerCode || playerCode.length !== 20) {
+        playerCode = Array.from({length: 20}, () => Math.floor(Math.random() * 10)).join('');
+        localStorage.setItem(CODE_KEY, playerCode);
+    }
+
     let money = 0;
     let dvdp = 0; 
     let level = 1;
@@ -418,7 +448,6 @@
         return img;
     }
 
-    // ==== GEBRUIKT DIRECT DE CODE UIT LOCALSTORAGE ====
     function getUserDbRef() {
         return db.ref('dvdPlusScores/' + playerCode);
     }
@@ -446,6 +475,7 @@
             rebuildDVDsFromTiers();
             initShop();
             equipSkin(currentSkin);
+            updateStatsUI();
         }).catch((err) => {
             console.error("Error loading Firebase data:", err);
             initShop();
@@ -453,12 +483,35 @@
         });
     }
 
+    let saveTimeout = null;
     function saveProgressToFirebase() {
         if (!playerCode) return;
-        dvdTiers = dvds.map(d => d.tier);
+        if (saveTimeout) clearTimeout(saveTimeout);
 
-        const userRef = getUserDbRef();
-        userRef.set({
+        saveTimeout = setTimeout(() => {
+            dvdTiers = dvds.map(d => d.tier);
+            const userRef = getUserDbRef();
+            userRef.set({
+                name: playerName,
+                code: playerCode,
+                money: money,
+                dvdp: dvdp,
+                level: level,
+                levelProgress: levelProgress,
+                upgradeLevels: upgradeLevels,
+                unlockedSkins: unlockedSkins,
+                currentSkin: currentSkin,
+                dvdTiers: dvdTiers, 
+                lastUpdated: Date.now()
+            });
+        }, 2000); 
+    }
+
+    window.addEventListener('beforeunload', () => {
+        if (saveTimeout) clearTimeout(saveTimeout);
+        if (!playerCode) return;
+        dvdTiers = dvds.map(d => d.tier);
+        getUserDbRef().set({
             name: playerName,
             code: playerCode,
             money: money,
@@ -471,6 +524,43 @@
             dvdTiers: dvdTiers, 
             lastUpdated: Date.now()
         });
+    });
+
+    function updateStatsUI() {
+        const dmgEl = document.getElementById('stat-dmg');
+        const spdEl = document.getElementById('stat-spd');
+        const dvdsEl = document.getElementById('stat-dvds');
+        const cornerEl = document.getElementById('stat-corner');
+        
+        const predMultEl = document.getElementById('stat-pred-mult');
+        const predTimeEl = document.getElementById('stat-pred-time');
+        const predCoolEl = document.getElementById('stat-pred-cool');
+        const predSlotsEl = document.getElementById('stat-pred-slots');
+
+        let maxTier = getHighestUnlockedTier();
+        let tierMult = Math.pow(3, maxTier);
+
+        if (dmgEl) {
+            if (dvds.length > 0) {
+                let realDmg = stats.moneyPerBounce * tierMult;
+                dmgEl.innerText = `${realDmg.toLocaleString()} (x${tierMult})`;
+            } else {
+                dmgEl.innerText = `${stats.moneyPerBounce} (x1)`;
+            }
+        }
+
+        if (cornerEl) {
+            let realCornerReward = stats.moneyPerBounce * stats.cornerMultiplier * tierMult;
+            cornerEl.innerText = `${realCornerReward.toLocaleString()} (${stats.cornerMultiplier}x)`;
+        }
+
+        if(spdEl) spdEl.innerText = stats.speedMultiplier.toFixed(1) + 'x';
+        if(dvdsEl) dvdsEl.innerText = dvds.length;
+
+        if(predMultEl) predMultEl.innerText = `+${stats.predictRewardMult}x`;
+        if(predTimeEl) predTimeEl.innerText = `${stats.predictDurationSec}s`;
+        if(predCoolEl) predCoolEl.innerText = `${stats.predictCooldownSec}s`;
+        if(predSlotsEl) predSlotsEl.innerText = `${1 + stats.multiTargetLevel}`;
     }
 
     function reapplyUpgrades() {
@@ -496,6 +586,8 @@
 
         if (stats.multiTargetLevel > 3) stats.multiTargetLevel = 3;
         if (stats.autopilotLevel > 1) stats.autopilotLevel = 1;
+        
+        updateStatsUI();
     }
 
     function rebuildDVDsFromTiers() {
@@ -504,6 +596,7 @@
         dvdTiers.forEach(tier => {
             dvds.push(new DVD(Date.now() + Math.random(), tier));
         });
+        updateStatsUI();
     }
 
     document.addEventListener("visibilitychange", () => {
@@ -688,6 +781,7 @@
 
     function spawnDVD(tier = 0) {
         dvds.push(new DVD(Date.now() + Math.random(), tier));
+        updateStatsUI();
         checkAndMerge(tier);
         saveProgressToFirebase();
         initShop();
@@ -721,6 +815,8 @@
             
             tier = nextTier;
             sameTierList = dvds.filter(d => d.tier === tier);
+            
+            updateStatsUI();
         }
         saveProgressToFirebase();
         initShop();
@@ -860,6 +956,7 @@
                 }
             } else if (p.status === 'cooldown') {
                 p.cooldownTimer -= dt;
+                p.cooldownTimer = Math.max(0, p.cooldownTimer); // Voorkom negatieve cooldown
                 if (p.cooldownTimer <= 0) {
                     p.status = 'ready';
                 }
@@ -1041,8 +1138,11 @@
         let canAfford = upData.currency === 'dvdp' ? (dvdp >= cost) : (money >= cost);
         
         if (canAfford) {
-            if (upData.currency === 'dvdp') dvdp -= cost;
-            else money -= cost;
+            if (upData.currency === 'dvdp') {
+                dvdp = Math.max(0, dvdp - cost);
+            } else {
+                money = Math.max(0, money - cost);
+            }
 
             if (!upgradeLevels[id]) upgradeLevels[id] = 0;
             upgradeLevels[id]++;
@@ -1062,7 +1162,7 @@
         let skin = findSkinObj(id);
         let cost = skin.cost !== undefined ? skin.cost : 150;
         if (dvdp >= cost && !unlockedSkins.includes(id)) {
-            dvdp -= cost;
+            dvdp = Math.max(0, dvdp - cost);
             unlockedSkins.push(id);
             updateCurrencies();
             initShop();
@@ -1146,7 +1246,6 @@
         requestAnimationFrame(gameLoop);
     }
 
-    // Direct inladen vanuit localStorage en starten!
     window.onload = () => {
         loadProgressFromFirebase();
         requestAnimationFrame(gameLoop);
