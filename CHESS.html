@@ -51,6 +51,7 @@
             animation: float 3s ease-in-out infinite;
         }
 
+        /* Petje van het mannetje */
         .avatar::before {
             content: '';
             position: absolute;
@@ -191,15 +192,15 @@
     <script src="https://cloudflare.com"></script>
     <script src="https://cloudflare.com"></script>
     
-    <!-- Firebase SDK (Gekoppeld aan jouw Plixo-Arcade database structuren) -->
+    <!-- Firebase SDK (Compat Modus) -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
 
     <script>
         // ===================================================
-        // FIREBASE CONFIGURATIE (AUTOMATISCH GEKOPPELD)
+        // FIREBASE INITIALISATIE
         // ===================================================
-        // Vul hier je eigen Firebase-gegevens in om live te gaan!
+        // VUL HIER DE GEGEVENS IN UIT JOUW PLIXO-ARCADE INDEX!
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
             authDomain: "YOUR_PROJECT_://firebaseapp.com",
@@ -233,7 +234,7 @@
         async function makeAIMove() {
             if (game.game_over()) return;
 
-            // Mannetje verandert naar denkmodus
+            // Mannetje verandert naar denkmodus (ogen knipperen)
             avatarEl.className = 'avatar thinking';
 
             const moves = game.moves({ verbose: true });
@@ -244,7 +245,6 @@
 
             let learnedMoves = {};
             try {
-                // Slaat data op onder 'plixo_arcade/chess_ai/' conform jouw projectindeling
                 const snapshot = await database.ref('plixo_arcade/chess_ai/' + currentFen).once('value');
                 if (snapshot.exists()) {
                     learnedMoves = snapshot.val();
@@ -258,7 +258,7 @@
                 const moveSan = move.san;
                 const score = learnedMoves[moveSan] || 0; 
 
-                // Epsilon-greedy exploratie: AI start willekeurig, maar leert snel de beste keuzes
+                // Epsilon-greedy exploratie: AI start random, maar kiest steeds vaker de succesvolle routes
                 const finalScore = score + (Math.random() * 0.25);
 
                 if (finalScore > maxScore) {
@@ -271,7 +271,7 @@
             game.move(bestMove.san);
             board.position(game.fen());
 
-            // Voeg toe aan geschiedenis voor de backpropagation training achteraf
+            // Sla op in de geschiedenis van dit potje
             moveHistory.push({ fen: currentFen, move: bestMove.san });
 
             avatarEl.className = 'avatar';
@@ -279,13 +279,14 @@
         }
 
         function onDrop(source, target) {
-            // BUGFIX 1: Controleer handmatig of de zet een promotie is om vastlopen van chess.js te voorkomen
+            // FIX 1: Handmatige check voor pionpromotie om crashes te voorkomen
             const sourcePiece = game.get(source);
             let promotionPiece = undefined;
             
             if (sourcePiece && sourcePiece.type === 'p') {
-                if ((sourcePiece.color === 'w' && target[1] === '8') || (sourcePiece.color === 'b' && target[1] === '1')) {
-                    promotionPiece = 'q'; // Promoveer standaard naar koningin
+                if ((sourcePiece.color === 'w' && target.charAt(1) === '8') || 
+                    (sourcePiece.color === 'b' && target.charAt(1) === '1')) {
+                    promotionPiece = 'q'; 
                 }
             }
 
@@ -295,7 +296,7 @@
                 promotion: promotionPiece
             });
 
-            if (move === null) return 'snapback'; // Illegale zet terugdraaien
+            if (move === null) return 'snapback'; // Illegale zet herstellen
 
             updateStatus();
             window.setTimeout(makeAIMove, 500);
@@ -310,3 +311,5 @@
             let turnColor = game.turn() === 'b' ? 'Zwart (AI)' : 'Wit (Jij)';
 
             if (game.in_checkmate()) {
+                statusText = `Schaakmat! ${turnColor} verliest.`;
+                if (game.turn() === 'w') {
