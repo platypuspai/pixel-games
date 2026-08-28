@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wereld Schaak AI tegen de Internet-Eenvat</title>
+    
+    <!-- Externe CSS voor het Schaakbord -->
+    <link rel="stylesheet" href="https://cloudflare.com">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e222b;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #282c34;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        /* --- DE OPPONENT AVATAR (HET MANNETJE) --- */
+        .opponent-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 15px;
+            height: 110px;
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            background: #ffbd59;
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* Het petje */
+        .avatar::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 5px;
+            width: 50px;
+            height: 15px;
+            background: #e74c3c;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .avatar-eyes {
+            position: absolute;
+            top: 22px;
+            left: 12px;
+            width: 36px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .eye {
+            width: 8px;
+            height: 8px;
+            background: #2c3e50;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .avatar-mouth {
+            position: absolute;
+            bottom: 12px;
+            left: 22px;
+            width: 16px;
+            height: 8px;
+            border-bottom: 3px solid #2c3e50;
+            border-radius: 0 0 10px 10px;
+            transition: all 0.2s;
+        }
+
+        /* Emotie-toestanden van het mannetje */
+        .avatar.thinking .eye { animation: blink 0.5s infinite alternate; }
+        .avatar.thinking { background: #f39c12; }
+
+        .avatar.winning .avatar-mouth {
+            border-radius: 0 0 15px 15px;
+            height: 10px;
+            background: transparent;
+        }
+
+        .avatar.losing .avatar-mouth {
+            border: none;
+            border-top: 3px solid #2c3e50;
+            border-radius: 10px 10px 0 0;
+            bottom: 8px;
+        }
+
+        .opponent-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #a0a5b5;
+            margin-top: 8px;
+        }
+
+        /* --- SCHAAKBORD & INTERFACE --- */
+        #board {
+            width: 400px;
+            max-width: 90vw;
+            border: 4px solid #3e4451;
+            border-radius: 4px;
+        }
+
+        .control-panel {
+            margin-top: 15px;
+            text-align: center;
+            width: 100%;
+        }
+
+        #status {
+            font-size: 15px;
+            color: #abb2bf;
+            margin-bottom: 12px;
+            min-height: 22px;
+        }
+
+        button {
+            background: #4b7bec;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover { background: #3867d6; }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @keyframes blink {
+            0% { transform: scaleY(1); }
+            100% { transform: scaleY(0.1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <!-- De AI Tegenstander boven het bord -->
+        <div class="opponent-area">
+            <div id="ai-avatar" class="avatar">
+                <div class="avatar-eyes">
+                    <div class="eye"></div>
+                    <div class="eye"></div>
+                </div>
+                <div class="avatar-mouth"></div>
+            </div>
+            <div class="opponent-name">Evolving Chess-Bot AI</div>
+        </div>
+
+        <!-- Het fysieke schaakbord -->
+        <div id="board"></div>
+
+        <!-- Status en Knoppen onder het bord -->
+        <div class="control-panel">
+            <div id="status">Laden van Firebase wereldgeheugen...</div>
+            <button onclick="resetGame()">Nieuw Potje</button>
+        </div>
+    </div>
+
+    <!-- Vereiste Scripts: jQuery, Chess.js (regels), Chessboard.js (interface) -->
+    <script src="https://jquery.com"></script>
+    <script src="https://cloudflare.com"></script>
+    <script src="https://cloudflare.com"></script>
+    
+    <!-- Firebase Legacy / Compat SDK -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+
+    <script>
+        // ==========================================
+        // 1. VERBINDING MET JOUW FIREBASE DATABASE
+        // ==========================================
+        // Plak hier jouw eigen Firebase configuratie in!
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_://firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_://firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_://appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        
+        // Initialiseer Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ==========================================
+        // 2. SPEL EN AI LOGICA
+        // ==========================================
+        let board = null;
+        let game = new Chess();
+        let moveHistory = []; // Slaat zetten van dit specifieke potje op
+
+        const avatarEl = document.getElementById('ai-avatar');
+
+        function onDragStart(source, piece, position, orientation) {
+            // Blokkeer zetten als de game voorbij is of als de speler zwarte stukken pakt
+            if (game.game_over()) return false;
+            if (piece.search(/^b/) !== -1) return false; 
+        }
+
+        async function makeAIMove() {
+            if (game.game_over()) return;
+
+            // Verander uiterlijk van het mannetje naar 'aan het nadenken'
+            avatarEl.className = 'avatar thinking';
+
+            const moves = game.moves({ verbose: true });
+            if (moves.length === 0) return;
+
+            // Converteer FEN-stelling naar geldige Firebase Pad-sleutel (zonder slashes)
+            const currentFen = game.fen().replace(/\//g, "_");
+
+            // Vraag Firebase naar de collectieve ervaringen van deze stelling
+            let learnedMoves = {};
+            try {
+                const snapshot = await database.ref('positions/' + currentFen).once('value');
+                if (snapshot.exists()) {
+                    learnedMoves = snapshot.val();
+                }
+            } catch(e) { console.error(e); }
+
+            let bestMove = null;
+            let maxScore = -Infinity;
+
+            moves.forEach(move => {
+                const moveSan = move.san;
+                const score = learnedMoves[moveSan] || 0; 
+
+                // Exploratie-factor: AI start willekeurig (random), maar kiest vaker
+                // voor bekende succesvolle zetten naarmate er meer data is.
+                const finalScore = score + (Math.random() * 0.15);
+
+                if (finalScore > maxScore) {
+                    maxScore = finalScore;
+                    bestMove = move;
+                }
+            });
+
+            // Voer de zet uit in de logica en op de interface
+            game.move(bestMove.san);
+            board.position(game.fen());
+
+            // Voeg toe aan geschiedenis voor de training achteraf
+            moveHistory.push({ fen: currentFen, move: bestMove.san });
+
+            // Reset emotie na het doen van de zet
+            avatarEl.className = 'avatar';
+            updateStatus();
+        }
+
+        function onDrop(source, target) {
+            let move = game.move({
+                from: source,
+                to: target,
+                promotion: 'q' 
+            });
+
+            if (move === null) return 'snapback'; // Illegale zet herstellen
+
+            updateStatus();
+            // Geef de AI een halve seconde om zijn zet te berekenen
+            window.setTimeout(makeAIMove, 600);
+        }
+
+        function onSnapEnd() {
+            board.position(game.fen());
+        }
+
+        function updateStatus() {
+            let statusText = '';
+            let turnColor = game.turn() === 'b' ? 'Zwart (AI)' : 'Wit (Jij)';
+
+            if (game.in_checkmate()) {
+                statusText = `Schaakmat! ${turnColor} heeft verloren.`;
+                if (game.turn() === 'w') {
+                    avatarEl.className = 'avatar winning'; // AI wint, mannetje lacht
+                    handleGameOver('AI');
+                } else {
