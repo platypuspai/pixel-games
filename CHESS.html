@@ -51,7 +51,6 @@
             animation: float 3s ease-in-out infinite;
         }
 
-        /* Petje van het mannetje */
         .avatar::before {
             content: '';
             position: absolute;
@@ -192,18 +191,18 @@
     <script src="https://cloudflare.com"></script>
     <script src="https://cloudflare.com"></script>
     
-    <!-- Firebase SDK (Zelfde versie als gebruikt in jouw project index) -->
+    <!-- Firebase SDK (Gekoppeld aan jouw Plixo-Arcade database structuren) -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
 
     <script>
         // ===================================================
-        // FIREBASE INITIALISATIE (HERGEBRUIKT UIT JOUW INDEX)
+        // FIREBASE CONFIGURATIE (AUTOMATISCH GEKOPPELD)
         // ===================================================
-        // Vul hier exact de config-gegevens in die in je Plixo-Arcade project staan
+        // Vul hier je eigen Firebase-gegevens in om live te gaan!
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            authDomain: "YOUR_PROJECT_://firebaseapp.com",
             databaseURL: "https://YOUR_PROJECT_://firebaseio.com",
             projectId: "YOUR_PROJECT_ID",
             storageBucket: "YOUR_PROJECT_://appspot.com",
@@ -211,14 +210,13 @@
             appId: "YOUR_APP_ID"
         };
         
-        // Start Firebase op als het nog niet draait
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         const database = firebase.database();
 
         // ===================================================
-        // SCHAAK & LEARNING LOGICA
+        // SCHAAK & AUTOMATISCH LEERPROCES
         // ===================================================
         let board = null;
         let game = new Chess();
@@ -228,41 +226,40 @@
 
         function onDragStart(source, piece, position, orientation) {
             if (game.game_over()) return false;
-            // Speler mag alleen witte stukken bewegen (AI is zwart)
+            // Speler mag GEEN zwarte stukken vastpakken (AI is zwart)
             if (piece.search(/^b/) !== -1) return false; 
         }
 
         async function makeAIMove() {
             if (game.game_over()) return;
 
-            // Het mannetje gaat live nadenken (ogen knipperen)
+            // Mannetje verandert naar denkmodus
             avatarEl.className = 'avatar thinking';
 
             const moves = game.moves({ verbose: true });
             if (moves.length === 0) return;
 
-            // Zet FEN stelling om naar een veilig Firebase database-pad
+            // FEN-stelling opschonen voor Firebase padcompatibiliteit
             const currentFen = game.fen().replace(/\//g, "_");
 
-            // Haal collectieve kennis op uit de database
             let learnedMoves = {};
             try {
-                const snapshot = await database.ref('chess_ai/positions/' + currentFen).once('value');
+                // Slaat data op onder 'plixo_arcade/chess_ai/' conform jouw projectindeling
+                const snapshot = await database.ref('plixo_arcade/chess_ai/' + currentFen).once('value');
                 if (snapshot.exists()) {
                     learnedMoves = snapshot.val();
                 }
-            } catch(e) { console.error("Database sync fout: ", e); }
+            } catch(e) { console.error("Firebase Sync Error: ", e); }
 
             let bestMove = null;
             let maxScore = -Infinity;
 
             moves.forEach(move => {
                 const moveSan = move.san;
-                // Standaard score is 0 (volledig random start)
                 const score = learnedMoves[moveSan] || 0; 
 
-                // Epsilon-greedy exploratie: geeft ruimte om random nieuwe dingen te proberen
-                const finalScore = score + (Math.random() * 0.2);
+                // Epsilon-greedy exploratie: AI start willekeurig, maar leert snel de beste keuzes
+                const finalScore = score + (Math.random() * 0.25);
 
                 if (finalScore > maxScore) {
                     maxScore = finalScore;
@@ -270,30 +267,38 @@
                 }
             });
 
-            // Voer de gekozen zet uit
+            // Voer de zet uit in de logica
             game.move(bestMove.san);
             board.position(game.fen());
 
-            // Onthoud de zet voor de feedback-loop aan het einde van de rit
+            // Voeg toe aan geschiedenis voor de backpropagation training achteraf
             moveHistory.push({ fen: currentFen, move: bestMove.san });
 
-            // Reset het mannetje naar zijn neutrale blik
             avatarEl.className = 'avatar';
             updateStatus();
         }
 
         function onDrop(source, target) {
+            // BUGFIX 1: Controleer handmatig of de zet een promotie is om vastlopen van chess.js te voorkomen
+            const sourcePiece = game.get(source);
+            let promotionPiece = undefined;
+            
+            if (sourcePiece && sourcePiece.type === 'p') {
+                if ((sourcePiece.color === 'w' && target[1] === '8') || (sourcePiece.color === 'b' && target[1] === '1')) {
+                    promotionPiece = 'q'; // Promoveer standaard naar koningin
+                }
+            }
+
             let move = game.move({
                 from: source,
                 to: target,
-                promotion: 'q' 
+                promotion: promotionPiece
             });
 
-            if (move === null) return 'snapback'; // Illegale zet
+            if (move === null) return 'snapback'; // Illegale zet terugdraaien
 
             updateStatus();
-            // Vertraag de AI-zet met 600ms zodat het mannetje echt lijkt na te denken
-            window.setTimeout(makeAIMove, 600);
+            window.setTimeout(makeAIMove, 500);
         }
 
         function onSnapEnd() {
@@ -305,8 +310,3 @@
             let turnColor = game.turn() === 'b' ? 'Zwart (AI)' : 'Wit (Jij)';
 
             if (game.in_checkmate()) {
-                statusText = `Schaakmat! ${turnColor} verliest.`;
-                if (game.turn() === 'w') {
-                    avatarEl.className = 'avatar winning'; // AI wint -> Mannetje lacht
-                    handleGameOver('AI');
-                } else {
