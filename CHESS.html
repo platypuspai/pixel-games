@@ -6,10 +6,10 @@
     <title>Chess.com Stijl — Klik-schaken</title>
     
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://googleapis.com" rel="stylesheet">
     
     <!-- Chessboard.js CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <link rel="stylesheet" href="https://unpkg.com">
     
     <style>
         :root {
@@ -144,10 +144,9 @@
 
         /* Markeringsstijlen voor legale zetten (Chess.com look) */
         .highlight-square {
-            box-shadow: inset 0 0 3px 3px rgba(129, 182, 76, 0.7);
+            box-shadow: inset 0 0 3px 3px rgba(129, 182, 76, 0.7) !important;
         }
         
-        /* Oplossing om markers relatief te positioneren binnen de schaakvelden */
         #board .square-55d63 {
             position: relative;
         }
@@ -195,29 +194,27 @@
                 <span>👤 Jij (Wit)</span>
             </div>
 
-            <div id="status">Verbinden met Plixo Cloud-geheugen...</div>
+            <div id="status">Laden...</div>
 
             <div class="controls">
                 <button class="secondary" onclick="resetGame()">Nieuw Spel</button>
-                <button onclick="makeAiMove()">Laat AI Zetten</button>
+                <button onclick="forceAiMove()">Zet AI</button>
             </div>
         </div>
     </div>
 
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Chess.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-    <!-- Chessboard.js -->
-    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <!-- Libraries in exact de juiste laadvolgorde -->
+    <script src="https://jquery.com"></script>
+    <script src="https://cloudflare.com"></script>
+    <script src="https://unpkg.com"></script>
     
-    <!-- Firebase Legacy / Compat SDK -->
+    <!-- Firebase SDK (Compat Modus) -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
 
     <script>
         // ===================================================
-        // 1. FIREBASE CONFIGURATIE EN VEILIGE OPSTART
+        // 1. FIREBASE CONFIGURATIE (VEILIGE REALTIME SYNC)
         // ===================================================
         // VUL HIER JOUW EIGEN CONFIG IN UIT JE MONEY DIGGER BESTAND!
         const firebaseConfig = {
@@ -233,26 +230,30 @@
         let database = null;
         let firebaseReady = false;
 
+        // Foutbestendige initialisatie: als de sleutels hierboven nog op demo staan, crasht het spel niet!
         try {
-            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY" && firebaseConfig.apiKey !== "") {
                 if (!firebase.apps.length) {
                     firebase.initializeApp(firebaseConfig);
                 }
                 database = firebase.database();
                 firebaseReady = true;
+                console.log("Firebase gekoppeld aan de schaak-AI!");
+            } else {
+                console.warn("Draait in lokale demo-modus. Vul je Firebase-sleutels in voor wereldwijd leren.");
             }
         } catch (e) {
-            console.error("Firebase database initialisatie mislukt: ", e);
+            console.error("Firebase database kon niet starten: ", e);
         }
 
         // ===================================================
-        // 2. SCHAAK SPEL VARIABELEN & MECHANISMEN
+        // 2. LOGICA EN COÖRDINATIE
         // ===================================================
         let board = null;
         let game = new Chess();
         let selectedSquare = null;
         let legalMoves = [];
-        let moveHistory = []; // Bijhouden voor reinforcement learning
+        let moveHistory = []; 
 
         function removeHighlights() {
             $('#board .square-55d63').removeClass('highlight-square highlight-legal highlight-legal-capture');
@@ -276,11 +277,11 @@
 
         function onSquareClick(square) {
             if (game.game_over()) return;
-            if (game.turn() !== 'w') return; // Alleen speler (wit) mag zetten doen
+            if (game.turn() !== 'w') return; 
 
             let matchMove = legalMoves.find(m => m.to === square);
             if (selectedSquare && matchMove) {
-                // Controleer op pionpromotie
+                // Handmatige afhandeling van pionpromotie om chess.js fouten te voorkomen
                 const sourcePiece = game.get(selectedSquare);
                 let promotionPiece = undefined;
                 if (sourcePiece && sourcePiece.type === 'p' && square.charAt(1) === '8') {
@@ -307,8 +308,3 @@
                 }
             }
 
-            // Selecteer een eigen wit stuk
-            let piece = game.get(square);
-            if (piece && piece.color === 'w') {
-                selectedSquare = square;
-                removeHighlights();
