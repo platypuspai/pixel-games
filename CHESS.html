@@ -3,200 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plixo-Arcade · Wereld Schaak AI</title>
+    <title>Chess.com Stijl — Klik-schaken</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chessboard.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     
     <style>
+        :root {
+            --bg: #161512;
+            --surface: #262421;
+            --surface-light: #363431;
+            --border: #3b3835;
+            --accent: #81b64c;
+            --text: #babbb6;
+            --text-light: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1e222b;
-            color: #ffffff;
+            font-family: 'Inconsolata', monospace;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            margin: 0;
+            padding: 20px;
         }
 
-        .game-container {
+        .chess-layout {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: #282c34;
+            gap: 24px;
+            background: var(--surface);
             padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 900px;
+            width: 100%;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
-        /* --- HET KLEINE MANNETJE (AVATAR) --- */
-        .opponent-area {
+        #board-container {
+            width: 440px;
+            height: 440px;
+        }
+
+        .sidebar {
+            width: 300px;
             display: flex;
             flex-direction: column;
+            gap: 16px;
+            height: 440px;
+        }
+
+        .player-card {
+            background: var(--surface-light);
+            padding: 12px 16px;
+            border-radius: 6px;
+            display: flex;
             align-items: center;
-            margin-bottom: 15px;
-            height: 110px;
+            justify-content: space-between;
+            font-weight: bold;
+            color: var(--text-light);
+            border-left: 4px solid var(--border);
         }
 
-        .avatar {
-            width: 60px;
-            height: 60px;
-            background: #ffbd59;
-            border-radius: 50%;
-            position: relative;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-            animation: float 3s ease-in-out infinite;
+        .player-card.active {
+            border-left-color: var(--accent);
         }
 
-        .avatar::before {
-            content: '';
-            position: absolute;
-            top: -8px;
-            left: 5px;
-            width: 50px;
-            height: 15px;
-            background: #e74c3c;
-            border-radius: 10px 10px 0 0;
+        .moves-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
-        .avatar-eyes {
-            position: absolute;
-            top: 22px;
-            left: 12px;
-            width: 36px;
+        .moves-box h3 {
+            font-size: 0.8rem;
+            color: var(--text);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.05em;
+        }
+
+        .move-row {
             display: flex;
             justify-content: space-between;
+            padding: 2px 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
         }
 
-        .eye {
-            width: 8px;
-            height: 8px;
-            background: #2c3e50;
-            border-radius: 50%;
-            transition: all 0.2s;
-        }
-
-        .avatar-mouth {
-            position: absolute;
-            bottom: 12px;
-            left: 22px;
-            width: 16px;
-            height: 8px;
-            border-bottom: 3px solid #2c3e50;
-            border-radius: 0 0 10px 10px;
-            transition: all 0.2s;
-        }
-
-        /* Animaties & Emoties */
-        .avatar.thinking .eye { animation: blink 0.4s infinite alternate; }
-        .avatar.thinking { background: #f39c12; }
-
-        .avatar.winning .avatar-mouth {
-            border-radius: 0 0 15px 15px;
-            height: 10px;
-            background: transparent;
-        }
-
-        .avatar.losing .avatar-mouth {
-            border: none;
-            border-top: 3px solid #2c3e50;
-            border-radius: 10px 10px 0 0;
-            bottom: 8px;
-        }
-
-        .opponent-name {
-            font-size: 14px;
-            font-weight: bold;
-            color: #a0a5b5;
-            margin-top: 8px;
-        }
-
-        /* --- MODERN SCHAAKBORD ELEMENT --- */
-        chess-board {
-            width: 400px;
-            max-width: 90vw;
-            border: 4px solid #3e4451;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .control-panel {
-            text-align: center;
-            width: 100%;
-        }
-
-        .status-text {
-            font-size: 15px;
-            color: #abb2bf;
-            margin-bottom: 12px;
-            min-height: 22px;
+        .controls {
+            display: flex;
+            gap: 10px;
         }
 
         button {
-            background: #4b7bec;
-            color: white;
+            flex: 1;
+            background: var(--accent);
+            color: #fff;
             border: none;
-            padding: 10px 24px;
-            font-size: 14px;
+            padding: 10px;
+            font-family: inherit;
             font-weight: bold;
             border-radius: 6px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: filter 0.2s;
         }
 
-        button:hover { background: #3867d6; }
-
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-6px); }
-            100% { transform: translateY(0px); }
+        button:hover {
+            filter: brightness(1.1);
         }
 
-        @keyframes blink {
-            0% { transform: scaleY(1); }
-            100% { transform: scaleY(0.1); }
+        button.secondary {
+            background: var(--surface-light);
+            color: var(--text-light);
+        }
+
+        #status {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            text-align: center;
+            min-height: 1.2em;
+        }
+
+        /* Markeringsstijlen voor legale zetten (Chess.com look) */
+        .highlight-square {
+            box-shadow: inset 0 0 3px 3px rgba(129, 182, 76, 0.7);
+        }
+        
+        /* Oplossing om markers relatief te positioneren binnen de schaakvelden */
+        #board .square-55d63 {
+            position: relative;
+        }
+
+        .highlight-legal::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 22px; height: 22px;
+            background-color: rgba(0, 0, 0, 0.25);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .highlight-legal-capture::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 4px solid rgba(0, 0, 0, 0.25);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
         }
     </style>
 </head>
 <body>
 
-    <div class="game-container">
-        <!-- De AI Tegenstander -->
-        <div class="opponent-area">
-            <div id="ai-avatar" class="avatar">
-                <div class="avatar-eyes">
-                    <div class="eye"></div>
-                    <div class="eye"></div>
-                </div>
-                <div class="avatar-mouth"></div>
-            </div>
-            <div class="opponent-name">Plixo Chess-Bot AI</div>
+    <div class="chess-layout">
+        <div id="board-container">
+            <div id="board" style="width: 100%"></div>
         </div>
 
-        <!-- Het Nieuwe Web-Component Bord (Inclusief ingebouwde SVG stukken) -->
-        <chess-board id="board" draggable></chess-board>
+        <div class="sidebar">
+            <div class="player-card" id="card-black">
+                <span>🤖 Chess Bot (Zwart)</span>
+            </div>
+            
+            <div class="moves-box">
+                <h3>Zettenhistorie</h3>
+                <div id="moves-list" style="display: flex; flex-direction: column; gap: 2px;"></div>
+            </div>
 
-        <!-- Besturing -->
-        <div class="control-panel">
-            <div id="status" class="status-text">Initialiseren...</div>
-            <button onclick="resetGame()">Nieuw Potje</button>
+            <div class="player-card active" id="card-white">
+                <span>👤 Jij (Wit)</span>
+            </div>
+
+            <div id="status">Verbinden met Plixo Cloud-geheugen...</div>
+
+            <div class="controls">
+                <button class="secondary" onclick="resetGame()">Nieuw Spel</button>
+                <button onclick="makeAiMove()">Laat AI Zetten</button>
+            </div>
         </div>
     </div>
 
-    <!-- Betrouwbare modules inladen (Geen jQuery vereist) -->
-    <script src="https://cloudflare.com"></script>
-    <script type="module" src="https://unpkg.com"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Chess.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <!-- Chessboard.js -->
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     
-    <!-- Firebase SDK (Compat Modus) -->
+    <!-- Firebase Legacy / Compat SDK -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
 
     <script>
         // ===================================================
-        // FIREBASE INITIALISATIE
+        // 1. FIREBASE CONFIGURATIE EN VEILIGE OPSTART
         // ===================================================
-        // VUL HIER JOUW EIGEN CONFIG IN UIT DE ARCADE INDEX!
+        // VUL HIER JOUW EIGEN CONFIG IN UIT JE MONEY DIGGER BESTAND!
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
             authDomain: "YOUR_PROJECT_://firebaseapp.com",
@@ -206,7 +229,7 @@
             messagingSenderId: "YOUR_SENDER_ID",
             appId: "YOUR_APP_ID"
         };
-        
+
         let database = null;
         let firebaseReady = false;
 
@@ -218,102 +241,74 @@
                 database = firebase.database();
                 firebaseReady = true;
             }
-        } catch(e) { console.error("Firebase fout: ", e); }
-
-        // ===================================================
-        // AI ENGINE LOGICA
-        // ===================================================
-        const boardEl = document.getElementById('board');
-        const avatarEl = document.getElementById('ai-avatar');
-        const statusEl = document.getElementById('status');
-        
-        let game = new Chess();
-        let moveHistory = [];
-
-        // Luister naar zetten op het nieuwe bord element
-        boardEl.addEventListener('change', (e) => {
-            // Synchroniseer visuele component updates
-        });
-
-        // Blokkeer slepen van zwarte stukken
-        boardEl.addEventListener('drag-start', (e) => {
-            const { source, piece, position, orientation } = e.detail;
-            if (game.game_over()) { e.preventDefault(); return; }
-            if (piece.search(/^b/) !== -1) { e.preventDefault(); return; }
-        });
-
-        // Verwerk de menselijke zet
-        boardEl.addEventListener('drop', (e) => {
-            const { source, target } = e.detail;
-
-            const sourcePiece = game.get(source);
-            let promotionPiece = undefined;
-            if (sourcePiece && sourcePiece.type === 'p') {
-                if ((sourcePiece.color === 'w' && target.charAt(1) === '8') || 
-                    (sourcePiece.color === 'b' && target.charAt(1) === '1')) {
-                    promotionPiece = 'q'; 
-                }
-            }
-
-            let move = game.move({
-                from: source,
-                to: target,
-                promotion: promotionPiece
-            });
-
-            if (move === null) {
-                e.detail.actionBar = 'snapback';
-                boardEl.setPosition(game.fen());
-                return;
-            }
-
-            updateStatus();
-            window.setTimeout(makeAIMove, 500);
-        });
-
-        async function makeAIMove() {
-            if (game.game_over()) return;
-
-            avatarEl.className = 'avatar thinking';
-
-            const moves = game.moves({ verbose: true });
-            if (moves.length === 0) return;
-
-            const currentFen = game.fen().replace(/\//g, "_");
-            let learnedMoves = {};
-
-            if (firebaseReady && database) {
-                try {
-                    const snapshot = await database.ref('plixo_arcade/chess_ai/' + currentFen).once('value');
-                    if (snapshot.exists()) {
-                        learnedMoves = snapshot.val();
-                    }
-                } catch(e) { console.error(e); }
-            }
-
-            let bestMove = null;
-            let maxScore = -Infinity;
-
-            moves.forEach(move => {
-                const moveSan = move.san;
-                const score = learnedMoves[moveSan] || 0;
-                const finalScore = score + (Math.random() * 0.25);
-
-                if (finalScore > maxScore) {
-                    maxScore = finalScore;
-                    bestMove = move;
-                }
-            });
-
-            game.move(bestMove.san);
-            boardEl.setPosition(game.fen());
-
-            moveHistory.push({ fen: currentFen, move: bestMove.san });
-            avatarEl.className = 'avatar';
-            updateStatus();
+        } catch (e) {
+            console.error("Firebase database initialisatie mislukt: ", e);
         }
 
-        function updateStatus() {
-            let statusText = '';
-            let turnColor = game.turn() === 'b' ? 'Zwart (AI)' : 'Wit (Jij)';
+        // ===================================================
+        // 2. SCHAAK SPEL VARIABELEN & MECHANISMEN
+        // ===================================================
+        let board = null;
+        let game = new Chess();
+        let selectedSquare = null;
+        let legalMoves = [];
+        let moveHistory = []; // Bijhouden voor reinforcement learning
 
+        function removeHighlights() {
+            $('#board .square-55d63').removeClass('highlight-square highlight-legal highlight-legal-capture');
+        }
+
+        function highlightSquare(square) {
+            let $square = $('#board .square-' + square);
+            $square.addClass('highlight-square');
+        }
+
+        function highlightLegalMoves(moves) {
+            moves.forEach(move => {
+                let $square = $('#board .square-' + move.to);
+                if (move.captured) {
+                    $square.addClass('highlight-legal-capture');
+                } else {
+                    $square.addClass('highlight-legal');
+                }
+            });
+        }
+
+        function onSquareClick(square) {
+            if (game.game_over()) return;
+            if (game.turn() !== 'w') return; // Alleen speler (wit) mag zetten doen
+
+            let matchMove = legalMoves.find(m => m.to === square);
+            if (selectedSquare && matchMove) {
+                // Controleer op pionpromotie
+                const sourcePiece = game.get(selectedSquare);
+                let promotionPiece = undefined;
+                if (sourcePiece && sourcePiece.type === 'p' && square.charAt(1) === '8') {
+                    promotionPiece = 'q';
+                }
+
+                let move = game.move({
+                    from: selectedSquare,
+                    to: square,
+                    promotion: promotionPiece
+                });
+
+                if (move) {
+                    selectedSquare = null;
+                    legalMoves = [];
+                    removeHighlights();
+                    board.position(game.fen());
+                    updateGameState();
+
+                    if (!game.game_over()) {
+                        window.setTimeout(makeAiMove, 500);
+                    }
+                    return;
+                }
+            }
+
+            // Selecteer een eigen wit stuk
+            let piece = game.get(square);
+            if (piece && piece.color === 'w') {
+                selectedSquare = square;
+                removeHighlights();
