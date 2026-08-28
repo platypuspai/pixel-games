@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plixo-Arcade · Wereld Schaak AI</title>
     
-    <!-- Externe CSS voor het schaakbord -->
-    <link rel="stylesheet" href="https://cloudflare.com">
-    
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -114,13 +111,14 @@
             margin-top: 8px;
         }
 
-        /* --- SCHAAKBORD --- */
-        #board {
+        /* --- MODERN SCHAAKBORD ELEMENT --- */
+        chess-board {
             width: 400px;
             max-width: 90vw;
             border: 4px solid #3e4451;
             border-radius: 4px;
             margin-bottom: 15px;
+            display: block;
         }
 
         .control-panel {
@@ -128,7 +126,7 @@
             width: 100%;
         }
 
-        #status {
+        .status-text {
             font-size: 15px;
             color: #abb2bf;
             margin-bottom: 12px;
@@ -176,20 +174,19 @@
             <div class="opponent-name">Plixo Chess-Bot AI</div>
         </div>
 
-        <!-- Het Schaakbord (Nu correct onder jQuery ingeladen) -->
-        <div id="board"></div>
+        <!-- Het Nieuwe Web-Component Bord (Inclusief ingebouwde SVG stukken) -->
+        <chess-board id="board" draggable></chess-board>
 
         <!-- Besturing -->
         <div class="control-panel">
-            <div id="status">Laden...</div>
+            <div id="status" class="status-text">Initialiseren...</div>
             <button onclick="resetGame()">Nieuw Potje</button>
         </div>
     </div>
 
-    <!-- SCRIPTS MOETEN IN DEZE VOLGORDE STAAN OM INITIALISATIE-CRASHES TE VOORKOMEN -->
-    <script src="https://jquery.com"></script>
+    <!-- Betrouwbare modules inladen (Geen jQuery vereist) -->
     <script src="https://cloudflare.com"></script>
-    <script src="https://cloudflare.com"></script>
+    <script type="module" src="https://unpkg.com"></script>
     
     <!-- Firebase SDK (Compat Modus) -->
     <script src="https://gstatic.com"></script>
@@ -197,9 +194,9 @@
 
     <script>
         // ===================================================
-        // FIREBASE GEGEVENS EN INITIALISATIE
+        // FIREBASE INITIALISATIE
         // ===================================================
-        // VUL HIER JOUW EIGEN GEGEVENS IN VAN DE ARCADE INDEX!
+        // VUL HIER JOUW EIGEN CONFIG IN UIT DE ARCADE INDEX!
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
             authDomain: "YOUR_PROJECT_://firebaseapp.com",
@@ -213,7 +210,6 @@
         let database = null;
         let firebaseReady = false;
 
-        // Veilig Firebase starten; crasht niet als er nog nep-data staat ingevuld
         try {
             if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
                 if (!firebase.apps.length) {
@@ -221,78 +217,37 @@
                 }
                 database = firebase.database();
                 firebaseReady = true;
-                console.log("Firebase succesvol verbonden voor de schaak-AI!");
-            } else {
-                console.warn("Firebase draait in Offline Demo Modus. Vul je echte API-sleutels in om te leren via internet!");
             }
-        } catch(e) {
-            console.error("Firebase initialisatie mislukt: ", e);
-        }
+        } catch(e) { console.error("Firebase fout: ", e); }
 
         // ===================================================
-        // SCHAAK ENGINE & LEER-ALGORITME
+        // AI ENGINE LOGICA
         // ===================================================
-        let board = null;
-        let game = new Chess();
-        let moveHistory = []; 
-
+        const boardEl = document.getElementById('board');
         const avatarEl = document.getElementById('ai-avatar');
+        const statusEl = document.getElementById('status');
+        
+        let game = new Chess();
+        let moveHistory = [];
 
-        function onDragStart(source, piece, position, orientation) {
-            if (game.game_over()) return false;
-            // Alleen witte stukken zijn bestuurbaar voor de speler
-            if (piece.search(/^b/) !== -1) return false; 
-        }
+        // Luister naar zetten op het nieuwe bord element
+        boardEl.addEventListener('change', (e) => {
+            // Synchroniseer visuele component updates
+        });
 
-        async function makeAIMove() {
-            if (game.game_over()) return;
+        // Blokkeer slepen van zwarte stukken
+        boardEl.addEventListener('drag-start', (e) => {
+            const { source, piece, position, orientation } = e.detail;
+            if (game.game_over()) { e.preventDefault(); return; }
+            if (piece.search(/^b/) !== -1) { e.preventDefault(); return; }
+        });
 
-            avatarEl.className = 'avatar thinking';
+        // Verwerk de menselijke zet
+        boardEl.addEventListener('drop', (e) => {
+            const { source, target } = e.detail;
 
-            const moves = game.moves({ verbose: true });
-            if (moves.length === 0) return;
-
-            const currentFen = game.fen().replace(/\//g, "_");
-            let learnedMoves = {};
-
-            // Haal database-kennis alleen op als Firebase correct werkt
-            if (firebaseReady && database) {
-                try {
-                    const snapshot = await database.ref('plixo_arcade/chess_ai/' + currentFen).once('value');
-                    if (snapshot.exists()) {
-                        learnedMoves = snapshot.val();
-                    }
-                } catch(e) { console.error("Database sync fout: ", e); }
-            }
-
-            let bestMove = null;
-            let maxScore = -Infinity;
-
-            moves.forEach(move => {
-                const moveSan = move.san;
-                const score = learnedMoves[moveSan] || 0; 
-
-                // Start willekeurig (random), hoe meer data hoe slimmer de AI keuzes worden
-                const finalScore = score + (Math.random() * 0.25);
-
-                if (finalScore > maxScore) {
-                    maxScore = finalScore;
-                    bestMove = move;
-                }
-            });
-
-            game.move(bestMove.san);
-            board.position(game.fen());
-
-            moveHistory.push({ fen: currentFen, move: bestMove.san });
-            avatarEl.className = 'avatar';
-            updateStatus();
-        }
-
-        function onDrop(source, target) {
             const sourcePiece = game.get(source);
             let promotionPiece = undefined;
-            
             if (sourcePiece && sourcePiece.type === 'p') {
                 if ((sourcePiece.color === 'w' && target.charAt(1) === '8') || 
                     (sourcePiece.color === 'b' && target.charAt(1) === '1')) {
@@ -306,6 +261,59 @@
                 promotion: promotionPiece
             });
 
-            if (move === null) return 'snapback'; 
+            if (move === null) {
+                e.detail.actionBar = 'snapback';
+                boardEl.setPosition(game.fen());
+                return;
+            }
 
             updateStatus();
+            window.setTimeout(makeAIMove, 500);
+        });
+
+        async function makeAIMove() {
+            if (game.game_over()) return;
+
+            avatarEl.className = 'avatar thinking';
+
+            const moves = game.moves({ verbose: true });
+            if (moves.length === 0) return;
+
+            const currentFen = game.fen().replace(/\//g, "_");
+            let learnedMoves = {};
+
+            if (firebaseReady && database) {
+                try {
+                    const snapshot = await database.ref('plixo_arcade/chess_ai/' + currentFen).once('value');
+                    if (snapshot.exists()) {
+                        learnedMoves = snapshot.val();
+                    }
+                } catch(e) { console.error(e); }
+            }
+
+            let bestMove = null;
+            let maxScore = -Infinity;
+
+            moves.forEach(move => {
+                const moveSan = move.san;
+                const score = learnedMoves[moveSan] || 0;
+                const finalScore = score + (Math.random() * 0.25);
+
+                if (finalScore > maxScore) {
+                    maxScore = finalScore;
+                    bestMove = move;
+                }
+            });
+
+            game.move(bestMove.san);
+            boardEl.setPosition(game.fen());
+
+            moveHistory.push({ fen: currentFen, move: bestMove.san });
+            avatarEl.className = 'avatar';
+            updateStatus();
+        }
+
+        function updateStatus() {
+            let statusText = '';
+            let turnColor = game.turn() === 'b' ? 'Zwart (AI)' : 'Wit (Jij)';
+
