@@ -918,6 +918,40 @@
     </p>
 </footer>
 
+<!-- === RECLAME BALK ONDERAAN (VERPLAATST NAAR HOME) === -->
+<div id="pixel-games-native-ad-balk">
+    <!-- Mobiele ad (320x50) -->
+    <div class="ad-mobile">
+        <script>
+            atOptions = {
+                'key' : 'f88d03b2176ccd225bcbe5f12005236c',
+                'format' : 'iframe',
+                'height' : 50,
+                'width' : 320,
+                'params' : {}
+            };
+        </script>
+        <script src="https://www.highrevenueformat.com/f88d03b2176ccd225bcbe5f12005236c/invoke.js"></script>
+    </div>
+
+    <!-- Computer ad (728x90) -->
+    <div class="ad-desktop">
+        <script>
+            atOptions = {
+                'key' : '8f9f857555d5db196ebd997d614a739b',
+                'format' : 'iframe',
+                'height' : 90,
+                'width' : 728,
+                'params' : {}
+            };
+        </script>
+        <script src="https://www.highrevenueformat.com/8f9f857555d5db196ebd997d614a739b/invoke.js"></script>
+    </div>
+    
+    <!-- De retro sluitknop met aftelling -->
+    <button onclick="sluitNativeAdBalk()" id="pixel-games-native-ad-sluitknop" disabled>10s</button>
+</div>
+
 <!-- 🌍 VERTALINGSSYSTEEM -->
 <script>
 const i18n = {
@@ -1081,7 +1115,7 @@ document.addEventListener('DOMContentLoaded', applyTranslations);
          var footer = document.querySelector('footer');
          if (footer) footer.style.display = (name === 'home') ? '' : 'none';
 
-         // Advertentiebalk uitsluitend op home zichtbaar maken
+         // Zorg ervoor dat de advertentiebalk uitsluitend op 'home' te zien is[cite: 2]
          var adBalk = document.getElementById('pixel-games-native-ad-balk');
          if (adBalk) {
              if (name === 'home') {
@@ -1441,41 +1475,6 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 })();
 </script>
 
-
-<!-- === RECLAME BALK ONDERAAN (RESPONSIVE & TIMER LOGICA) === -->
-<div id="pixel-games-native-ad-balk">
-    <!-- Mobiele ad (320x50) -->
-    <div class="ad-mobile">
-        <script>
-            atOptions = {
-                'key' : 'f88d03b2176ccd225bcbe5f12005236c',
-                'format' : 'iframe',
-                'height' : 50,
-                'width' : 320,
-                'params' : {}
-            };
-        </script>
-        <script src="https://www.highrevenueformat.com/f88d03b2176ccd225bcbe5f12005236c/invoke.js"></script>
-    </div>
-
-    <!-- Computer ad (728x90) -->
-    <div class="ad-desktop">
-        <script>
-            atOptions = {
-                'key' : '8f9f857555d5db196ebd997d614a739b',
-                'format' : 'iframe',
-                'height' : 90,
-                'width' : 728,
-                'params' : {}
-            };
-        </script>
-        <script src="https://www.highrevenueformat.com/8f9f857555d5db196ebd997d614a739b/invoke.js"></script>
-    </div>
-    
-    <!-- De retro sluitknop met aftelling -->
-    <button onclick="sluitNativeAdBalk()" id="pixel-games-native-ad-sluitknop" disabled>10s</button>
-</div>
-
 <!-- RETRO RESPONSIVE STYLING (CSS) -->
 <style>
 #pixel-games-native-ad-balk {
@@ -1575,7 +1574,6 @@ function sluitNativeAdBalk() {
         adElement.style.setProperty('display', 'none', 'important');
     }
     
-    // Na 10 seconden komt de advertentiebalk automatisch weer tevoorschijn op de homepagina
     setTimeout(function() {
         var pageHome = document.getElementById('page-home');
         if (pageHome && pageHome.classList.contains('active')) {
