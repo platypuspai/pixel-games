@@ -505,7 +505,7 @@
     <div class="logo-container">
         <h1><span class="title-pixel">PLIXO</span><span class="title-dash">-</span><span class="title-games">ARCADE</span></h1>
     </div>
-    <p class="subtitle" data-i18n="subtitle">10 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span></p>
+    <p class="subtitle" data-i18n="subtitle">11 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span></p>
 
     <nav class="navbar">
         <button class="nav-btn active" onclick="showPage('home', this)" data-i18n="navHome">▶ HOME</button>
@@ -804,6 +804,25 @@
         </div>
     </div>
 
+    <!-- THE END -->
+    <div class="game-card" style="--card-accent: #00ff88;">
+        <div class="card-corner tl"></div><div class="card-corner br"></div>
+        <div class="card-preview" style="--preview-bg: #0a1a0a;">
+            <svg class="animate-pulse" width="80" height="80" viewBox="0 0 32 32" style="image-rendering:pixelated;">
+                <rect x="4" y="4" width="24" height="24" fill="none" stroke="#00ff88" stroke-width="2"/>
+                <text x="16" y="20" font-family="monospace" font-size="6" font-weight="bold" fill="#00ff88" text-anchor="middle">END</text>
+            </svg>
+        </div>
+        <div class="card-body">
+            <span class="card-tag" style="color:#00ff88;" data-i18n="tagEnd">// 11 · finale</span>
+            <h2 class="card-title" data-i18n="titleEnd">THE END</h2>
+            <p class="card-desc" data-i18n="descEnd">The final project conclusion and interactive experience!</p>
+            <div class="card-actions">
+                <a class="btn btn-play" href="the end.html" style="background:#00ff88; color:#000;" data-i18n="btnPlay">▶ PLAY</a>
+            </div>
+        </div>
+    </div>
+
 </main>
 </div>
 
@@ -845,9 +864,9 @@
         </div>
         <div class="info-block">
             <h3 data-i18n="infT2">// THE GAMES</h3>
-            <p data-i18n="infP2">There are currently 10 games available: DVD+, Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse and Time Ticker. All games are playable directly in your browser.</p>
+            <p data-i18n="infP2">There are currently 11 games available: DVD+, Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker and THE END. All games are playable directly in your browser.</p>
             <div class="info-tag-list">
-                <span class="info-tag">DVD+</span><span class="info-tag">DINO WORLD</span><span class="info-tag">MINI PLATFORMER</span><span class="info-tag">ONE SQUARE</span><span class="info-tag">DODGING ARENA</span><span class="info-tag">BUG ESCAPE</span><span class="info-tag">MONEY DIGGER</span><span class="info-tag">LUCKY GUY</span><span class="info-tag">Mini Apocalypse</span><span class="info-tag">TIME TICKER</span>
+                <span class="info-tag">DVD+</span><span class="info-tag">DINO WORLD</span><span class="info-tag">MINI PLATFORMER</span><span class="info-tag">ONE SQUARE</span><span class="info-tag">DODGING ARENA</span><span class="info-tag">BUG ESCAPE</span><span class="info-tag">MONEY DIGGER</span><span class="info-tag">LUCKY GUY</span><span class="info-tag">Mini Apocalypse</span><span class="info-tag">TIME TICKER</span><span class="info-tag">THE END</span>
             </div>
         </div>
         <div class="info-block">
@@ -922,7 +941,7 @@
 <script>
 const i18n = {
   en: {
-    subtitle: "10 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span>",
+    subtitle: "11 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span>",
     navHome: "▶ HOME", navContact: "✉ CONTACT", navInfo: "ℹ INFO", navLb: "LEADERBOARD",
     tagSim: "// 10 · simulation & idle", descDvd: "The ultimate DVD bouncing simulator with upgrades, skins, and predictions!",
     tagDino: "// 01 · simulation", descDino: "Would the dinosaurs survive without the asteroid? Find out!", btnExt: "⬡ EXTENSION",
@@ -934,13 +953,14 @@ const i18n = {
     tagMon: "// 05 · click & collect", descMon: "Click as much money as you can!", btnMob: "📱 MOBILE",
     tagLuck: "// 06 · luck", descLuck: "Pure chaos mode. Pick your number and survive the wheel.",
     tagTime: "// 09 · idle & facts", descTime: "Watch real-time facts count up second by second in notebook style!",
+    tagEnd: "// 11 · finale", titleEnd: "THE END", descEnd: "The final project conclusion and interactive experience!",
     btnPlay: "▶ PLAY",
     conTitle: "✉ CONTACT US", conDesc: "Questions, feedback or just want to say hi? Send us a message — we read everything!",
     conLName: "// NAME", conPName: "Your name...", conLEmail: "// EMAIL", conPEmail: "your@email.com",
     conLMsg: "// MESSAGE", conPMsg: "Write your message here...", conBtn: "► SEND MESSAGE",
     conSucc: "✓ MESSAGE RECEIVED!<br><br>We'll reply as soon as possible (check your mail).", conSending: "SENDING...",
     infT1: "// WHAT IS PLIXO-ARCADE?", infP1: "Plixo-Arcade is a collection of small browser games made as a school project. All games are free to play, directly in your browser.",
-    infT2: "// THE GAMES", infP2: "There are currently 10 games available: DVD+, Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse and Time Ticker. All games are playable directly in your browser.",
+    infT2: "// THE GAMES", infP2: "There are currently 11 games available: DVD+, Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker and THE END. All games are playable directly in your browser.",
     infT3: "// TECHNOLOGY", infP3: "All games are built with vanilla HTML, CSS, JavaScript and Python. One game is made in Scratch. No frameworks, no libraries — just pure web technology.",
     lbTitle: "LEADERBOARD", lbDesc: "Live leaderboards for all Plixo-Arcade games.", lbSpeler: "// PLAYER", lbBtnNaam: "CHANGE NAME",
     lbMdMeta: "clicks", lbPfMeta: "best time", lbLgMeta: "highest level", lbNotice: "⚠ Scores are saved locally per browser.",
@@ -949,7 +969,7 @@ const i18n = {
     foot: "This is a school project:) &nbsp;·&nbsp; Free to play &nbsp;·&nbsp;"
   },
   nl: {
-    subtitle: "10 games &nbsp;·&nbsp; speel in de browser &nbsp;·&nbsp; schoolproject <span>_</span>",
+    subtitle: "11 games &nbsp;·&nbsp; speel in de browser &nbsp;·&nbsp; schoolproject <span>_</span>",
     navHome: "▶ HOME", navContact: "✉ CONTACT", navInfo: "ℹ INFO", navLb: "LEADERBOARD",
     tagSim: "// 10 · simulatie & idle", descDvd: "De ultieme DVD stuiter simulator met upgrades, skins en voorspellingen!",
     tagDino: "// 01 · simulatie", descDino: "Zouden de dinosauriërs overleven zonder asteroïde? Ontdek het hier!", btnExt: "⬡ EXTENSIE",
@@ -961,13 +981,14 @@ const i18n = {
     tagMon: "// 05 · click & collect", descMon: "Klik zoveel mogelijk geld bij elkaar!", btnMob: "📱 MOBIEL",
     tagLuck: "// 06 · geluk", descLuck: "Pure chaos. Kies een nummer en overleef het wiel.",
     tagTime: "// 09 · idle & feitjes", descTime: "Kijk hoe real-time feitjes elke seconde oplopen in een notitieboek stijl!",
+    tagEnd: "// 11 · finale", titleEnd: "THE END", descEnd: "De finale projectconclusie en interactieve ervaring!",
     btnPlay: "▶ SPELEN",
     conTitle: "✉ CONTACTEER ONS", conDesc: "Vragen, feedback of gewoon even hallo zeggen? Stuur ons een bericht!",
     conLName: "// NAAM", conPName: "Jouw naam...", conLEmail: "// E-MAIL", conPEmail: "jouw@email.com",
     conLMsg: "// BERICHT", conPMsg: "Schrijf hier je bericht...", conBtn: "► VERSTUUR BERICHT",
     conSucc: "✓ BERICHT ONTVANGEN!<br><br>We reageren zo snel mogelijk (check je mail).", conSending: "VERZENDEN...",
     infT1: "// WAT IS PLIXO-ARCADE?", infP1: "Plixo-Arcade is een collectie van kleine browsergames, gemaakt voor een schoolproject. Alle spellen zijn gratis te spelen in de browser.",
-    infT2: "// DE SPELLEN", infP2: "Er zijn momenteel 10 games beschikbaar: DVD+, Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse en Time Ticker.",
+    infT2: "// DE SPELLEN", infP2: "Er zijn momenteel 11 games beschikbaar: DVD+, Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker en THE END.",
     infT3: "// TECHNOLOGIE", infP3: "Alle spellen zijn gebouwd met vanilla HTML, CSS, JavaScript en Python. Eén game is gemaakt in Scratch. Geen frameworks, gewoon pure web technologie.",
     lbTitle: "LEADERBOARD", lbDesc: "Live ranglijsten voor alle Plixo-Arcade games.", lbSpeler: "// SPELER", lbBtnNaam: "NAAM WIJZIGEN",
     lbMdMeta: "clicks", lbPfMeta: "beste tijd", lbLgMeta: "hoogste level", lbNotice: "⚠ Scores worden lokaal opgeslagen per browser.",
@@ -976,7 +997,7 @@ const i18n = {
     foot: "Dit is een schoolproject:) &nbsp;·&nbsp; Gratis spelen &nbsp;·&nbsp;"
   },
   fr: {
-    subtitle: "10 jeux &nbsp;·&nbsp; jouez dans le navigateur &nbsp;·&nbsp; projet scolaire <span>_</span>",
+    subtitle: "11 jeux &nbsp;·&nbsp; jouez dans le navigateur &nbsp;·&nbsp; projet scolaire <span>_</span>",
     navHome: "▶ ACCUEIL", navContact: "✉ CONTACT", navInfo: "ℹ INFO", navLb: "CLASSEMENT",
     tagSim: "// 10 · simulation", descDvd: "L'ultime simulateur de rebond de DVD avec améliorations, skins et prédictions!",
     tagDino: "// 01 · simulation", descDino: "Les dinosaures survivraient-ils sans l'astéroïde? Découvrez-le!", btnExt: "⬡ EXTENSION",
@@ -988,13 +1009,14 @@ const i18n = {
     tagMon: "// 05 · clic & collecte", descMon: "Cliquez et récoltez autant d'argent que possible!", btnMob: "📱 MOBILE",
     tagLuck: "// 06 · chance", descLuck: "Mode chaos pur. Choisissez votre numéro et survivez.",
     tagTime: "// 09 · faits", descTime: "Regardez les faits en temps réel s'accumuler seconde par seconde!",
+    tagEnd: "// 11 · finale", titleEnd: "THE END", descEnd: "La conclusion finale du projet et l'expérience interactive!",
     btnPlay: "▶ JOUER",
     conTitle: "✉ NOUS CONTACTER", conDesc: "Questions, retours ou juste un bonjour? Envoyez-nous un message!",
     conLName: "// NOM", conPName: "Votre nom...", conLEmail: "// E-MAIL", conPEmail: "votre@email.com",
     conLMsg: "// MESSAGE", conPMsg: "Écrivez votre message ici...", conBtn: "► ENVOYER",
     conSucc: "✓ MESSAGE REÇU!<br><br>Nous répondrons le plus vite possible.", conSending: "ENVOI...",
     infT1: "// QU'EST-CE QUE PLIXO-ARCADE?", infP1: "Plixo-Arcade est une collection de petits jeux sur navigateur réalisés dans le cadre d'un projet scolaire.",
-    infT2: "// LES JEUX", infP2: "10 jeux sont actuellement disponibles: DVD+, Dino World, Mini Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse et Time Ticker.",
+    infT2: "// LES JEUX", infP2: "11 jeux sont actuellement disponibles: DVD+, Dino World, Mini Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker et THE END.",
     infT3: "// TECHNOLOGIE", infP3: "Tous les jeux sont construits en HTML, CSS, JavaScript et Python.",
     lbTitle: "CLASSEMENT", lbDesc: "Classements en direct pour tous les jeux Plixo-Arcade.", lbSpeler: "// JOUEUR", lbBtnNaam: "CHANGER NOM",
     lbMdMeta: "clics", lbPfMeta: "meilleur temps", lbLgMeta: "niveau max", lbNotice: "⚠ Les scores sont sauvegardés localement.",
