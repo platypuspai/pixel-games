@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kies je Game Mode</title>
+<style>
+  body {
+    background: #111;
+    color: #fff;
+    font-family: monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+  }
+  h1 {
+    margin-bottom: 40px;
+    color: #fff;
+    font-size: 24px;
+    letter-spacing: 2px;
+  }
+  .container {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .card {
+    background: #222;
+    border: 3px solid #444;
+    border-radius: 12px;
+    width: 220px;
+    height: 260px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: white;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+  }
+  .card:hover {
+    transform: translateY(-8px);
+  }
+  .card.basic:hover {
+    border-color: #4488ff;
+    box-shadow: 0 10px 25px rgba(68, 136, 255, 0.3);
+  }
+  .card.spikes:hover {
+    border-color: #ff44aa;
+    box-shadow: 0 10px 25px rgba(255, 68, 170, 0.3);
+  }
+  .number {
+    font-size: 72px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  .card.basic .number { color: #4488ff; }
+  .card.spikes .number { color: #ff44aa; }
+  
+  .title {
+    font-size: 18px;
+    margin-bottom: 25px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .record-label {
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+  }
+  .record-time {
+    font-size: 20px;
+    color: #6f6;
+    font-weight: bold;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>KIES EEN SPELTYPE</h1>
+
+<div class="container">
+  <!-- Link naar de Basic Levels -->
+  <a href="mini-browser-platformer.html" class="card basic">
+    <div class="number">1</div>
+    <div class="title">Basic Levels</div>
+    <div class="record-label">Record Tijd</div>
+    <div class="record-time" id="score-basic">--:--.-</div>
+  </a>
+
+  <!-- Link naar de Spikes Levels -->
+  <a href="mini-spikes-platformer.html" class="card spikes">
+    <div class="number">2</div>
+    <div class="title">Spikes Levels</div>
+    <div class="record-label">Record Tijd</div>
+    <div class="record-time" id="score-spikes">--:--.-</div>
+  </a>
+</div>
+
+<script>
+  function timerString(ms) {
+    if (!ms) return "--:--.-";
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    const tenth = Math.floor((ms % 1000) / 100);
+    return m + ":" + sec.toString().padStart(2,"0") + "." + tenth;
+  }
+
+  // Haal de basic highscore op
+  const basicScore = localStorage.getItem("platformer_highscore");
+  if (basicScore) {
+    document.getElementById("score-basic").textContent = timerString(parseInt(basicScore));
+  }
+
+  // Haal de spikes highscore op
+  const spikesScore = localStorage.getItem("platformer_spike_levels_highscore");
+  if (spikesScore) {
+    document.getElementById("score-spikes").textContent = timerString(parseInt(spikesScore));
+  }
+</script>
+
+</body>
+</html>
