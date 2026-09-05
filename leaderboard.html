@@ -13,7 +13,7 @@
             --bg: #0a0a0f; --surface: #12121a; --card: #1a1a28; --border: #2a2a42;
             --accent-orange: #ff8844; --accent-green: #00ff88; --accent-cyan: #00e5ff;
             --accent-pink: #ff44aa; --accent-red: #ff4444; --accent-yellow: #ffdd00;
-            --accent-indigo: #6e44ff;
+            --accent-indigo: #6e44ff; --accent-purple: #b344ff;
             --text: #e8e8ff; --text-muted: #7777aa;
             --accent-blue: #4488ff;
         }
@@ -148,11 +148,20 @@
 
         <div class="board" style="border-top: 2px solid var(--accent-green);">
             <div class="board-head">
-                <span class="board-title" style="color:var(--accent-green)">MINI PLATFORMER</span>
+                <span class="board-title" style="color:var(--accent-green)">MINI PLATFORMER (BASIC)</span>
                 <span class="board-meta" data-i18n="metaTime">best time</span>
             </div>
             <div class="board-body" id="pf-body"><div class="lb-loading" data-i18n="connecting">Connecting</div></div>
             <div class="board-foot" id="pf-foot"></div>
+        </div>
+        
+        <div class="board" style="border-top: 2px solid var(--accent-purple);">
+            <div class="board-head">
+                <span class="board-title" style="color:var(--accent-purple)">MINI PLATFORMER (SPIKES)</span>
+                <span class="board-meta" data-i18n="metaTime">best time</span>
+            </div>
+            <div class="board-body" id="pf-spikes-body"><div class="lb-loading" data-i18n="connecting">Connecting</div></div>
+            <div class="board-foot" id="pf-spikes-foot"></div>
         </div>
 
         <div class="board" style="border-top: 2px solid var(--accent-cyan);">
@@ -380,13 +389,14 @@ async function importAccount() {
 
         const cleanName = data.name.trim();
 
-        const [mdSnap, lgSnap, pfSnap, maSnap, beSnap, daSnap] = await Promise.all([
+        const [mdSnap, lgSnap, pfSnap, maSnap, beSnap, daSnap, pfSpikesSnap] = await Promise.all([
             db.ref('scores').once('value'),
             db.ref('luckyGuyScores').once('value'),
             db.ref('platformerScores').once('value'),
             db.ref('miniApocalypseScores').once('value'),
             db.ref('bugEscapeScores').once('value'),
-            db.ref('dodgingArenaScores').once('value')
+            db.ref('dodgingArenaScores').once('value'),
+            db.ref('platformerSpikeLevelsScores').once('value')
         ]);
 
         let trueMdDeviceId = data.deviceId; 
@@ -422,6 +432,7 @@ async function importAccount() {
         fixNameInDB(mdSnap, 'scores');
         fixNameInDB(lgSnap, 'luckyGuyScores');
         fixNameInDB(pfSnap, 'platformerScores');
+        fixNameInDB(pfSpikesSnap, 'platformerSpikeLevelsScores');
         fixNameInDB(maSnap, 'miniApocalypseScores');
         fixNameInDB(beSnap, 'bugEscapeScores');
         fixNameInDB(daSnap, 'dodgingArenaScores');
@@ -479,13 +490,14 @@ async function confirmName() {
         document.getElementById('bar-name').textContent = val;
 
         if (oldName && oldName.toLowerCase() !== valLow) {
-            const [mdSnap, lgSnap, pfSnap, maSnap, beSnap, daSnap] = await Promise.all([
+            const [mdSnap, lgSnap, pfSnap, maSnap, beSnap, daSnap, pfSpikesSnap] = await Promise.all([
                 db.ref('scores').once('value'),
                 db.ref('luckyGuyScores').once('value'),
                 db.ref('platformerScores').once('value'),
                 db.ref('miniApocalypseScores').once('value'),
                 db.ref('bugEscapeScores').once('value'),
-                db.ref('dodgingArenaScores').once('value')
+                db.ref('dodgingArenaScores').once('value'),
+                db.ref('platformerSpikeLevelsScores').once('value')
             ]);
             
             const lgSave = localStorage.getItem('luckyGuySaveData');
@@ -495,6 +507,7 @@ async function confirmName() {
             mdSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('scores/' + child.key + '/name').set(val).catch(()=>{}); });
             lgSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('luckyGuyScores/' + child.key + '/name').set(val).catch(()=>{}); });
             pfSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('platformerScores/' + child.key + '/name').set(val).catch(()=>{}); });
+            pfSpikesSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('platformerSpikeLevelsScores/' + child.key + '/name').set(val).catch(()=>{}); });
             maSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('miniApocalypseScores/' + child.key + '/name').set(val).catch(()=>{}); });
             beSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('bugEscapeScores/' + child.key + '/name').set(val).catch(()=>{}); });
             daSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('dodgingArenaScores/' + child.key + '/name').set(val).catch(()=>{}); });
@@ -503,6 +516,7 @@ async function confirmName() {
         document.getElementById('modal').classList.add('hidden');
         if (window._mdData) render('md-body', 'md-foot', window._mdData, val);
         if (window._pfData) render('pf-body', 'pf-foot', window._pfData, val);
+        if (window._pfSpikesData) render('pf-spikes-body', 'pf-spikes-foot', window._pfSpikesData, val);
         if (window._lgData) render('lg-body', 'lg-foot', window._lgData, val);
         if (window._maData) render('ma-body', 'ma-foot', window._maData, val);
         if (window._beData) render('be-body', 'be-foot', window._beData, val);
@@ -596,7 +610,7 @@ let mdOff = null;
     mdOff = () => ref.off('value', onVal);
 })();
 
-// Mini Platformer
+// Mini Platformer (BASIC)
 function ts(ms) { const s = Math.floor(ms/1000), m = Math.floor(s/60), t = Math.floor((ms%1000)/100); return m > 0 ? m+'m '+(s%60)+'.'+t+'s' : s+'.'+t+'s'; }
 let pfOff = null;
 (function loadPF() {
@@ -611,6 +625,22 @@ let pfOff = null;
     }
     ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
     pfOff = () => ref.off('value', onVal);
+})();
+
+// Mini Platformer (SPIKES)
+let pfSpikesOff = null;
+(function loadPFSpikes() {
+    const body = document.getElementById('pf-spikes-body'); body.innerHTML = `<div class="lb-loading">${tr('connecting')}</div>`;
+    if (pfSpikesOff) { pfSpikesOff(); pfSpikesOff = null; }
+    const ref = fbApp.database().ref('platformerSpikeLevelsScores');
+    function onVal(snap) {
+        const byName = {}; 
+        snap.forEach(child => { const d = child.val(); if (!d || !d.name || d.time == null) return; if (!byName[d.name] || d.time < byName[d.name]) byName[d.name] = d.time; });
+        const rows = Object.entries(byName).map(([name, time]) => ({ name, score: ts(time), v: time })).sort((a, b) => a.v - b.v);
+        const cleaned = rows.map(r => ({ name: r.name, score: r.score })); window._pfSpikesData = cleaned; render('pf-spikes-body', 'pf-spikes-foot', cleaned, getName());
+    }
+    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
+    pfSpikesOff = () => ref.off('value', onVal);
 })();
 
 // Lucky Guy
