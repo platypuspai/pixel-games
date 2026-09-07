@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Mini Browser Platformer - SPIKE Edition</title>
+<title>Mini Browser Platformer - Full Edition</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { overflow: hidden; background: #111; font-family: monospace; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; }
@@ -118,6 +118,48 @@ const LEVELS = [
     star:[170,GROUND_HEIGHT-10],
     obstacles:[],
     spikes:[[40,GROUND_HEIGHT-16,10,16],[90,GROUND_HEIGHT-16,10,16],[140,GROUND_HEIGHT-16,10,16]]
+  },
+  {
+    name:"TROLL",
+    player_start:[10,GROUND_HEIGHT-14],
+    star:[100,GROUND_HEIGHT-70],
+    obstacles:[
+      [100,GROUND_HEIGHT-14,10,14],
+      [20,GROUND_HEIGHT-20,10,20],
+      [40,GROUND_HEIGHT-40,10,40],
+      [60,GROUND_HEIGHT-60,10,60]
+    ],
+    spikes:[
+      [90,GROUND_HEIGHT-68,10,10,270],
+      [110,GROUND_HEIGHT-68,10,10,90]
+    ]
+  },
+  {
+    name:"BOUNCY",
+    player_start:[10,GROUND_HEIGHT-14],
+    star:[10,GROUND_HEIGHT-70],
+    obstacles:[
+      [30,GROUND_HEIGHT-60,10,10],
+      [50,GROUND_HEIGHT-50,10,10],
+      [70,GROUND_HEIGHT-40,10,10],
+      [90,GROUND_HEIGHT-30,10,10],
+      [110,GROUND_HEIGHT-20,10,10],
+      [130,GROUND_HEIGHT-10,10,10]
+    ],
+    spikes:[[30,GROUND_HEIGHT-20,10,20]]
+  },
+  {
+    name:"HOP HOP",
+    player_start:[10,GROUND_HEIGHT-14],
+    star:[170,GROUND_HEIGHT-10],
+    obstacles:[],
+    spikes:[
+      [30,GROUND_HEIGHT-10,10,10],
+      [60,GROUND_HEIGHT-30,10,10,180],
+      [90,GROUND_HEIGHT-10,10,10],
+      [120,GROUND_HEIGHT-30,10,10,180],
+      [150,GROUND_HEIGHT-10,10,10]
+    ]
   },
   {
     name:"DEATH TRAP",
@@ -329,7 +371,7 @@ const LEVELS = [
 let timerRunning = false;
 let timerStart = 0;
 let timerCurrent = 0;
-let highscore = localStorage.getItem("platformer_spike_levels_highscore") ? parseInt(localStorage.getItem("platformer_spike_levels_highscore")) : null;
+let highscore = localStorage.getItem("platformer_full_levels_highscore") ? parseInt(localStorage.getItem("platformer_full_levels_highscore")) : null;
 
 function timerString(ms) {
   const s = Math.floor(ms / 1000);
@@ -392,10 +434,10 @@ function nextLevel() {
       timerRunning = false;
       if(highscore === null || timerCurrent < highscore) {
         highscore = timerCurrent;
-        localStorage.setItem("platformer_spike_levels_highscore", highscore);
+        localStorage.setItem("platformer_full_levels_highscore", highscore);
         const pfName = localStorage.getItem('pg_player_name') || 'Speler';
         if(window._pfDb) {
-          const pfRef = window._pfDb.ref('platformerSpikeLevelsScores');
+          const pfRef = window._pfDb.ref('platformerFullLevelsScores');
           pfRef.orderByChild('name').equalTo(pfName).once('value').then(snap => {
             let existingKey = null, existingTime = Infinity;
             snap.forEach(child => { existingKey = child.key; existingTime = child.val().time || Infinity; });
@@ -529,10 +571,10 @@ document.getElementById("restart-btn").addEventListener("click", () => {
 document.getElementById("reset-btn").addEventListener("click", () => {
   if (!confirm("Reset your highscore?")) return;
   highscore = null;
-  localStorage.removeItem("platformer_spike_levels_highscore");
+  localStorage.removeItem("platformer_full_levels_highscore");
   const pfName = localStorage.getItem('pg_player_name') || null;
   if (pfName && window._pfDb) {
-    window._pfDb.ref('platformerSpikeLevelsScores').orderByChild('name').equalTo(pfName).once('value').then(snap => {
+    window._pfDb.ref('platformerFullLevelsScores').orderByChild('name').equalTo(pfName).once('value').then(snap => {
       snap.forEach(child => child.ref.remove());
     }).catch(()=>{});
   }
