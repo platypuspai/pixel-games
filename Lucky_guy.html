@@ -493,108 +493,123 @@
     <script>
 (function() {
     let clickTimestamps = [];
-    let cheatDetected = false;
+    let isWarningActive = false;
+    let warningTimer;
+    let timeLeft = 15;
+    let lastCheatTime = 0;
     const MAX_CPS = 15;
+    let bar = null;
 
-    // Luister naar klikken in de capture-fase, zodat we ze kunnen stoppen vóór de game code
     document.addEventListener('click', function(e) {
-        if (cheatDetected) {
-            e.stopPropagation();
-            e.preventDefault();
-            return;
-        }
-
-        // Detecteer console scripts en virtuele klikken
-        if (!e.isTrusted) {
-            triggerAnticheat("Console script of virtuele klik gedetecteerd");
-            e.stopPropagation();
-            return;
-        }
-
         const now = Date.now();
-        clickTimestamps.push(now);
+        let isCheating = false;
 
-        // Verwijder klikken ouder dan 1 seconde voor accurate CPS
-        clickTimestamps = clickTimestamps.filter(t => now - t <= 1000);
-
-        // 1. CPS Limiet Check
-        if (clickTimestamps.length > MAX_CPS) {
-            triggerAnticheat(`Onmenselijke kliksnelheid: >${MAX_CPS} CPS`);
-            e.stopPropagation();
-            return;
-        }
-
-        // 2. Onrealistisch constante tijdsintervallen (laatste 5 klikken)
-        if (clickTimestamps.length >= 5) {
-            let isMachine = true;
-            let targetInterval = clickTimestamps[clickTimestamps.length - 1] - clickTimestamps[clickTimestamps.length - 2];
+        // 1. Detecteer console scripts en virtuele klikken
+        if (!e.isTrusted) {
+            isCheating = true;
+        } else {
+            clickTimestamps.push(now);
             
-            // Controleer of de afgelopen 3 intervallen identiek zijn aan de laatste (met max 3ms speling)
-            for (let i = clickTimestamps.length - 2; i > clickTimestamps.length - 5; i--) {
-                let interval = clickTimestamps[i] - clickTimestamps[i - 1];
-                if (Math.abs(interval - targetInterval) > 3) {
-                    isMachine = false; // Te veel variantie, dus een mens
-                    break;
+            // Verwijder klikken ouder dan 1 seconde
+            clickTimestamps = clickTimestamps.filter(t => now - t <= 1000);
+
+            // 2. CPS Limiet Check
+            if (clickTimestamps.length > MAX_CPS) {
+                isCheating = true;
+            } 
+            // 3. Mechanisch ritme check (laatste 5 klikken)
+            else if (clickTimestamps.length >= 5) {
+                let isMachine = true;
+                let targetInterval = clickTimestamps[clickTimestamps.length - 1] - clickTimestamps[clickTimestamps.length - 2];
+                
+                for (let i = clickTimestamps.length - 2; i > clickTimestamps.length - 5; i--) {
+                    let interval = clickTimestamps[i] - clickTimestamps[i - 1];
+                    if (Math.abs(interval - targetInterval) > 3) {
+                        isMachine = false; // Te veel speling, dus een mens
+                        break;
+                    }
+                }
+                if (isMachine && targetInterval > 0 && targetInterval < 200) {
+                    isCheating = true;
                 }
             }
+        }
+
+        // Als er een cheat is gedetecteerd
+        if (isCheating) {
+            e.stopPropagation();
+            e.preventDefault();
+            lastCheatTime = now; // Update de tijd van de laatste illegale klik
             
-            // Alleen straffen bij onmenselijk snelle EN perfect ritmische klikken (bijv. onder de 200ms per klik)
-            if (isMachine && targetInterval > 0 && targetInterval < 200) { 
-                triggerAnticheat("Robot-achtige ritmische precisie");
-                e.stopPropagation();
-                return;
+            if (!isWarningActive) {
+                startWarning();
             }
+        } 
+        // Als de waarschuwing actief is, blokkeer dan óók normale klikken totdat de straf voorbij is
+        else if (isWarningActive) {
+            e.stopPropagation();
+            e.preventDefault();
         }
     }, true); 
 
-    function triggerAnticheat(reason) {
-        cheatDetected = true;
+    function startWarning() {
+        isWarningActive = true;
+        timeLeft = 15;
         
-        // Waarschuwingsbalk genereren
-        const bar = document.createElement('div');
-        bar.style.position = 'fixed';
-        bar.style.top = '0';
-        bar.style.left = '0';
-        bar.style.width = '100%';
-        bar.style.background = '#ff0044'; // Rode waarschuwingskleur
-        bar.style.color = '#ffffff';
-        bar.style.textAlign = 'center';
-        bar.style.padding = '15px';
-        bar.style.fontFamily = '"Press Start 2P", monospace, sans-serif'; // Sluit aan bij de styling van DVD+ en Lucky Guy
-        bar.style.fontSize = '12px';
-        bar.style.zIndex = '9999999';
-        bar.style.boxShadow = '0 5px 15px rgba(0,0,0,0.8)';
-        bar.style.lineHeight = '1.5';
-        document.body.appendChild(bar);
-
-        let timeLeft = 15;
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.style.position = 'fixed';
+            bar.style.top = '0';
+            bar.style.left = '0';
+            bar.style.width = '100%';
+            bar.style.background = '#ff0044';
+            bar.style.color = '#ffffff';
+            bar.style.textAlign = 'center';
+            bar.style.padding = '15px';
+            bar.style.fontFamily = '"Press Start 2P", monospace, sans-serif'; 
+            bar.style.fontSize = '12px';
+            bar.style.zIndex = '9999999';
+            bar.style.boxShadow = '0 5px 15px rgba(0,0,0,0.8)';
+            bar.style.lineHeight = '1.5';
+            document.body.appendChild(bar);
+        }
+        bar.style.display = 'block';
         
         function updateBar() {
-            bar.innerText = `⚠️ AUTOCLICKER GEBRUIK! (${reason}) ⚠️\nSpel sluit af in: ${timeLeft} seconden.`;
+            bar.innerText = `⚠️ AUTOCLICKER DETECTED! ⚠️\nGame closing in: ${timeLeft} seconds. Turn off your autoclicker to cancel!`;
         }
         
         updateBar();
 
-        const timer = setInterval(() => {
+        warningTimer = setInterval(() => {
+            let timeSinceLastCheat = Date.now() - lastCheatTime;
+            
+            // Vergevings-mechanisme: als de speler 3 seconden stopt met de autoclicker, annuleer de straf
+            if (timeSinceLastCheat > 3000) {
+                cancelWarning();
+                return;
+            }
+
             timeLeft--;
             updateBar();
+
+            // Als de 15 seconden om zijn en de speler is niet gestopt
             if (timeLeft <= 0) {
-                clearInterval(timer);
-                
-                // Communicatie naar de index file
-                
-                // Methode 1: Sla het op in localStorage zodat index.html dit kan uitlezen
+                clearInterval(warningTimer);
                 localStorage.setItem('cheat_detectie', 'WAAR');
-                
-                // Methode 2: Stuur een event naar parent (als de game in een iframe zit op de index file)
                 window.parent.postMessage('AUTOCLICKER_DETECTED', '*');
-                
-                // Stuur de speler fysiek terug naar de index
                 window.location.href = 'index.html'; 
             }
         }, 1000);
     }
+
+    function cancelWarning() {
+        clearInterval(warningTimer);
+        isWarningActive = false;
+        bar.style.display = 'none'; // Verberg de balk
+        clickTimestamps = []; // Reset de klik-geschiedenis voor een schone lei
+    }
 })();
-</script>
+</script> 
 </body>
 </html>
