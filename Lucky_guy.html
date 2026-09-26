@@ -488,8 +488,6 @@
     </script>
 
 
-
-    
     <script>
 (function() {
     let clickTimestamps = [];
@@ -525,7 +523,7 @@
                 for (let i = clickTimestamps.length - 2; i > clickTimestamps.length - 5; i--) {
                     let interval = clickTimestamps[i] - clickTimestamps[i - 1];
                     if (Math.abs(interval - targetInterval) > 3) {
-                        isMachine = false; // Te veel speling, dus een mens
+                        isMachine = false; 
                         break;
                     }
                 }
@@ -535,17 +533,15 @@
             }
         }
 
-        // Als er een cheat is gedetecteerd
         if (isCheating) {
             e.stopPropagation();
             e.preventDefault();
-            lastCheatTime = now; // Update de tijd van de laatste illegale klik
+            lastCheatTime = now; 
             
             if (!isWarningActive) {
                 startWarning();
             }
         } 
-        // Als de waarschuwing actief is, blokkeer dan óók normale klikken totdat de straf voorbij is
         else if (isWarningActive) {
             e.stopPropagation();
             e.preventDefault();
@@ -584,16 +580,21 @@
         warningTimer = setInterval(() => {
             let timeSinceLastCheat = Date.now() - lastCheatTime;
             
-            // Vergevings-mechanisme: als de speler 3 seconden stopt met de autoclicker, annuleer de straf
+            // Vergevings-mechanisme: annuleer zodra ze 3 seconden lang niet cheaten
             if (timeSinceLastCheat > 3000) {
                 cancelWarning();
                 return;
             }
 
-            timeLeft--;
+            // BEVRIES DE TIMER: Telt alleen af als ze in de afgelopen seconde nog gecheat hebben
+            // Hierdoor stopt de tijd met lopen op bijv. 2 seconden, totdat de 3 seconden vergevings-tijd voorbij is.
+            if (timeSinceLastCheat <= 1000) {
+                timeLeft--;
+            }
+            
             updateBar();
 
-            // Als de 15 seconden om zijn en de speler is niet gestopt
+            // Voer de straf uit als de tijd op is
             if (timeLeft <= 0) {
                 clearInterval(warningTimer);
                 localStorage.setItem('cheat_detectie', 'WAAR');
@@ -606,10 +607,10 @@
     function cancelWarning() {
         clearInterval(warningTimer);
         isWarningActive = false;
-        bar.style.display = 'none'; // Verberg de balk
-        clickTimestamps = []; // Reset de klik-geschiedenis voor een schone lei
+        bar.style.display = 'none'; 
+        clickTimestamps = []; 
     }
 })();
-</script> 
+</script>  
 </body>
 </html>
