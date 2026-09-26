@@ -967,7 +967,8 @@ const i18n = {
     lbMdMeta: "clicks", lbPfMeta: "best time", lbLgMeta: "highest level", lbNotice: "⚠ Scores are saved locally per browser.",
     lbMT: "// CHOOSE YOUR NAME", lbMP: "This name will be used to identify you on the leaderboards.", lbMPh: "Your player name...", lbMBtn: "► CONFIRM NAME",
     lbLoad: "Loading", lbConn: "Connecting", lbEmpty: "Not done yet.", lbRank: "Your rank: #", lbAlert: "Please enter a player name!",
-    foot: "This is a school project:) &nbsp;·&nbsp; Free to play &nbsp;·&nbsp;"
+    foot: "This is a school project:) &nbsp;·&nbsp; Free to play &nbsp;·&nbsp;",
+    snakeStart: "START"
   },
   nl: {
     subtitle: "11 games &nbsp;·&nbsp; speel in de browser &nbsp;·&nbsp; schoolproject <span>_</span>",
@@ -995,7 +996,8 @@ const i18n = {
     lbMdMeta: "clicks", lbPfMeta: "beste tijd", lbLgMeta: "hoogste level", lbNotice: "⚠ Scores worden lokaal opgeslagen per browser.",
     lbMT: "// KIES JE NAAM", lbMP: "Deze naam wordt gebruikt om jezelf te herkennen in de ranglijsten.", lbMPh: "Jouw spelernaam...", lbMBtn: "► BEVESTIG NAAM",
     lbLoad: "Laden", lbConn: "Verbinden", lbEmpty: "Nog geen data.", lbRank: "Je ranking: #", lbAlert: "Voer een spelernaam in!",
-    foot: "Dit is een schoolproject:) &nbsp;·&nbsp; Gratis spelen &nbsp;·&nbsp;"
+    foot: "Dit is een schoolproject:) &nbsp;·&nbsp; Gratis spelen &nbsp;·&nbsp;",
+    snakeStart: "START"
   },
   fr: {
     subtitle: "11 jeux &nbsp;·&nbsp; jouez dans le navigateur &nbsp;·&nbsp; projet scolaire <span>_</span>",
@@ -1015,7 +1017,7 @@ const i18n = {
     conTitle: "✉ NOUS CONTACTER", conDesc: "Questions, retours ou juste un bonjour? Envoyez-nous un message!",
     conLName: "// NOM", conPName: "Votre nom...", conLEmail: "// E-MAIL", conPEmail: "votre@email.com",
     conLMsg: "// MESSAGE", conPMsg: "Écrivez votre message ici...", conBtn: "► ENVOYER",
-    conSucc: "✓ MESSAGE REÇU!<br><br>Nous répondrons le plus vite possible.", conSending: "ENVOI...",
+    conSucc: "✓ MESSAGE REÇU!<br><br>We'll reply as soon as possible.", conSending: "ENVOI...",
     infT1: "// QU'EST-CE QUE PLIXO-ARCADE?", infP1: "Plixo-Arcade est une collection de petits jeux sur navigateur réalisés dans le cadre d'un projet scolaire.",
     infT2: "// LES JEUX", infP2: "11 jeux sont actuellement disponibles: DVD+, Dino World, Mini Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker et THE END.",
     infT3: "// TECHNOLOGIE", infP3: "Tous les jeux sont construits en HTML, CSS, JavaScript et Python.",
@@ -1023,7 +1025,8 @@ const i18n = {
     lbMdMeta: "clics", lbPfMeta: "meilleur temps", lbLgMeta: "niveau max", lbNotice: "⚠ Les scores sont sauvegardés localement.",
     lbMT: "// CHOISISSEZ VOTRE NOM", lbMP: "Ce nom vous identifiera dans les classements.", lbMPh: "Votre nom de joueur...", lbMBtn: "► CONFIRMER",
     lbLoad: "Chargement", lbConn: "Connexion", lbEmpty: "Pas de données.", lbRank: "Votre rang: #", lbAlert: "Veuillez entrer un nom!",
-    foot: "Projet scolaire:) &nbsp;·&nbsp; Gratuit &nbsp;·&nbsp;"
+    foot: "Projet scolaire:) &nbsp;·&nbsp; Gratuit &nbsp;·&nbsp;",
+    snakeStart: "JOUER"
   }
 };
 
@@ -1313,8 +1316,9 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
 
         const hint = document.createElement('div');
         hint.id = 'snake-hint';
-        hint.style.cssText = 'position:absolute; left:70px; top:5px; color:#ff4444; font-family:"Press Start 2P", "Inconsolata", monospace; font-size:10px; font-weight:bold; pointer-events:none; text-shadow: 2px 2px 0 #000;';
-        hint.innerText = '← KLIK OM TE STARTEN';
+        hint.style.cssText = 'position:absolute; left:6px; top:6px; color:#ffffff; font-family:"Press Start 2P", "Inconsolata", monospace; font-size:9px; font-weight:bold; pointer-events:none; text-shadow: 1px 1px 0 #000; z-index:20;';
+        hint.setAttribute('data-i18n', 'snakeStart');
+        hint.innerText = window.t ? window.t('snakeStart') : 'START';
         container.appendChild(hint);
 
         snake.forEach(seg => { seg.el.addEventListener('click', startGame); });
