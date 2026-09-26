@@ -487,5 +487,112 @@
         window.saveScoreToFirebase = saveScoreToFirebase;
     </script>
 
+    // BEGIN KLIKBESTAND
+    <script>
+(function() {
+    let clickTimestamps = [];
+    let cheatDetected = false;
+    const MAX_CPS = 15;
+
+    // Luister naar klikken in de capture-fase, zodat we ze kunnen stoppen vóór de game code
+    document.addEventListener('click', function(e) {
+        if (cheatDetected) {
+            e.stopPropagation();
+            e.preventDefault();
+            return;
+        }
+
+        // Detecteer console scripts en virtuele klikken
+        if (!e.isTrusted) {
+            triggerAnticheat("Console script of virtuele klik gedetecteerd");
+            e.stopPropagation();
+            return;
+        }
+
+        const now = Date.now();
+        clickTimestamps.push(now);
+
+        // Verwijder klikken ouder dan 1 seconde voor accurate CPS
+        clickTimestamps = clickTimestamps.filter(t => now - t <= 1000);
+
+        // 1. CPS Limiet Check
+        if (clickTimestamps.length > MAX_CPS) {
+            triggerAnticheat(`Onmenselijke kliksnelheid: >${MAX_CPS} CPS`);
+            e.stopPropagation();
+            return;
+        }
+
+        // 2. Onrealistisch constante tijdsintervallen (laatste 5 klikken)
+        if (clickTimestamps.length >= 5) {
+            let isMachine = true;
+            let targetInterval = clickTimestamps[clickTimestamps.length - 1] - clickTimestamps[clickTimestamps.length - 2];
+            
+            // Controleer of de afgelopen 3 intervallen identiek zijn aan de laatste (met max 3ms speling)
+            for (let i = clickTimestamps.length - 2; i > clickTimestamps.length - 5; i--) {
+                let interval = clickTimestamps[i] - clickTimestamps[i - 1];
+                if (Math.abs(interval - targetInterval) > 3) {
+                    isMachine = false; // Te veel variantie, dus een mens
+                    break;
+                }
+            }
+            
+            // Alleen straffen bij onmenselijk snelle EN perfect ritmische klikken (bijv. onder de 200ms per klik)
+            if (isMachine && targetInterval > 0 && targetInterval < 200) { 
+                triggerAnticheat("Robot-achtige ritmische precisie");
+                e.stopPropagation();
+                return;
+            }
+        }
+    }, true); 
+
+    function triggerAnticheat(reason) {
+        cheatDetected = true;
+        
+        // Waarschuwingsbalk genereren
+        const bar = document.createElement('div');
+        bar.style.position = 'fixed';
+        bar.style.top = '0';
+        bar.style.left = '0';
+        bar.style.width = '100%';
+        bar.style.background = '#ff0044'; // Rode waarschuwingskleur
+        bar.style.color = '#ffffff';
+        bar.style.textAlign = 'center';
+        bar.style.padding = '15px';
+        bar.style.fontFamily = '"Press Start 2P", monospace, sans-serif'; // Sluit aan bij de styling van DVD+ en Lucky Guy
+        bar.style.fontSize = '12px';
+        bar.style.zIndex = '9999999';
+        bar.style.boxShadow = '0 5px 15px rgba(0,0,0,0.8)';
+        bar.style.lineHeight = '1.5';
+        document.body.appendChild(bar);
+
+        let timeLeft = 15;
+        
+        function updateBar() {
+            bar.innerText = `⚠️ AUTOCLICKER GEBRUIK! (${reason}) ⚠️\nSpel sluit af in: ${timeLeft} seconden.`;
+        }
+        
+        updateBar();
+
+        const timer = setInterval(() => {
+            timeLeft--;
+            updateBar();
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                
+                // Communicatie naar de index file
+                
+                // Methode 1: Sla het op in localStorage zodat index.html dit kan uitlezen
+                localStorage.setItem('cheat_detectie', 'WAAR');
+                
+                // Methode 2: Stuur een event naar parent (als de game in een iframe zit op de index file)
+                window.parent.postMessage('AUTOCLICKER_DETECTED', '*');
+                
+                // Stuur de speler fysiek terug naar de index
+                window.location.href = 'index.html'; 
+            }
+        }, 1000);
+    }
+})();
+</script>
 </body>
 </html>
