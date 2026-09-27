@@ -1561,9 +1561,9 @@ document.addEventListener("DOMContentLoaded", function() {
             localStorage.setItem('cheat_strikes', strikes.toString());
             
             if (strikes === 1) {
-                alert(window.t ? window.t('cheatYellow') : "WAARSCHUWING! Driehoek is GEEL. Volgende keer volgt een ban.");
+                alert(window.t ? window.t('cheatYellow') : "WAARSCHUWING! Cheat gedetecteerd. Je status is nu GEEL. Bij de volgende overtreding wordt je account verwijderd.");
             } else if (strikes >= 2) {
-                alert(window.t ? window.t('cheatRed') : "ACCOUNT VERBANNEN!");
+                alert(window.t ? window.t('cheatRed') : "ACCOUNT VERBANNEN! Je hebt de regels verbroken. Je account en scores zijn verwijderd.");
                 banAccount(playerName);
             }
         }
@@ -1616,15 +1616,19 @@ async function banAccount(name) {
         let devId = localStorage.getItem('pg_device_id');
         if (devId) await db.ref('nameOwners/' + devId).remove();
         
-        // Wis lokale account-data, maar forceer de strike op 2 (rood)
+        // Wis lokale account-data en reset de strafpunten voor een 'frisse start'
         localStorage.removeItem('pg_player_name');
         localStorage.removeItem('pg_device_id');
         localStorage.removeItem('pg_account_code');
-        localStorage.setItem('cheat_strikes', '2'); 
+        localStorage.setItem('cheat_strikes', '0'); // Reset driehoek naar groen
         
-        location.reload();
+        // Stuur de speler direct naar het leaderboard voor een nieuw account
+        window.location.href = 'leaderboard.html';
     } catch(e) {
         console.error("Ban Error:", e);
+        // Zelfs bij een error doorsturen en resetten
+        localStorage.setItem('cheat_strikes', '0');
+        window.location.href = 'leaderboard.html';
     }
 }
 </script>
