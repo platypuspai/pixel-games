@@ -91,13 +91,32 @@
             50% { opacity: 1; transform: scale(1.5); }
         }
 
-        /* ---- LANGUAGE SELECTOR ---- */
-        #language-box {
+        /* ---- TOP CONTROLS (Rules & Lang) ---- */
+        #top-controls {
             position: absolute;
             top: 20px;
             right: 20px;
             z-index: 1001;
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
+        
+        #rules-dropdown {
+            display: none;
+            position: absolute;
+            top: 40px;
+            right: 0;
+            width: 330px;
+            background: rgba(10, 10, 10, 0.95);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent-green);
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+            text-align: left;
+            backdrop-filter: blur(4px);
+        }
+
         #lang-select {
             background: rgba(10, 10, 10, 0.8);
             color: #fff;
@@ -483,13 +502,35 @@
 
 <div class="stars" id="stars"></div>
 
-<!-- Language Selector -->
-<div id="language-box">
-  <select id="lang-select">
-    <option value="en">English</option>
-    <option value="nl">Nederlands</option>
-    <option value="fr">Français</option>
-  </select>
+<!-- TOP CONTROLS: Rules & Language -->
+<div id="top-controls">
+    <!-- Rules Triangle -->
+    <div id="rules-triangle-container" style="cursor: pointer; display: flex; align-items: center; gap: 8px; position: relative;">
+        <span style="font-family: 'Press Start 2P', monospace; font-size: 0.5rem; color: var(--text-muted);" data-i18n="rulesBtn">RULES</span>
+        <svg id="rules-triangle" width="28" height="28" viewBox="0 0 24 24">
+            <!-- Afgeronde driehoek (SVG) -->
+            <path id="rules-triangle-path" d="M12 2.247a2 2 0 0 1 1.732 1l8 13.856a2 2 0 0 1-1.732 3H3.999a2 2 0 0 1-1.732-3l8-13.856a2 2 0 0 1 1.732-1z" fill="#00ff88"/>
+        </svg>
+        
+        <!-- Dropdown Box (verschijnt bij hover) -->
+        <div id="rules-dropdown">
+            <h3 style="font-family: 'Press Start 2P', monospace; font-size: 0.55rem; color: var(--accent-green); margin-bottom: 12px;" data-i18n="rulesTitle">// ARCADE RULES</h3>
+            <ul style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; padding-left: 16px; margin-bottom: 0;">
+                <li style="margin-bottom: 8px;" data-i18n="rule1"><strong>No autoclickers</strong><br><span style="font-size: 0.65rem;">Penalty: Green ➔ Yellow ➔ Red (Ban)</span></li>
+                <li style="margin-bottom: 8px;" data-i18n="rule2"><strong>No hacking / modifying code</strong><br><span style="font-size: 0.65rem;">Penalty: Green ➔ Red (Instant Ban)</span></li>
+                <li data-i18n="rule3"><strong>No AI models allowed</strong><br><span style="font-size: 0.65rem;">Penalty: Green ➔ Yellow ➔ Red (Ban)</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Language Selector -->
+    <div id="language-box">
+      <select id="lang-select">
+        <option value="en">English</option>
+        <option value="nl">Nederlands</option>
+        <option value="fr">Français</option>
+      </select>
+    </div>
 </div>
 
 <header>
@@ -968,7 +1009,15 @@ const i18n = {
     lbMT: "// CHOOSE YOUR NAME", lbMP: "This name will be used to identify you on the leaderboards.", lbMPh: "Your player name...", lbMBtn: "► CONFIRM NAME",
     lbLoad: "Loading", lbConn: "Connecting", lbEmpty: "Not done yet.", lbRank: "Your rank: #", lbAlert: "Please enter a player name!",
     foot: "This is a school project:) &nbsp;·&nbsp; Free to play &nbsp;·&nbsp;",
-    snakeStart: "START"
+    snakeStart: "START",
+    rulesBtn: "RULES",
+    rulesTitle: "// ARCADE RULES",
+    rule1: "<strong>No autoclickers</strong><br><span style='font-size:0.65rem;'>Penalty: Green ➔ Yellow ➔ Red (Ban)</span>",
+    rule2: "<strong>No hacking / modifying code</strong><br><span style='font-size:0.65rem;'>Penalty: Green ➔ Red (Instant Ban)</span>",
+    rule3: "<strong>No AI models allowed</strong><br><span style='font-size:0.65rem;'>Penalty: Green ➔ Yellow ➔ Red (Ban)</span>",
+    cheatNoAccount: "You were kicked for cheating! Play fair.",
+    cheatYellow: "WARNING! Cheat detected. Your status is now YELLOW. The next offense will result in a ban.",
+    cheatRed: "ACCOUNT BANNED! You broke the rules. Your account and scores have been deleted."
   },
   nl: {
     subtitle: "11 games &nbsp;·&nbsp; speel in de browser &nbsp;·&nbsp; schoolproject <span>_</span>",
@@ -997,7 +1046,15 @@ const i18n = {
     lbMT: "// KIES JE NAAM", lbMP: "Deze naam wordt gebruikt om jezelf te herkennen in de ranglijsten.", lbMPh: "Jouw spelernaam...", lbMBtn: "► BEVESTIG NAAM",
     lbLoad: "Laden", lbConn: "Verbinden", lbEmpty: "Nog geen data.", lbRank: "Je ranking: #", lbAlert: "Voer een spelernaam in!",
     foot: "Dit is een schoolproject:) &nbsp;·&nbsp; Gratis spelen &nbsp;·&nbsp;",
-    snakeStart: "START"
+    snakeStart: "START",
+    rulesBtn: "REGELS",
+    rulesTitle: "// ARCADE REGELS",
+    rule1: "<strong>Geen autoclicker</strong><br><span style='font-size:0.65rem;'>Straf: Groen ➔ Geel ➔ Rood (Ban)</span>",
+    rule2: "<strong>Niet hacken / code aanpassen</strong><br><span style='font-size:0.65rem;'>Straf: Groen ➔ Rood (Instant Ban)</span>",
+    rule3: "<strong>Geen AI-modellen gebruiken</strong><br><span style='font-size:0.65rem;'>Straf: Groen ➔ Geel ➔ Rood (Ban)</span>",
+    cheatNoAccount: "Je bent teruggestuurd wegens valsspelen! Speel eerlijk.",
+    cheatYellow: "WAARSCHUWING! Cheat gedetecteerd. Je status is nu GEEL. Bij de volgende overtreding wordt je account verwijderd.",
+    cheatRed: "ACCOUNT VERBANNEN! Je hebt de regels verbroken. Je account en scores zijn verwijderd."
   },
   fr: {
     subtitle: "11 jeux &nbsp;·&nbsp; jouez dans le navigateur &nbsp;·&nbsp; projet scolaire <span>_</span>",
@@ -1026,7 +1083,15 @@ const i18n = {
     lbMT: "// CHOISISSEZ VOTRE NOM", lbMP: "Ce nom vous identifiera dans les classements.", lbMPh: "Votre nom de joueur...", lbMBtn: "► CONFIRMER",
     lbLoad: "Chargement", lbConn: "Connexion", lbEmpty: "Pas de données.", lbRank: "Votre rang: #", lbAlert: "Veuillez entrer un nom!",
     foot: "Projet scolaire:) &nbsp;·&nbsp; Gratuit &nbsp;·&nbsp;",
-    snakeStart: "JOUER"
+    snakeStart: "JOUER",
+    rulesBtn: "RÈGLES",
+    rulesTitle: "// RÈGLES DE L'ARCADE",
+    rule1: "<strong>Pas d'autoclicker</strong><br><span style='font-size:0.65rem;'>Pénalité: Vert ➔ Jaune ➔ Rouge (Ban)</span>",
+    rule2: "<strong>Pas de piratage / modif. de code</strong><br><span style='font-size:0.65rem;'>Pénalité: Vert ➔ Rouge (Ban)</span>",
+    rule3: "<strong>Pas de modèles d'IA</strong><br><span style='font-size:0.65rem;'>Pénalité: Vert ➔ Jaune ➔ Rouge (Ban)</span>",
+    cheatNoAccount: "Vous avez été expulsé pour tricherie! Jouez équitablement.",
+    cheatYellow: "ATTENTION! Triche détectée. Votre statut est JAUNE. La prochaine infraction = ban.",
+    cheatRed: "COMPTE BANNI! Vous avez enfreint les règles. Votre compte et vos scores ont été supprimés."
   }
 };
 
@@ -1461,6 +1526,107 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     window.addEventListener('load', initSnake);
     if (document.readyState === 'complete') initSnake();
 })();
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const FB_CFG_INDEX = {
+        apiKey: 'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',
+        authDomain: 'money-digger-9b05e.firebaseapp.com',
+        databaseURL: 'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app'
+    };
+    if (!firebase.apps.length) {
+        firebase.initializeApp(FB_CFG_INDEX);
+    }
+    
+    let strikes = parseInt(localStorage.getItem('cheat_strikes') || '0');
+    let playerName = localStorage.getItem('pg_player_name');
+    let detectie = localStorage.getItem('cheat_detectie');
+    
+    // Controleer op inkomende cheats
+    if (detectie) {
+        localStorage.removeItem('cheat_detectie'); // Meteen opschonen
+        
+        if (!playerName) {
+            // Geen account? Alleen wegsturen.
+            alert(window.t ? window.t('cheatNoAccount') : "Je bent teruggestuurd wegens valsspelen!");
+        } else {
+            // Checken of het een instant-ban delict is (Hack)
+            if (detectie === 'HACK') {
+                strikes = 2; // Instant rood
+            } else {
+                strikes++; // Autoclicker & AI is +1 strike per keer
+            }
+            
+            localStorage.setItem('cheat_strikes', strikes.toString());
+            
+            if (strikes === 1) {
+                alert(window.t ? window.t('cheatYellow') : "WAARSCHUWING! Driehoek is GEEL. Volgende keer volgt een ban.");
+            } else if (strikes >= 2) {
+                alert(window.t ? window.t('cheatRed') : "ACCOUNT VERBANNEN!");
+                banAccount(playerName);
+            }
+        }
+    }
+    
+    // UI updaten (Driehoek kleur en hover effecten)
+    const triangleFill = document.getElementById('rules-triangle-path');
+    const rulesDropdown = document.getElementById('rules-dropdown');
+    const rulesContainer = document.getElementById('rules-triangle-container');
+
+    if (triangleFill && rulesDropdown) {
+        if (strikes === 0) {
+            triangleFill.setAttribute('fill', '#00ff88');
+            rulesDropdown.style.borderTopColor = '#00ff88';
+            rulesDropdown.querySelector('h3').style.color = '#00ff88';
+        } else if (strikes === 1) {
+            triangleFill.setAttribute('fill', '#ffdd00');
+            rulesDropdown.style.borderTopColor = '#ffdd00';
+            rulesDropdown.querySelector('h3').style.color = '#ffdd00';
+        } else {
+            triangleFill.setAttribute('fill', '#ff4444');
+            rulesDropdown.style.borderTopColor = '#ff4444';
+            rulesDropdown.querySelector('h3').style.color = '#ff4444';
+        }
+    }
+    
+    if (rulesContainer && rulesDropdown) {
+        rulesContainer.addEventListener('mouseenter', () => { rulesDropdown.style.display = 'block'; });
+        rulesContainer.addEventListener('mouseleave', () => { rulesDropdown.style.display = 'none'; });
+    }
+});
+
+async function banAccount(name) {
+    try {
+        const db = firebase.database();
+        // De tabelnamen in jouw Firebase
+        const tables = [
+            'scores', 'luckyGuyScores', 'platformerScores', 
+            'platformerSpikeLevelsScores', 'miniApocalypseScores', 
+            'bugEscapeScores', 'dodgingArenaScores'
+        ];
+        
+        // Verwijder scores op basis van speler naam
+        for (let table of tables) {
+            const snap = await db.ref(table).orderByChild('name').equalTo(name).once('value');
+            snap.forEach(child => child.ref.remove());
+        }
+        
+        // Verwijder naam registratie (zodat de naam weer vrijkomt)
+        let devId = localStorage.getItem('pg_device_id');
+        if (devId) await db.ref('nameOwners/' + devId).remove();
+        
+        // Wis lokale account-data, maar forceer de strike op 2 (rood)
+        localStorage.removeItem('pg_player_name');
+        localStorage.removeItem('pg_device_id');
+        localStorage.removeItem('pg_account_code');
+        localStorage.setItem('cheat_strikes', '2'); 
+        
+        location.reload();
+    } catch(e) {
+        console.error("Ban Error:", e);
+    }
+}
 </script>
 </body>
 </html>
