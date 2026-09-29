@@ -1632,5 +1632,65 @@ async function banAccount(name) {
     }
 }
 </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Wacht even tot Firebase zeker is geladen (omdat het in een ander script geïnitialiseerd wordt)
+    setTimeout(() => {
+        const db = firebase.database();
+        const mainContainer = document.querySelector('main');
+        const gameCards = Array.from(mainContainer.querySelectorAll('.game-card'));
+
+        // Stap 1: Geef elke game-card een uniek ID op basis van de titel en meet de kliks
+        gameCards.forEach(card => {
+            const titleEl = card.querySelector('.card-title');
+            if (titleEl) {
+                // Maak een veilig ID van de titel (bijv. "Dino World" wordt "dino_world")
+                const gameId = titleEl.innerText.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                card.setAttribute('data-game-id', gameId);
+
+                // Zoek de speel-knop in deze specifieke kaart
+                const playBtn = card.querySelector('.btn-play');
+                if (playBtn) {
+                    playBtn.addEventListener('click', () => {
+                        // Tel 1 op bij het aantal kliks voor deze game in Firebase
+                        const ref = db.ref('gameStats/clicks/' + gameId);
+                        ref.transaction((currentClicks) => {
+                            return (currentClicks || 0) + 1;
+                        });
+                    });
+                }
+            }
+        });
+
+        // Stap 2: Luister naar de Firebase database en sorteer de kaarten live
+        db.ref('gameStats/clicks').on('value', (snapshot) => {
+            const clickData = snapshot.val() || {};
+
+            // Sorteer de array van game-cards op basis van het aantal kliks
+            gameCards.sort((a, b) => {
+                const idA = a.getAttribute('data-game-id');
+                const idB = b.getAttribute('data-game-id');
+                
+                const clicksA = clickData[idA] || 0; // 0 als er nog niet geklikt is
+                const clicksB = clickData[idB] || 0;
+
+                // Zet de game met de meeste kliks bovenaan
+                return clicksB - clicksA; 
+            });
+
+            // Zorg ervoor dat "THE END" altijd als allerlaatste blijft staan
+            gameCards.sort((a, b) => {
+                if (a.getAttribute('data-game-id') === 'the_end') return 1;
+                if (b.getAttribute('data-game-id') === 'the_end') return -1;
+                return 0;
+            });
+
+            // Stap 3: Plaats de kaarten in de nieuwe volgorde terug op de pagina
+            gameCards.forEach(card => mainContainer.appendChild(card));
+        });
+    }, 500); // Korte vertraging om te garanderen dat de Firebase config al is uitgevoerd
+});
+</script>
 </body>
 </html>
