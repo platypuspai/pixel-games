@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>One Square v1.6</title>
+<title>One Square v1.8.5 — Widescreen 720x400 (No Stretching)</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -10,7 +10,7 @@ body {
   display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh;
 }
 #top-bar {
-  width: 200px; height: 20px; background: #1a1a1a;
+  width: 720px; height: 20px; background: #1a1a1a;
   display: flex; align-items: center; padding: 0 6px;
   border-bottom: 1px solid #333; position: relative;
   flex-shrink: 0;
@@ -66,6 +66,7 @@ body {
 .s-btn-fs:hover { background:#25253a; }
 #mp-status { font-size: 7px; color: #5a5; text-align:center; }
 canvas { display: block; image-rendering: pixelated; }
+#game { width: 720px; height: 400px; }
 :fullscreen #top-bar { width: 100vw; }
 :fullscreen canvas { width: 100vw !important; height: calc(100vh - 20px) !important; image-rendering: pixelated; }
 #name-modal {
@@ -114,10 +115,10 @@ canvas { display: block; image-rendering: pixelated; }
     <button class="s-btn s-btn-fs" id="btn-fs">⛶ Fullscreen</button>
   </div>
 </div>
-<canvas id="game" width="200" height="200"></canvas>
+<canvas id="game" width="720" height="400"></canvas>
 <div id="name-modal">
   <div id="name-box">
-    <h2>ONE SQUARE v1.6</h2>
+    <h2>ONE SQUARE v1.8.5</h2>
     <input id="name-input" type="text" maxlength="12" placeholder="your name..." />
     <button id="name-confirm">Play ▶</button>
   </div>
@@ -128,7 +129,7 @@ canvas { display: block; image-rendering: pixelated; }
 
 <script>
 // ═══════════════════════════════════════════════════════
-//  FIREBASE CONFIG (zelfde project als platformer)
+//  FIREBASE CONFIG
 // ═══════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
@@ -141,17 +142,17 @@ const FIREBASE_CONFIG = {
 };
 
 // ═══════════════════════════════════════════════════════
-//  EMBEDDED TEXTURES (standalone, geen externe files)
+//  EMBEDDED TEXTURES
 // ═══════════════════════════════════════════════════════
 window._imgSrcs = {
-  'dirt.png':    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACU0lEQVR4nCXLy5LjNAAF0Kun3247cdIZmh6YomcxRbGh+HsW/AB/wIoUQ6enHUfxU5JliQVnf4gEOIEPyATWFQwgAAcoYIEAcI7ZIYoxaVAKnkv89uvPeRz5zQanE8EkJc5ZAB6UCXkbpmr/OGkLyn//40+abiDzFXMXr8OP+1y6YVUXoVXm58+nis3dUxmZ9p9oHU8ZSwG6bfjhWB/K+PzX3+pyfhAkF+H9awc7Tt2le71wN/fv/07dxfSdALgAnDGRYB8OcV2Wqn1jJPzy5TtCyE3dvj/VxPsvn3+6DWMsGAP4BlDGEYjqdZH1u+awGd1eO+89l3Ge5eNi+6Uv6mZedABoLNHb8K1fjk/Pu8ePXmS9CTyt3u82KZtRB+PF128KIjOeCwZ6tyBUMpl4KlrVG+s9FYRFZVVvhG+E36fl+dOLcYHH2biBAoiiSGudJMn5fLbWxnFsrRVChBAIIS8vLyGEtm23bWMALwWmUdllJLk8Nbuh7xLB8yw5n18ZBQhzembB5Ylk2ALAzYpC4PihCd7mVaKnNWKQZH2skzQis16G7rXt7jzO9s2h4qAEyNIkioVZps2teZoA3hq9qyuzjL1SCL7ZVfu6cKudHTgFrkr1dwVnUsmKNL5d72UhrPciTg9pRThX40KZpIwFgM+Aj/LmqXZ6WvUU1WUO/vBQXC6XY3FI8+L1vTu/3faPCRfU/B/Uyj8eTkP75gQZNhmSWm0kPjx3K+6jc0nVfKrr5ni93WeAFBLWggIUqFLMMwjAAEGgAzgBlRgMNiBLyTiH/wBja0E8/rQXwwAAAABJRU5ErkJggg==',
-  'grass.png':   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACn0lEQVR4nDXS2U4TUQAG4H/OnFk7LR1oC2JroJSgRoKJgkYhLtFovDEhPoMv40N44TN440JcolETjQIqLdiyB0opnensc2aON3r3PcAnQAJkQANEQAI4wAEGCAAAEQCQABEQABwUFIuPH3ZxFKmhMqD5vh/24+Jg0XN8qokh9yml759/enD7zjA99fTJMwoVge6KuhAj/Pj2a2kqf7pQfvHm9ehEcbw0fuJ0O+3OwqPLu3s7gRDABIWBgHorm8vZ0cz5e1VKqdOzry/OdTodKzlJdaaXVI94fW7JXAJAkMAoDRhD2Wb9kIlMMqSN3e2D3r6al1e/rHOZd/ptOStFQjxYLoJDwDlUb1aKk4OhGu4f7xu5rJTI+Zxp2w6h3IlsSqng8zwd/Plhzf/CCLoYHxnnMYkd5nY9yiQeCG7X317f4REZ0EzfCk+ObJVmZi/MIgFBCgKxvlLXZWNibIIS6WC/ncZ8qjaVhMlGo1XID42Wym7PiYIEEggUeJ5Xq9XiOG42m5ZlTU9PM8YajYYoitVqdfltXRRFRVEopWAgiKAbmpJV1lv1wnChUBra2mmpGaU6WVUNte/2Jq5WGs01TgGSgINAwst3b5zAGj5T0k3tx6vfuaKxfbgZk+jbyg89r6o5eaxW+bz0LZETDICA48ata4wxx7LTNC1fKfz6ujFkmqpMZ2bOeZ7nun0A0/OTpmnCAQEFs8NfS80zIxUFStSP5q7MaEIm6EWRHW59OpS52lrb1EWtu3uEBAR9ZHj27v2FP99bzp5DAznoRKvv6setYyXW5uYvEo+mNgRXPFs+jwgUAXLMPDo8uFSdTWU4jqPDuDm7IImy5fQQpeVcJXs6I9nyQbsNDuFf7zzAABGgQAgIQApI/5EF2gAHXPwFGMRBUVilbIQAAAAASUVORK5CYII=',
-  'stone.png':   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACjUlEQVR4nD2SwUrrQBSG50yaySTWmwQa2lQUYqsLi1koShD3uvBRXPkirn0AcesriF1YQVAD7UJtuzBaCG00tTaTZCZ30cs9qw/ODz8/fAghhBDSNA0hBAAIoaWlJYSQLMulUmkBqqouvpIkAaX09PQ0CILv7+9GoyHLcpIkGONOp+O6rm3bQRAwxtbX18MwvLi4wEmSRFFkGIbjOIqivL6+qqpKCEnTtF6vh2GoqqplWVdXV5xzWZYxxljX9bu7u6IoOOdra2u+70+nU8/zhsNhu90WQnS73ZOTk0qlkmUZFkIAwMHBAWNsPp8DwObmZrlcRgiZprm3tzcajVqtFgD8/PwghDDGeDwev7+/m6b5/PxsGAYA9Ho9SZKyLDNNs9VqTSaTx8dHQogkSbgoCtu2y+VymqY7OzvD4fDr66vZbCqKMhgM4ji+vLys1Wrb29sAwDnHADCZTLrdriRJnHNN0+r1elEUs9lsa2urUqkcHR0xxnq9HmMMIYQBgBDieR6lNM/zfr+f5/nNzU2pVPJ9HwB83xdCNJtNSilCCHPOsyzTNO3p6YlSqus659x1XUKI67qfn5+e5ymKUhRFFEX/GlRVnc1m1WqVUuo4jhBiZWWFMQYAg8GAc359fT2fz3Vd/zdakqR2u12r1cIwfHh4YIzd39/HcYwxPjw8FEIcHx9blpWmKee8tLy8HEXR7u4uQogQsr+/nySJ53kA8PLyEsfxxsZGv993HIdSSinF0+n0z58/hmHc3t7atr1QoNPpfHx8OI4zGo0opY1Go1qtjsdjxhgQQs7Ozt7e3lZXV39/fymlQghZlvM8F0IURZGmqWVZQRCYpnl+fo4wxv+VXui9uP+8CMiyvOC/6CVByxifm2sAAAAASUVORK5CYII=',
-  'log.png':     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACH0lEQVR4nD3EzY7UOBQG0M/2dRw7lapUq0E0aNjPkvd/AXa8Q2+QGuiqyp8d2/d6FkhzFkcF4Hkab/dFAUOPlGAAAAQUoAFhwLzBdlBN70XIk/r27d+4v01T760R5rQyGddYmmbTNW68xIPolIv//v0H5dqEH9IWbfh2v3WmS1Gm6ck62tNyPo8xZ+20SO2lFQGRwuXieu9IF6OzSLXWdLqmuP76/XbUP37o1z2L6i2JAbQ0pHW2SkpaT96ZVnvS+djItOvonIHvbdpT6AxBegtNgAKkyLbsBrojO4ZTb/vHn/vJD6Ef5Khph+88BKVAO8CZU9pEio5rdeakxGl0x85Kuk77knAerNXeaq8AnYEmGqKep4+d9efxiYvkyEO4MEPDCqvn6eNxsBQ4QANg5vf3dxEhonmeY4zOuZeXF2PM6+srACJyzjEzAwRgPIev9h9rS017cP6IrbZjn+fp6dz5T/sRY9kstAsBAAmwphsQG+cjz9JS5kaiRZWY51S337d1vA4QEpgCaNsBSj3Wh/NdGIctRhd6F9z1wxNDcj3EIJw8g401SkHHjAq9xFybydx+/kIzdlnTY95TFZBrwLIdb++P+7pzAzWA6HS9fjHWq4NDWKbp8/0+18p+GIpE21WYcLlMCucKUOjtuiky5/mRFfvT+CklEh6EOWez7NHoa5PQ2bHy0FutBqAB9u8aSvA/DVSg91gjGBgcrUf9D624R8eKD6q1AAAAAElFTkSuQmCC',
-  'mystery.png': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACp0lEQVR4nAXBz2scVQAH8O/7NfNm5+3O7ibbNTXNJhYSk0sPhUKL1EulFFG8eBNPgjf/h957EPwPPIkHexGpeK5YaItsq1JsaJOY7M9kd3Zm3vx8b/x8iHTBBGDBXMAABJKiLMEclBasRmkAipoAJaoKnBIM/3wgXZpmJ0JOKdN6Vfq+m+fLtV5vsbCMtq1VWeZ0Oztbg695M8BkfHTvznfCxdO/PhLeLHCJtVaQQhdz2cLkTH5y5wksfnz4TWcNVGu8e8VRAR7/8SUQCW7ydElMrhpNGJvn862B++i3L8II/Q26isFVE1H64vfhdekOWaWmx/bTj9+ES8Di9eHnmT2CXcn2s8Px3SQ6pgRcR1CKtbrzxeKEZVc//ODfp09urXcHWSR23/v+8fP3HbtQHZNluq73BQNlBh3/ymwcUtigbd4e36A0PZ+fxvG4FaDXI/13ZKZDwWSd+yYDJwSj0aS32TVEWyxPR/Pt/g0dOYzKKEZZRhej/1yPC0EY4dSCWsBv0jSLq6qoTNzw3apgaWIPDn569vw6Z67faIJWSTalPPd8UNTwpDI1Z9wBqW2d6SK8efvRi39uCZkuVyGlQnoOpbTdWU80qONgFXLp9svKKau6ve5XdJzWiM1Lt3UulbDWmc4Ka9RsapoKNM3BWNMW27zeTWJWmpLJ6uWry90N783JRLV8QK0F1wTZs7YRRqCqg0SXe9sPhbndbh/MLqK8tPsHZ+fzYntnK0r1eFLOT/b3Br/6KrAcPIzQCjZqg53Bt4ennylppeMNh5c54dPR0m3Q/qWr13Z/qCsk2soGOAPCsPz79X1rVxfTi2534+zocHNzs0wFspXwhMnlz7981e5sUSaSGES6cDwYAxA0HWiNoIU4Bgy4g6KCpfAkaopkhVaA/wEmaFDu9TutHAAAAABJRU5ErkJggg==',
-  'wool.png':    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAAB6klEQVR4nE2SuQ7iQAyGnUkgHBLikEBAAc/Gk9DR0/MavAQFPQUEEiARkEtMMmQOb2GW3c4eeezvt39wHAcAAMC2bQosy3Ic55f+gkajQQEEQbDf77XWVVUholJKCBGGIaXX6xURN5vNer0GAAYAWZb1er37/V6WJef8fD5zzkejUZqmxpjJZBKG4WKx0FrX63VgjL3f7zAMEfF4PMZxjIiIKKV8Pp+cc6UUDUHELyIiCiF+dcaY8/lsjEHEsizpXWvt+77rugAAP1Bqlue5MSaO47Isi6JQSj2fz/f7/Z3QbrdPpxMiep5HzTjnUkqtNSISKiImSfL9QBMIyRgjpfwVIeLr9TocDoT6+Xwcx7EAIAxDx3GMMZzz+XwupazValEU2bbd7/cZY0EQ2LY9Ho8tywIA0FqXZSmlpLmn0ynP89vtRqqUUp/Ph1C/SHmeJ0lSVZVS6v+N+b7/k0FH/KehKApEDIIAEekUURRRb1poFEVFUTQaDUZYzWYziqLpdFpVFXmm0+nYtp2mKWPMsixEbDabQgio1+vb7ZZwtdYkw/O8LMt837/dbo/HQ2sthFgulwDAqqoSQux2Ozp5t9v1PG82m7muOxwOx+PxYDBgjK1Wq8vl8tXQarUoIKvXajVKyQjfVf619x99A+NZhCMj0QAAAABJRU5ErkJggg==',
-  'glass.png':   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAABKElEQVR4nJ3TT0rDQBiG8Sczk9SkSdqC2BRaKXQh3sKt4Cm8gDfyFKI3kG5cuC7FLEIRtBjTsTFO/rgo7k3e/fNbfZ/1tF43rutS5DmO49CYH4qiIPT6SCnR2Y4gCEjTlDAMSdOMKIrYZZq6rrGeX+Lm/qNPl13aW4SjJAAX9itXg10rYDwZI7Zv7wC4do+7z6AVsNlsEJPoBICH/ahVDOD0FKLQ+9bh38qyREiszsBisUAYYzoDq9UK4ft+Z2A+nyO01p0BYwzi6zvvDFSmRMxms86AbdsIp+e2Dm/OhwAoSyEc96hVfD2VKKUA8H0f9bhcgn/2b+A2qSA5nL9SYGVV08RxzOlsSp7nmHyP53mEfkCSJBwPR9R1zWBw+JPiu0JKibRB64JfSCpn6IJKEQUAAAAASUVORK5CYII=',
-  'ladder.png':  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACKklEQVR4nC3RS4tcVRRA4bXP495bt6orle6BlJKoQ0UMopYDFUQHthP9u0FBIyIGk4FDESQ469AxJl19X+ecfbaDzvoJ60McDXz3+Tvnh7daEOhaJ+Ad3iHQwDcfvf3F+6+34DwhVgJM/z1brdqNY6qsqEArZMVBgNaV0PoApsg+8MF7+7MVlNl81IpKSCU7HFhAMW0c5ttJ+gcPn4SlUEt25ofrocbOxabUFGIzjmO/6lJKUtU0FZlk3RpIDwG+PuxrtfuPLzJEjxdyoYJBA99++uayzD88flocoYDAlFVVowehFBQAJ6hhMOUyzkmhVGTnuffu/u5pP7x41vd913VP/32O86p6dns3Xr0EmqYZs9n67MGvf7qshBCmaVLVnObLy0sHu+2JF4ZhiDEGLyLStu2yLGpI7/CV88PezL5/dEFDSdwUG+ZEA+eH/TAMv/91dcw4rXhhmQYzdcKSEAiCQE4ET3BoXhx1yQByAp99fOe0ReejmXX9+ng8Gs57H7zM82xamhCya7W79eNvT4LCUsjeliV5oauqqtXqdrsNXjSnKsF8MBdCuzaQEImVrz68u2rj/V/+zhAF4dVQgwBffnJnWvLPf1yUQNCCN0qal5pvpKphEAS1V3bBSfR2IyNb4XDvtf3ayjRM6k9u3R7HcV7GzWqDc8fj0VFPN00Rf8Xmp4f/BG+sgy3XLxrREx9jermLMqS89iml9Maum6fB6RR8m66fN/A/WpksJvn1R50AAAAASUVORK5CYII=',
+  'dirt.png': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACU0lEQVR4nCXLy5LjNAAF0Kun3247cdIZmh6YomcxRbGh+HsW/AB/wIoUQ6enHUfxU5JliQVnf4gEOIEPyATWFQwgAAcoYIEAcI7ZIYoxaVAKnkv89uvPeRz5zQanE8EkJc5ZAB6UCXkbpmr/OGkLyn//40+abiDzFXMXr8OP+1y6YVUXoVXm58+nis3dUxmZ9p9oHU8ZSwG6bfjhWB/K+PzX3+pyfhAkF+H9awc7Tt2le71wN/fv/07dxfSdALgAnDGRYB8OcV2Wqn1jJPzy5TtCyE3dvj/VxPsvn3+6DWMsGAP4BlDGEYjqdZH1u+awGd1eO+89l3Ge5eNi+6Uv6mZedABoLNHb8K1fjk/Pu8ePXmS9CTyt3u82KZtRB+PF128KIjOeCwZ6tyBUMpl4KlrVG+s9FYRFZVVvhG+E36fl+dOLcYHH2biBAoiiSGudJMn5fLbWxnFsrRVChBAIIS8vLyGEtm23bWMALwWmUdllJLk8Nbuh7xLB8yw5n18ZBQhzembB5Ylk2ALAzYpC4PihCd7mVaKnNWKQZH2skzQis16G7rXt7jzO9s2h4qAEyNIkioVZps2teZoA3hq9qyuzjL1SCL7ZVfu6cKudHTgFrkr1dwVnUsmKNL5d72UhrPciTg9pRThX40KZpIwFgM+Aj/LmqXZ6WvUU1WUO/vBQXC6XY3FI8+L1vTu/3faPCRfU/B/Uyj8eTkP75gQZNhmSWm0kPjx3K+6jc0nVfKrr5ni93WeAFBLWggIUqFLMMwjAAEGgAzgBlRgMNiBLyTiH/wBja0E8/rQXwwAAAABJRU5ErkJggg==',
+  'grass.png': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQhH3A/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACn0lEQVR4nDXS2U4TUQAG4H/OnFk7LR1oC2JroJSgRoKJgkYhLtFovDEhPoMv40N44TN440JcolETjQIqLdiyB0opnensc2aON3r3PcAnQAJkQANEQAI4wAEGCAAAEQCQABEQABwUFIuPH3ZxFKmhMqD5vh/24+Jg0XN8qokh9yml759/enD7zjA99fTJMwoVge6KuhAj/Pj2a2kqf7pQfvHm9ehEcbw0fuJ0O+3OwqPLu3s7gRDABIWBgHorm8vZ0cz5e1VKqdOzry/OdTodKzlJdaaXVI94fW7JXAJAkMAoDRhD2Wb9kIlMMqSN3e2D3r6al1e/rHOZd/ptOStFQjxYLoJDwDlUb1aKk4OhGu4f7xu5rJTI+Zxp2w6h3IlsSqng8zwd/Plhzf/CCLoYHxnnMYkd5nY9yiQeCG7X317f4REZ0EzfCk+ObJVmZi/MIgFBCgKxvlLXZWNibIIS6WC/ncZ8qjaVhMlGo1XID42Wym7PiYIEEggUeJ5Xq9XiOG42m5ZlTU9PM8YajYYoitVqdfltXRRFRVEopWAgiKAbmpJV1lv1wnChUBra2mmpGaU6WVUNte/2Jq5WGs01TgGSgINAwst3b5zAGj5T0k3tx6vfuaKxfbgZk+jbyg89r6o5eaxW+bz0LZETDICA48ata4wxx7LTNC1fKfz6ujFkmqpMZ2bOeZ7nun0A0/OTpmnCAQEFs8NfS80zIxUFStSP5q7MaEIm6EWRHW59OpS52lrb1EWtu3uEBAR9ZHj27v2FP99bzp5DAznoRKvv6setYyXW5uYvEo+mNgRXPFs+jwgUAXLMPDo8uFSdTWU4jqPDuDm7IImy5fQQpeVcJXs6I9nyQbsNDuFf7zzAABGgQAgIQApI/5EF2gAHXPwFGMRBUVilbIQAAAAASUVORK5CYII=',
+  'stone.png': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACjUlEQVR4nD2SwUrrQBSG50yaySTWmwQa2lQUYqsLi1koShD3uvBRXPkirn0AcesriF1YQVAD7UJtuzBaCG00tTaTZCZ30cs9qw/ODz8/fAghhBDSNA0hBAAIoaWlJYSQLMulUmkBqqouvpIkAaX09PQ0CILv7+9GoyHLcpIkGONOp+O6rm3bQRAwxtbX18MwvLi4wEmSRFFkGIbjOIqivL6+qqpKCEnTtF6vh2GoqqplWVdXV5xzWZYxxljX9bu7u6IoOOdra2u+70+nU8/zhsNhu90WQnS73ZOTk0qlkmUZFkIAwMHBAWNsPp8DwObmZrlcRgiZprm3tzcajVqtFgD8/PwghDDGeDwev7+/m6b5/PxsGAYA9Ho9SZKyLDNNs9VqTSaTx8dHQogkSbgoCtu2y+VymqY7OzvD4fDr66vZbCqKMhgM4ji+vLys1Wrb29sAwDnHADCZTLrdriRJnHNN0+r1elEUs9lsa2urUqkcHR0xxnq9HmMMIYQBgBDieR6lNM/zfr+f5/nNzU2pVPJ9HwB83xdCNJtNSilCCHPOsyzTNO3p6YlSqus659x1XUKI67qfn5+e5ymKUhRFFEX/GlRVnc1m1WqVUuo4jhBiZWWFMQYAg8GAc359fT2fz3Vd/zdakqR2u12r1cIwfHh4YIzd39/HcYwxPjw8FEIcHx9blpWmKee8tLy8HEXR7u4uQogQsr+/nySJ53kA8PLyEsfxxsZGv993HIdSSinF0+n0z58/hmHc3t7atr1QoNPpfHx8OI4zGo0opY1Go1qtjsdjxhgQQs7Ozt7e3lZXV39/fymlQghZlvM8F0IURZGmqWVZQRCYpnl+fo4wxv+VXui9uP+8CMiyvOC/6CVByxifm2sAAAAASUVORK5CYII=',
+  'log.png': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwBGPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACH0lEQVR4nD3EzY7UOBQG0M/2dRw7lapUq0E0aNjPkvd/AXa8Q2+QGuiqyp8d2/d6FkhzFkcF4Hkab/dFAUOPlGAAAAQUoAFhwLzBdlBN70XIk/r27d+4v01T760R5rQyGddYmmbTNW68xIPolIv//v0H5dqEH9IWbfh2v3WmS1Gm6ck62tNyPo8xZ+20SO2lFQGRwuXieu9IF6OzSLXWdLqmuP76/XbUP37o1z2L6i2JAbQ0pHW2SkpaT96ZVnvS+djItOvonIHvbdpT6AxBegtNgAKkyLbsBrojO4ZTb/vHn/vJD6Ef5Khph+88BKVAO8CZU9pEio5rdeakxGl0x85Kuk77knAerNXeaq8AnYEmGqKep4+d9efxiYvkyEO4MEPDCqvn6eNxsBQ4QANg5vf3dxEhonmeY4zOuZeXF2PM6+srACJyzjEzAwRgPIev9h9rS017cP6IrbZjn+fp6dz5T/sRY9kstAsBAAmwphsQG+cjz9JS5kaiRZWY51S337d1vA4QEpgCaNsBSj3Wh/NdGIctRhd6F9z1wxNDcj3EIJw8g401SkHHjAq9xFybydx+/kIzdlnTY95TFZBrwLIdb++P+7pzAzWA6HS9fjHWq4NDWKbp8/0+18p+GIpE21WYcLlMCucKUOjtuiky5/mRFfvT+CklEh6EOWez7NHoa5PQ2bHyFutBqAB9u8aSvA/DVSg91gjGBgcrUf9D624R8eKD6q1AAAAAElFTkSuQmCC',
+  'mystery.png': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwBGPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACp0lEQVR4nAXBz2scVQAH8O/7NfNm5+3O7ibbNTXNJhYSk0sPhUKL1EulFFG8eBNPgjf/h957EPwPPIkHexGpeK5YaItsq1JsaJOY7M9kd3Zm3vx8b/x8iHTBBGDBXMAABJKiLMEclBasRmkAipoAJaoKnBIM/3wgXZpmJ0JOKdN6Vfq+m+fLtV5vsbCMtq1VWeZ0Oztbg695M8BkfHTvznfCxdO/PhLeLHCJtVaQQhdz2cLkTH5y5wksfnz4TWcNVGu8e8VRAR7/8SUQCW7ydElMrhpNGJvn862B++i3L8II/Q26isFVE1H64vfhdekOWaWmx/bTj9+ES8Di9eHnmT2CXcn2s8Px3SQ6pgRcR1CKtbrzxeKEZVc//ODfp09urXcHWSR23/v+8fP3HbtQHZNluq73BQNlBh3/ymwcUtigbd4e36A0PZ+fxvG4FaDXI/13ZKZDwWSd+yYDJwSj0aS32TVEWyxPR/Pt/g0dOYzKKEZZRhej/1yPC0EY4dSCWsBv0jSLq6qoTNzw3apgaWIPDn569vw6Z67faIJWSTalPPd8UNTwpDI1Z9wBqW2d6SK8efvRi39uCZkuVyGlQnoOpbTdWU80qONgFXLp9svKKau6ve5XdJzWiM1Lt3UulbDWmc4Ka9RsapoKNM3BWNMW27zeTWJWmpLJ6uWry90N783JRLV8QK0F1wTZs7YRRqCqg0SXe9sPhbndbh/MLqK8tPsHZ+fzYntnK0r1eFLOT/b3Br/6KrAcPIzQCjZqg53Bt4ennylppeMNh5c54dPR0m3Q/qWr13Z/qCsk2soGOAPCsPz79X1rVxfTi2534+zocHNzs0wFspXwhMnlz7981e5sUSaSGES6cDwYAxA0HWiNoIU4Bgy4g6KCpfAkaopkhVaA/wEmaFDu9TutHAAAAABJRU5ErkJggg==',
+  'wool.png': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwBGPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAAB6klEQVR4nE2SuQ7iQAyGnUkgHBLikEBAAc/Gk9DR0/MavAQFPQUEEiARkEtMMmQOb2GW3c4eeezvt39wHAcAAMC2bQosy3Ic55f+gkajQQEEQbDf77XWVVUholJKCBGGIaXX6xURN5vNer0GAAYAWZb1er37/V6WJef8fD5zzkejUZqmxpjJZBKG4WKx0FrX63VgjL3f7zAMEfF4PMZxjIiIKKV8Pp+cc6UUDUHELyIiCiF+dcaY8/lsjEHEsizpXWvt+77rugAAP1Bqlue5MSaO47Isi6JQSj2fz/f7/Z3QbrdPpxMiep5HzTjnUkqtNSISKiImSfL9QBMIyRgjpfwVIeLr9TocDoT6+Xwcx7EAIAxDx3GMMZzz+XwupazValEU2bbd7/cZY0EQ2LY9Ho8tywIA0FqXZSmlpLmn0ynP89vtRqqUUp/Ph1C/SHmeJ0lSVZVS6v+N+b7/k0FH/KehKApEDIIAEekUURRRb1poFEVFUTQaDUZYzWYziqLpdFpVFXmm0+nYtp2mKWPMsixEbDabQgio1+vb7ZZwtdYkw/O8LMt837/dbo/HQ2sthFgulwDAqqoSQux2Ozp5t9v1PG82m7muOxwOx+PxYDBgjK1Wq8vl8tXQarUoIKvXajVKyQjfVf619x99A+NZhCMj0QAAAABJRU5ErkJggg==',
+  'glass.png': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwBGPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAABKElEQVR4nJ3TT0rDQBiG8Sczk9SkSdqC2BRaKXQh3sKt4Cm8gDfyFKI3kG5cuC7FLEIRtBjTsTFO/rgo7k3e/fNbfZ/1tF43rutS5DmO49CYH4qiIPT6SCnR2Y4gCEjTlDAMSdOMKIrYZZq6rrGeX+Lm/qNPl13aW4SjJAAX9itXg10rYDwZI7Zv7wC4do+7z6AVsNlsEJPoBICH/ahVDOD0FKLQ+9bh38qyREiszsBisUAYYzoDq9UK4ft+Z2A+nyO01p0BYwzi6zvvDFSmRMxms86AbdsIp+e2Dm/OhwAoSyEc96hVfD2VKKUA8H0f9bhcgn/2b+A2qSA5nL9SYGVV08RxzOlsSp7nmHyP53mEfkCSJBwPR9R1zWBw+JPiu0JKibRB64JfSCpn6IJKEQUAAAAASUVORK5CYII=',
+  'ladder.png': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwBGPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAACKklEQVR4nC3RS4tcVRRA4bXP495bt6orle6BlJKoQ0UMopYkVUQHthP9u0FBIyIGk4FDESQ469AxJl19X+ecfbaDzvoJ60McDXz3+Tvnh7daEOhaJ+Ad3iHQwDcfvf3F+6+34DwhVgJM/z1brdqNY6qsqEArZMVBgNaV0PoApsg+8MF7+7MVlNl81IpKSCU7HFhAMW0c5ttJ+gcPn4SlUEt25ofrocbOxabUFGIzjmO/6lJKUtU0FZlk3RpIDwG+PuxrtfuPLzJEjxdyoYJBA99++uayzD88flocoYDAlFVVowehFBQAJ6hhMOUyzkmhVGTnuffu/u5pP7x41vd913VP/32O86p6dns3Xr0EmqYZs9n67MGvf7qshBCmaVLVnObLy0sHu+2JF4ZhiDEGLyLStu2yLGpI7/CV88PezL5/dEFDSdwUG+ZEA+eH/TAMv/91dcw4rXhhmQYzdcKSEAiCQE4ET3BoXhx1yQByAp99fOe0ReejmXX9+ng8Gs57H7zM82xamhCya7W79eNvT4LCUsjeliV5oauqqtXqdrsNXjSnKsF8MBdCuzaQEImVrz68u2rj/V/+zhAF4dVQgwBffnJnWvLPf1yUQNCCN0qal5pvpKphEAS1V3bBSfR2IyNb4XDvtf3ayjRM6k9u3R7HcV7GzWqDc8fj0VFPN00Rf8Xmp4f/BG+sgy3XLxrREx9jermLMqS89iml9Maum6fB6RR8m66fN/A/WpksJvn1R50AAAAAElFTkSuQmCC',
   'chicken.png': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect x="5" y="1" width="6" height="5" fill="%23388e3c"/><rect x="6" y="3" width="1" height="1" fill="%23111"/><rect x="9" y="3" width="1" height="1" fill="%23111"/><rect x="6" y="6" width="4" height="3" fill="%230288d1"/><rect x="4" y="6" width="2" height="1" fill="%23388e3c"/><rect x="10" y="6" width="2" height="1" fill="%23388e3c"/><rect x="5" y="10" width="6" height="4" fill="%23ffffff"/><rect x="4" y="11" width="1" height="2" fill="%23dddddd"/><rect x="11" y="11" width="1" height="2" fill="%23dddddd"/><rect x="6" y="7" width="4" height="4" fill="%23ffffff"/><rect x="6" y="8" width="1" height="1" fill="%23111"/><rect x="9" y="8" width="1" height="1" fill="%23111"/><rect x="7" y="9" width="2" height="1" fill="%23ffb300"/><rect x="7" y="10" width="1" height="1" fill="%23e53935"/><rect x="6" y="14" width="1" height="2" fill="%23ffb300"/><rect x="9" y="14" width="1" height="2" fill="%23ffb300"/></svg>'
 };
 const _origImage = window.Image;
@@ -202,22 +203,25 @@ const MYSTERY_TEX = new Image();
 MYSTERY_TEX.src = "mystery.png";
 
 // ═══════════════════════════════════════════════════════
-//  CONSTANTS — grotere wereld
+//  CONSTANTS — WIDESCREEN OPLOSSING
 // ═══════════════════════════════════════════════════════
-const BLOCK_SIZE   = 16;
-const WORLD_W      = 60;   // was 25 — veel meer ruimte
-const WORLD_H      = 18;   // was 11
+const BLOCK_SIZE   = 32;
+const WORLD_W      = 60;   
+const WORLD_H      = 18;   
 const HOTBAR_SLOTS = 8;
-const CANVAS_W     = 200;
-const CANVAS_H     = 200;
-const HOTBAR_H     = 24;
+const HOTBAR_W     = 400; // Constante breedte voor de visuele hotbar
+
+const CANVAS_W     = 720; // Widescreen basisbreedte (geeft 16:9 verhouding)
+const CANVAS_H     = 400; 
+
+const HOTBAR_H     = 48;
 const VIEW_H       = CANVAS_H - HOTBAR_H;
 const FLOOR_Y      = VIEW_H;
-const GRAVITY      = 0.35;
-const JUMP_FORCE   = -5.5;
-const MOVE_SPEED   = 1.5;
-const LADDER_SPEED = 1.2;
-const LADDER_SINK  = 0.4;
+const GRAVITY      = 0.7;
+const JUMP_FORCE   = -11.0;
+const MOVE_SPEED   = 3.0;
+const LADDER_SPEED = 2.4;
+const LADDER_SINK  = 0.8;
 const ONE_BLOCK_X  = Math.floor(WORLD_W / 2);
 const ONE_BLOCK_Y  = Math.floor(WORLD_H / 2);
 
@@ -239,9 +243,43 @@ if(!myPlayerId) {
 
 let myName = localStorage.getItem("onesquare_name") || "";
 
-// You are always red for yourself, others see you as blue
-const MY_COLOR    = "#e74c3c"; // rood (alleen jij ziet dit)
-const REMOTE_COLOR = "#3d8be8"; // blauw (zo zien anderen eruit voor jou)
+const MY_COLOR    = "#e74c3c";
+const REMOTE_COLOR = "#3d8be8";
+
+
+// ═══════════════════════════════════════════════════════
+//  PLIXO SKIN BRIDGE
+// ═══════════════════════════════════════════════════════
+const selectedSkinImage = new _origImage();
+let selectedSkinReady = false;
+let fbSkinsRef = null;
+
+function refreshSelectedSkinImage() {
+  const dataUrl = localStorage.getItem("plixo_skin_image");
+  selectedSkinReady = false;
+
+  if (dataUrl) {
+    selectedSkinImage.onload = () => { selectedSkinReady = true; };
+    selectedSkinImage.onerror = () => { selectedSkinReady = false; };
+    selectedSkinImage.src = dataUrl;
+  }
+
+  // Keep the current skin in Firebase; remove a stale remote copy when no image exists.
+  if (fbSkinsRef && myPlayerId && isMultiplayer) {
+    const skinRef = fbSkinsRef.child(myPlayerId);
+    if (dataUrl && /^data:image\//.test(dataUrl)) {
+      skinRef.set(dataUrl).catch(e => console.warn("Skin sync failed", e));
+    } else {
+      skinRef.remove().catch(e => console.warn("Skin cleanup failed", e));
+    }
+  }
+}
+refreshSelectedSkinImage();
+window.addEventListener("storage", e => {
+  if (e.key === "plixo_skin_image" || e.key === "plixo_selected_skin") refreshSelectedSkinImage();
+});
+window.addEventListener("pageshow", refreshSelectedSkinImage);
+window.addEventListener("focus", refreshSelectedSkinImage);
 
 // ═══════════════════════════════════════════════════════
 //  STORAGE HELPERS
@@ -268,6 +306,83 @@ function saveMPHotbar() {
   try { localStorage.setItem("onesquare_mp_hotbar_" + myPlayerId, JSON.stringify(hotbar)); } catch(e) {}
 }
 
+
+// ═══════════════════════════════════════════════════════
+//  PLIXO MISSIONS / ACHIEVEMENTS
+// ═══════════════════════════════════════════════════════
+function readLocalJSON(key, fallback = {}) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function recordOneSquareProgress(ids) {
+  const idList = Array.isArray(ids) ? ids : [ids];
+  const globalProgress = readLocalJSON("plixo_mission_progress", {});
+  const today = new Date().toDateString();
+  const dailyKey = "plixo_daily_progress_" + today;
+  const dailyProgress = readLocalJSON(dailyKey, {});
+
+  for (const id of idList) {
+    globalProgress[id] = (Number(globalProgress[id]) || 0) + 1;
+    dailyProgress[id] = (Number(dailyProgress[id]) || 0) + 1;
+  }
+
+  try {
+    localStorage.setItem("plixo_mission_progress", JSON.stringify(globalProgress));
+    localStorage.setItem(dailyKey, JSON.stringify(dailyProgress));
+  } catch (e) {}
+
+  syncOneSquareProgressToFirebase(globalProgress, today, dailyProgress);
+}
+
+function syncOneSquareProgressToFirebase(globalProgress, today, dailyProgress) {
+  const candidates = [localStorage.getItem("pg_account_code"), localStorage.getItem("pg_player_id"), localStorage.getItem("plixo_sync_code")];
+  const code = candidates.map(value => String(value || "").trim()).find(value => /^\d{20}$/.test(value));
+  if (!code) return;
+
+  initFirebase();
+  if (!db) return;
+
+  const dailyClaimed = readLocalJSON("plixo_daily_claimed_" + today, {});
+  const dailyBonus = localStorage.getItem("plixo_daily_bonus_date") || "";
+  const userRef = db.ref("plixo_users/" + code);
+
+  userRef.transaction(current => {
+    current = current || {};
+    const mergedMissionProgress = current.mission_progress || {};
+    for (const id of Object.keys(globalProgress)) {
+      mergedMissionProgress[id] = Math.max(Number(mergedMissionProgress[id]) || 0, Number(globalProgress[id]) || 0);
+    }
+    current.mission_progress = mergedMissionProgress;
+
+    const remoteDaily = current.daily || {};
+    let mergedDailyProgress;
+    let mergedDailyClaimed;
+    if (remoteDaily.date === today) {
+      mergedDailyProgress = { ...(remoteDaily.progress || {}) };
+      for (const id of Object.keys(dailyProgress)) {
+        mergedDailyProgress[id] = Math.max(Number(mergedDailyProgress[id]) || 0, Number(dailyProgress[id]) || 0);
+      }
+      mergedDailyClaimed = { ...(remoteDaily.claimed || {}), ...dailyClaimed };
+    } else {
+      mergedDailyProgress = { ...dailyProgress };
+      mergedDailyClaimed = { ...dailyClaimed };
+    }
+
+    current.daily = {
+      date: today,
+      progress: mergedDailyProgress,
+      claimed: mergedDailyClaimed,
+      bonus: dailyBonus || (remoteDaily.date === today ? remoteDaily.bonus : "") || ""
+    };
+    return current;
+  }).catch(e => console.warn("One Square PLIXO progress sync failed", e));
+}
+
 // ═══════════════════════════════════════════════════════
 //  WORLD STATE
 // ═══════════════════════════════════════════════════════
@@ -279,14 +394,23 @@ let selectedSlot = 0;
 //  CANVAS
 // ═══════════════════════════════════════════════════════
 const canvas = document.getElementById("game");
-const ctx    = canvas.getContext("2d");
+const RENDER_SCALE = Math.max(2, Math.ceil(window.devicePixelRatio || 1));
+canvas.width = CANVAS_W * RENDER_SCALE;
+canvas.height = CANVAS_H * RENDER_SCALE;
+const ctx = canvas.getContext("2d");
+ctx.scale(RENDER_SCALE, RENDER_SCALE);
 
 // ═══════════════════════════════════════════════════════
 //  HOTBAR HELPERS
 // ═══════════════════════════════════════════════════════
 function addToHotbar(id) {
-  for(let i=0;i<HOTBAR_SLOTS;i++) { if(hotbar[i]&&hotbar[i].id===id){hotbar[i].count++;return;} }
-  for(let i=0;i<HOTBAR_SLOTS;i++) { if(!hotbar[i]){hotbar[i]={id,count:1};return;} }
+  for(let i=0;i<HOTBAR_SLOTS;i++) {
+    if(hotbar[i]&&hotbar[i].id===id){hotbar[i].count++;return true;}
+  }
+  for(let i=0;i<HOTBAR_SLOTS;i++) {
+    if(!hotbar[i]){hotbar[i]={id,count:1};return true;}
+  }
+  return false; // Full hotbar: the item was not actually received.
 }
 function removeFromHotbar(slot) {
   if(!hotbar[slot]) return false;
@@ -308,7 +432,8 @@ function getRandomDrop() {
 class Player {
   constructor(x,y,color="red") {
     this.px=x*BLOCK_SIZE; this.py=y*BLOCK_SIZE;
-    this.w=10; this.h=14; this.vx=0; this.vy=0;
+    this.w=18; this.h=26; 
+    this.vx=0; this.vy=0;
     this.onGround=false; this.color=color;
   }
   isBlockSolid(bx,by) {
@@ -368,22 +493,51 @@ class Player {
       if(this.vy>0&&(this.isBlockSolid(left2,bot2)||this.isBlockSolid(right2,bot2))){this.py=bot2*BLOCK_SIZE-this.h;this.vy=0;this.onGround=true;}
     }
     if(this.py+this.h>=FLOOR_Y){this.py=FLOOR_Y-this.h;this.vy=0;this.onGround=true;}
-    if(this.py<0){this.py=0;this.vy=0;} // ceiling = top of canvas
-    camX=this.px-CANVAS_W/2+this.w/2;
-    camX=Math.max(0,Math.min(WORLD_W*BLOCK_SIZE-CANVAS_W,camX));
+    if(this.py<0){this.py=0;this.vy=0;} 
+
+    // Camera verandert alleen de weergave; spelerposities blijven wereldcoördinaten.
+    updateCameraToPlayer();
   }
-  draw(label) {
+  draw(label, useSelectedSkin = false) {
     const sx=Math.round(this.px-camX);
     const sy=Math.round(this.py-camY);
-    ctx.fillStyle=this.color;
-    ctx.fillRect(sx,sy,this.w,this.h);
+
+    if (useSelectedSkin && localStorage.getItem("plixo_selected_skin") === "rainbow_spiral") {
+      // Animated reward skin drawn directly at the current sprite size; no hitbox changes.
+      ctx.save();
+      ctx.beginPath(); ctx.rect(sx, sy, this.w, this.h); ctx.clip();
+      ctx.fillStyle = "#080812"; ctx.fillRect(sx, sy, this.w, this.h);
+      const tNow = performance.now() / 1000;
+      const phase = tNow * 2.4;
+      ctx.shadowBlur = 3;
+      for (let t = 0; t < Math.PI * 10; t += 0.12) {
+        const radius = 0.25 + t * 0.34;
+        const px = sx + this.w / 2 + Math.cos(t + phase) * radius * 0.53;
+        const py = sy + this.h / 2 + Math.sin(t + phase) * radius * 0.92;
+        const hue = (t * 42 + tNow * 115) % 360;
+        ctx.fillStyle = `hsl(${hue},100%,62%)`;
+        ctx.shadowColor = `hsl(${hue},100%,62%)`;
+        ctx.fillRect(Math.round(px), Math.round(py), 1.35, 1.35);
+      }
+      ctx.restore();
+    } else if (useSelectedSkin && selectedSkinReady) {
+      const wasSmoothingEnabled = ctx.imageSmoothingEnabled;
+      ctx.imageSmoothingEnabled = false;
+      // The source PNG remains untouched; its one-pixel transparent border sits outside the hitbox.
+      ctx.drawImage(selectedSkinImage, sx - 1, sy - 1, 20, 28);
+      ctx.imageSmoothingEnabled = wasSmoothingEnabled;
+    } else {
+      ctx.fillStyle=this.color;
+      ctx.fillRect(sx,sy,this.w,this.h);
+    }
+
     if(label) {
       ctx.fillStyle="rgba(0,0,0,0.6)";
-      ctx.font="5px monospace";
+      ctx.font="10px monospace";
       const tw=ctx.measureText(label).width;
-      ctx.fillRect(sx+this.w/2-tw/2-1,sy-8,tw+2,7);
+      ctx.fillRect(sx+this.w/2-tw/2-2,sy-16,tw+4,14);
       ctx.fillStyle="#fff";
-      ctx.fillText(label,sx+this.w/2-tw/2,sy-2);
+      ctx.fillText(label,sx+this.w/2-tw/2,sy-4);
     }
   }
 }
@@ -391,10 +545,144 @@ class Player {
 let camX=0;
 const camY=0;
 
-function spawnPlayer() {
-  player.px=ONE_BLOCK_X*BLOCK_SIZE;
-  player.py=(ONE_BLOCK_Y-1)*BLOCK_SIZE;
-  player.vx=0; player.vy=0;
+function updateCameraToPlayer() {
+  const maxCamX = Math.max(0, WORLD_W * BLOCK_SIZE - CANVAS_W);
+  const wantedX = player.px - CANVAS_W / 2 + player.w / 2;
+  camX = Math.max(0, Math.min(maxCamX, wantedX));
+}
+
+// Absolute world coordinates only: camX must never affect spawn selection.
+function isPlayerRectClear(px, py) {
+  if (!Number.isFinite(px) || !Number.isFinite(py)) return false;
+  if (px < 0 || py < 0 || px + player.w > WORLD_W * BLOCK_SIZE ||
+      py + player.h > FLOOR_Y) return false;
+
+  const left = Math.floor(px / BLOCK_SIZE);
+  const right = Math.floor((px + player.w - 0.01) / BLOCK_SIZE);
+  const top = Math.floor(py / BLOCK_SIZE);
+  const bottom = Math.floor((py + player.h - 0.01) / BLOCK_SIZE);
+
+  for (let by = top; by <= bottom; by++) {
+    for (let bx = left; bx <= right; bx++) {
+      if (player.isBlockSolid(bx, by)) return false;
+    }
+  }
+  return true;
+}
+
+function spawnOverlapsRemotePlayer(px, py) {
+  const now = Date.now();
+  for (const id in remotePlayers) {
+    const rp = remotePlayers[id];
+    if (!rp || !Number.isFinite(Number(rp.px)) || !Number.isFinite(Number(rp.py))) continue;
+    if (now - (Number(rp.t) || 0) > 15000) continue;
+
+    const rx = Number(rp.px), ry = Number(rp.py);
+    if (px < rx + player.w && px + player.w > rx &&
+        py < ry + player.h && py + player.h > ry) return true;
+  }
+  return false;
+}
+
+function findSafeSpawnPosition() {
+  const targetX = ONE_BLOCK_X * BLOCK_SIZE;
+  const targetY = (ONE_BLOCK_Y - 1) * BLOCK_SIZE;
+  const xPositions = Array.from(
+    { length: WORLD_W },
+    (_, bx) => bx * BLOCK_SIZE + (BLOCK_SIZE - player.w) / 2
+  );
+
+  // Prefer a solid, free landing surface; first avoid existing players too.
+  function bestSupportedPosition(avoidOtherPlayers) {
+    let best = null;
+    let bestScore = Infinity;
+
+    function consider(px, py) {
+      if (!isPlayerRectClear(px, py)) return;
+      if (avoidOtherPlayers && spawnOverlapsRemotePlayer(px, py)) return;
+      const dx = px - targetX;
+      const dy = py - targetY;
+      const score = dx * dx + dy * dy;
+      if (score < bestScore) {
+        bestScore = score;
+        best = { x: px, y: py, supported: true };
+      }
+    }
+
+    // Virtual floor is also a valid support surface if the player body is clear.
+    const floorY = FLOOR_Y - player.h;
+    for (const px of xPositions) consider(px, floorY);
+
+    const lastVisibleRow = Math.min(WORLD_H - 1, Math.floor((FLOOR_Y - 1) / BLOCK_SIZE));
+    for (let by = 1; by <= lastVisibleRow; by++) {
+      const py = by * BLOCK_SIZE - player.h;
+      if (py < 0 || py + player.h > FLOOR_Y) continue;
+      for (let bx = 0; bx < WORLD_W; bx++) {
+        if (!player.isBlockSolid(bx, by)) continue; // ladders aren't solid
+        consider(xPositions[bx], py);
+      }
+    }
+    return best;
+  }
+
+  let best = bestSupportedPosition(true);
+  if (best) return best;
+  best = bestSupportedPosition(false);
+  if (best) return best;
+
+  // If no supported position exists, choose clear air and let gravity settle
+  // the player; this fallback still forbids spawning inside any solid block.
+  function bestClearAirPosition(avoidOtherPlayers) {
+    let bestAir = null;
+    let bestScore = Infinity;
+    const maxY = Math.max(0, FLOOR_Y - player.h);
+    for (let py = 0; py <= maxY; py += 4) {
+      for (const px of xPositions) {
+        if (!isPlayerRectClear(px, py)) continue;
+        if (avoidOtherPlayers && spawnOverlapsRemotePlayer(px, py)) continue;
+        const dx = px - targetX;
+        const dy = py - targetY;
+        const score = dx * dx + dy * dy;
+        if (score < bestScore) {
+          bestScore = score;
+          bestAir = { x: px, y: py, supported: false };
+        }
+      }
+    }
+    return bestAir;
+  }
+
+  return bestClearAirPosition(true) || bestClearAirPosition(false) || null;
+}
+
+function spawnPlayer(useSafeMultiplayerSpawn = false) {
+  let spawnX = ONE_BLOCK_X * BLOCK_SIZE;
+  let spawnY = (ONE_BLOCK_Y - 1) * BLOCK_SIZE;
+  let foundSafeSpawn = null;
+
+  if (useSafeMultiplayerSpawn) {
+    foundSafeSpawn = findSafeSpawnPosition();
+    if (!foundSafeSpawn) {
+      setStatus("⚠ Geen vrije spawnplek; maak ruimte in de wereld.", "#f88");
+      return false;
+    }
+    spawnX = foundSafeSpawn.x;
+    spawnY = foundSafeSpawn.y;
+  }
+
+  player.px = spawnX;
+  player.py = spawnY;
+  player.vx = 0;
+  player.vy = 0;
+  player.onGround = !!(foundSafeSpawn && foundSafeSpawn.supported);
+  updateCameraToPlayer();
+
+  // Force a fresh world-coordinate broadcast for the new spawn.
+  lastSentX = -1;
+  lastSentY = -1;
+  fbThrottle = 0;
+  if (useSafeMultiplayerSpawn) setStatus("");
+  return true;
 }
 
 let player=new Player(ONE_BLOCK_X,ONE_BLOCK_Y-1,MY_COLOR);
@@ -413,10 +701,14 @@ canvas.addEventListener("mousedown",(e)=>{
   const scaleY = CANVAS_H / rect.height;
   const mx=(e.clientX-rect.left)*scaleX;
   const my=(e.clientY-rect.top)*scaleY;
-  const slotW=CANVAS_W/HOTBAR_SLOTS;
+
   if(my>=VIEW_H){
-    const slot=Math.floor(mx/slotW);
-    if(slot>=0&&slot<HOTBAR_SLOTS) selectedSlot=slot;
+    const startX = (CANVAS_W - HOTBAR_W) / 2;
+    if(mx >= startX && mx <= startX + HOTBAR_W) {
+      const slotW = HOTBAR_W / HOTBAR_SLOTS;
+      const slot = Math.floor((mx - startX) / slotW);
+      if(slot>=0&&slot<HOTBAR_SLOTS) selectedSlot=slot;
+    }
     return;
   }
   const{bx,by}=screenToWorld(mx,my);
@@ -450,6 +742,7 @@ function placeBlock(bx,by) {
   if(!bt.isLadder&&bx>=px1&&bx<=px2&&by>=py1&&by<=py2) return;
   world[by][bx]=slot.id;
   removeFromHotbar(selectedSlot);
+  recordOneSquareProgress(["dm_51", "dm_52"]);
   onWorldChanged();
 }
 
@@ -459,8 +752,24 @@ function placeBlock(bx,by) {
 let db=null, fbInited=false;
 let myFbRef=null, myOnlineRef=null, myHotbarRef=null;
 let fbWorldRef=null;
+let mpWorldReady=false;
+let mpSpawnPending=false;
 let remotePlayers={};
+let remoteSkinImages={};
 let fbListeners=[];
+
+function setRemoteSkinImage(playerId, dataUrl) {
+  if (typeof dataUrl !== "string" || !/^data:image\//.test(dataUrl)) {
+    delete remoteSkinImages[playerId];
+    return;
+  }
+  const img = new Image();
+  img.onerror = () => {
+    if (remoteSkinImages[playerId] === img) delete remoteSkinImages[playerId];
+  };
+  remoteSkinImages[playerId] = img;
+  img.src = dataUrl;
+}
 
 const statusEl=document.getElementById("mp-status");
 const modeBadge=document.getElementById("mode-badge");
@@ -489,31 +798,40 @@ function enterMultiplayer() {
   initFirebase();
   if(!db){setStatus("❌ offline","#f66");return;}
 
-  // Load MP world from Firebase
+  // The world snapshot is async; freeze movement and broadcasts until safe spawn.
+  mpWorldReady = false;
+  mpSpawnPending = true;
+  breaking = null; // don't let a singleplayer block-break carry into the shared world
   fbWorldRef=db.ref("onesquare/world");
   const fbPlayersRef=db.ref("onesquare/players");
   const fbOnlineRef=db.ref("onesquare/online");
+  fbSkinsRef=db.ref("onesquare/playerSkins");
 
   myFbRef=fbPlayersRef.child(myPlayerId);
   myFbRef.onDisconnect().remove();
+
+  const mySkinData = localStorage.getItem("plixo_skin_image");
+  const mySkinRef = fbSkinsRef.child(myPlayerId);
+  mySkinRef.onDisconnect().remove();
+  if (mySkinData && /^data:image\//.test(mySkinData)) {
+    mySkinRef.set(mySkinData).catch(e => console.warn("Skin sync failed", e));
+  } else {
+    mySkinRef.remove().catch(e => console.warn("Skin cleanup failed", e));
+  }
+
   myOnlineRef=fbOnlineRef.child(myPlayerId);
   myOnlineRef.set(true);
   myOnlineRef.onDisconnect().remove();
 
   myHotbarRef=db.ref("onesquare/hotbars/"+myPlayerId);
-
-  // Load hotbar for MP
   hotbar=loadMPHotbar();
 
-  // Listen to online count
   const onlineL=fbOnlineRef.on("value",snap=>{setStatus("● "+snap.numChildren()+" online");});
   fbListeners.push(()=>fbOnlineRef.off("value",onlineL));
 
-  // Listen to world — éénmalig laden dan live updates
   const worldL=fbWorldRef.on("value",snap=>{
     const val=snap.val();
     if(val) {
-      // Firebase returns an object, not a real array — convert it
       const arr=Array.from({length:WORLD_H},()=>Array(WORLD_W).fill(null));
       for(let r=0;r<WORLD_H;r++) {
         if(!val[r]) continue;
@@ -525,37 +843,69 @@ function enterMultiplayer() {
     } else {
       world=Array.from({length:WORLD_H},()=>Array(WORLD_W).fill(null));
     }
+
+    // Wait for this authoritative world snapshot before selecting a spawn.
+    const wasWorldReady = mpWorldReady;
+    mpWorldReady = true;
+    if (mpSpawnPending) {
+      if (spawnPlayer(true)) mpSpawnPending = false;
+    } else if (wasWorldReady && isMultiplayer && !isPlayerRectClear(player.px, player.py)) {
+      // Remote edits may never leave this player embedded in a block.
+      mpSpawnPending = true;
+      if (spawnPlayer(true)) mpSpawnPending = false;
+    }
+  }, error => {
+    console.warn("One Square world sync failed:", error);
+    // Do not use the local singleplayer world as if it were the multiplayer world.
+    // Freeze the join and block all broadcasts until an authoritative snapshot arrives.
+    mpWorldReady = false;
+    mpSpawnPending = true;
+    setStatus("⚠ Multiplayerwereld niet geladen — verlaat en probeer opnieuw", "#f88");
   });
   fbListeners.push(()=>fbWorldRef.off("value",worldL));
 
-  // Listen to other players
   const addL=fbPlayersRef.on("child_added",snap=>{if(snap.key!==myPlayerId&&snap.val())remotePlayers[snap.key]=snap.val();});
   const chgL=fbPlayersRef.on("child_changed",snap=>{if(snap.key!==myPlayerId&&snap.val())remotePlayers[snap.key]=snap.val();});
   const remL=fbPlayersRef.on("child_removed",snap=>{delete remotePlayers[snap.key];});
   fbListeners.push(()=>{fbPlayersRef.off("child_added",addL);fbPlayersRef.off("child_changed",chgL);fbPlayersRef.off("child_removed",remL);});
+
+  const skinAdd = fbSkinsRef.on("child_added", snap => {
+    if (snap.key !== myPlayerId) setRemoteSkinImage(snap.key, snap.val());
+  });
+  const skinChg = fbSkinsRef.on("child_changed", snap => {
+    if (snap.key !== myPlayerId) setRemoteSkinImage(snap.key, snap.val());
+  });
+  const skinRem = fbSkinsRef.on("child_removed", snap => {
+    delete remoteSkinImages[snap.key];
+  });
+  fbListeners.push(() => {
+      fbSkinsRef.off("child_added", skinAdd);
+      fbSkinsRef.off("child_changed", skinChg);
+      fbSkinsRef.off("child_removed", skinRem);
+  });
 
   isMultiplayer=true;
   modeBadge.textContent="🌐 MP";
   btnToggle.textContent="🏠 Go to Singleplayer";
   btnToggle.classList.add("in-mp");
   btnReset.style.display="none";
-  spawnPlayer();
+  // Safe spawn is performed by the world listener after the authoritative snapshot.
 }
 
 function exitMultiplayer() {
-  // Remove listeners
+  mpWorldReady = false;
+  mpSpawnPending = false;
   fbListeners.forEach(fn=>fn());
-  fbListeners=[];
   if(myFbRef){myFbRef.remove();myFbRef=null;}
   if(myOnlineRef){myOnlineRef.remove();myOnlineRef=null;}
+  if(fbSkinsRef && myPlayerId) {fbSkinsRef.child(myPlayerId).remove();}
   myHotbarRef=null;
   fbWorldRef=null;
+  fbSkinsRef=null;
   remotePlayers={};
+  remoteSkinImages={};
 
-  // Save MP hotbar
   saveMPHotbar();
-
-  // Return to SP
   world=loadSPWorld();
   hotbar=loadSPHotbar();
   isMultiplayer=false;
@@ -581,7 +931,6 @@ btnReset.addEventListener("click",()=>{
   spawnPlayer();
 });
 
-// Called after every world change
 function onWorldChanged() {
   if(isMultiplayer) {
     saveMPHotbar();
@@ -597,13 +946,14 @@ function onWorldChanged() {
 // ═══════════════════════════════════════════════════════
 let lastSentX=-1,lastSentY=-1,fbThrottle=0;
 function broadcastPos() {
-  if(!isMultiplayer||!myFbRef) return;
+  if(!isMultiplayer || !myFbRef || !mpWorldReady || mpSpawnPending) return;
   fbThrottle++;
   const moved=Math.round(player.px)!==lastSentX||Math.round(player.py)!==lastSentY;
   if(!moved&&fbThrottle<20) return;
   fbThrottle=0;
   lastSentX=Math.round(player.px);
   lastSentY=Math.round(player.py);
+  // px/py are absolute world pixels, never camera-relative screen pixels.
   try { myFbRef.set({px:lastSentX,py:lastSentY,name:myName,t:Date.now()}); } catch(e){}
 }
 
@@ -644,39 +994,43 @@ function drawWorld() {
       ctx.fillRect(sx,sy,BLOCK_SIZE,BLOCK_SIZE);
       const cracks=Math.floor(prog*4);
       ctx.strokeStyle=`rgba(0,0,0,${prog})`;
-      ctx.lineWidth=1;
-      if(cracks>=1){ctx.beginPath();ctx.moveTo(sx+4,sy+4);ctx.lineTo(sx+8,sy+10);ctx.stroke();}
-      if(cracks>=2){ctx.beginPath();ctx.moveTo(sx+8,sy+2);ctx.lineTo(sx+13,sy+8);ctx.stroke();}
-      if(cracks>=3){ctx.beginPath();ctx.moveTo(sx+3,sy+10);ctx.lineTo(sx+9,sy+14);ctx.stroke();}
-      if(cracks>=4){ctx.beginPath();ctx.moveTo(sx+11,sy+5);ctx.lineTo(sx+15,sy+12);ctx.stroke();}
+      ctx.lineWidth=2;
+      if(cracks>=1){ctx.beginPath();ctx.moveTo(sx+8,sy+8);ctx.lineTo(sx+16,sy+20);ctx.stroke();}
+      if(cracks>=2){ctx.beginPath();ctx.moveTo(sx+16,sy+4);ctx.lineTo(sx+26,sy+16);ctx.stroke();}
+      if(cracks>=3){ctx.beginPath();ctx.moveTo(sx+6,sy+20);ctx.lineTo(sx+18,sy+28);ctx.stroke();}
+      if(cracks>=4){ctx.beginPath();ctx.moveTo(sx+22,sy+10);ctx.lineTo(sx+30,sy+24);ctx.stroke();}
     }
   }
 }
 
 function drawHotbar() {
-  const slotW=CANVAS_W/HOTBAR_SLOTS;
-  const barY=VIEW_H;
+  const slotW = HOTBAR_W / HOTBAR_SLOTS;
+  const startX = (CANVAS_W - HOTBAR_W) / 2;
+  const barY = VIEW_H;
+
   ctx.fillStyle="#333";
-  ctx.fillRect(0,barY,CANVAS_W,HOTBAR_H);
+  ctx.fillRect(0,barY,CANVAS_W,HOTBAR_H); // Grijze achtergrond over de hele breedte
+
   for(let i=0;i<HOTBAR_SLOTS;i++) {
-    const sx=i*slotW;
-    const sy=barY+2;
-    const sw=slotW-2;
-    const sh=HOTBAR_H-4;
+    const sx = startX + i * slotW;
+    const sy = barY + 4;
+    const sw = slotW - 4;
+    const sh = HOTBAR_H - 8;
     ctx.fillStyle=i===selectedSlot?"#666":"#444";
-    ctx.fillRect(sx+1,sy,sw,sh);
+    ctx.fillRect(sx+2,sy,sw,sh);
     ctx.strokeStyle=i===selectedSlot?"#fff":"#555";
-    ctx.strokeRect(sx+1.5,sy+0.5,sw-1,sh-1);
+    ctx.lineWidth=2;
+    ctx.strokeRect(sx+3,sy+1,sw-2,sh-2);
     const slot=hotbar[i];
     if(slot) {
       const bt=getBlockType(slot.id);
       if(bt) {
         const tex=TEXTURES[slot.id];
-        if(tex&&tex.complete&&tex.naturalWidth>0){ctx.imageSmoothingEnabled=false;ctx.drawImage(tex,sx+3,sy+2,sw-4,sh-4);}
-        else{ctx.fillStyle=bt.color;ctx.fillRect(sx+3,sy+2,sw-4,sh-4);}
+        if(tex&&tex.complete&&tex.naturalWidth>0){ctx.imageSmoothingEnabled=false;ctx.drawImage(tex,sx+6,sy+4,sw-8,sh-8);}
+        else{ctx.fillStyle=bt.color;ctx.fillRect(sx+6,sy+4,sw-8,sh-8);}
         ctx.fillStyle="white";
-        ctx.font="5px monospace";
-        ctx.fillText(slot.count,sx+2,barY+HOTBAR_H-4);
+        ctx.font="10px monospace";
+        ctx.fillText(slot.count,sx+4,barY+HOTBAR_H-8);
       }
     }
   }
@@ -687,16 +1041,26 @@ function drawRemotePlayers() {
     const rp=remotePlayers[id];
     const sx=Math.round(rp.px-camX);
     const sy=Math.round(rp.py-camY);
-    if(sx<-20||sx>CANVAS_W+20) continue;
-    ctx.fillStyle=REMOTE_COLOR;
-    ctx.fillRect(sx,sy,10,14);
+    if(sx<-40||sx>CANVAS_W+40) continue;
+
+    const rSkin = remoteSkinImages[id];
+    if (rSkin && rSkin.complete && rSkin.naturalWidth > 0) {
+        const wasSmoothing = ctx.imageSmoothingEnabled;
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(rSkin, sx - 1, sy - 1, 20, 28);
+        ctx.imageSmoothingEnabled = wasSmoothing;
+    } else {
+        ctx.fillStyle=REMOTE_COLOR;
+        ctx.fillRect(sx,sy,18,26); 
+    }
+
     const label=rp.name||id.slice(0,4);
     ctx.fillStyle="rgba(0,0,0,0.65)";
-    ctx.font="5px monospace";
+    ctx.font="10px monospace";
     const tw=ctx.measureText(label).width;
-    ctx.fillRect(sx+5-tw/2-1,sy-8,tw+2,7);
+    ctx.fillRect(sx+9-tw/2-2,sy-16,tw+4,14);
     ctx.fillStyle="#fff";
-    ctx.fillText(label,sx+5-tw/2,sy-2);
+    ctx.fillText(label,sx+9-tw/2,sy-4);
   }
 }
 
@@ -726,14 +1090,25 @@ function loop(timestamp) {
   if(timestamp-lastTime<FRAME_TIME) return;
   lastTime=timestamp;
 
-  player.update(keys);
+  if (!isMultiplayer || (mpWorldReady && !mpSpawnPending)) {
+    player.update(keys);
+  }
 
   if(breaking) {
     const elapsed=Date.now()-breaking.startTime;
     if(elapsed>=breaking.duration) {
       const{bx,by}=breaking;
-      if(breaking.isOneBlock){addToHotbar(getRandomDrop());}
-      else{const id=world[by][bx];if(id){addToHotbar(id);world[by][bx]=null;}}
+      let completedBreak = false;
+      if(breaking.isOneBlock){
+        const droppedBlock = getRandomDrop();
+        const receivedDrop = addToHotbar(droppedBlock);
+        if (receivedDrop && droppedBlock === "chicken_jockey") recordOneSquareProgress("a_chicken_jockey");
+        completedBreak = true;
+      } else {
+        const id=world[by][bx];
+        if(id){addToHotbar(id);world[by][bx]=null;completedBreak = true;}
+      }
+      if (completedBreak) recordOneSquareProgress(["dm_53", "dm_54", "a66"]); // permanent DEMOLISHER mission in skin.html
       onWorldChanged();
       breaking=null;
     }
@@ -746,7 +1121,7 @@ function loop(timestamp) {
   ctx.clearRect(0,0,CANVAS_W,CANVAS_H);
   drawWorld();
   drawRemotePlayers();
-  player.draw(isMultiplayer ? myName : null);
+  player.draw(isMultiplayer ? myName : null, true);
   drawHotbar();
 }
 
