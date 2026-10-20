@@ -500,5 +500,493 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     }
   } catch (e) {}
 </script>
+<!-- PLIXO DODGING ARENA PROGRESS-ONLY ADDITION START -->
+<script>
+/* PLIXO progress bridge for Dodging Arena.
+ * This bridge ONLY observes existing game state and syncs achievement/mission progress.
+ * It does not alter player costumes, the skin menu, joystick, controls, hitboxes, or gameplay.
+ */
+(function DodgingArenaProgressOnly() {
+  'use strict';
+
+  if (window.__plixoDodgingArenaProgressOnlyInstalled) return;
+  window.__plixoDodgingArenaProgressOnlyInstalled = true;
+
+  const GAME_ID = 'dodging_arena';
+  const FIREBASE_CONFIG = {
+    databaseURL: 'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app',
+    projectId: 'money-digger-9b05e'
+  };
+  const DAY_KEY = () => new Date().toDateString();
+  // Stage variable 'selectedskin': 1 Normal, 2 Minecraft, 3 Triangle, 4 Astro, 5 Weather.
+  const ARENA_SKIN_MISSION_IDS = {
+    1: 'dm_arena_skin_normal',
+    2: 'dm_arena_skin_minecraft',
+    3: 'dm_arena_skin_triangle',
+    4: 'dm_arena_skin_astro',
+    5: 'dm_arena_skin_weather'
+  };
+  const ARENA_SKIN_PROGRESS_IDS = Object.values(ARENA_SKIN_MISSION_IDS);
+  const GLOBAL_PROGRESS_IDS = ['a9', 'a13', 'a_arena_151', 'dm_1', 'dm_2', 'dm_3', 'dm_71', 'dm_72', 'dm_75', ...ARENA_SKIN_PROGRESS_IDS];
+  const DAILY_PROGRESS_IDS = ['dm_1', 'dm_2', 'dm_3', 'dm_71', 'dm_72', 'dm_75', ...ARENA_SKIN_PROGRESS_IDS];
+  const START_DEDUPE_MS = 1200;
+  const CLOUD_SYNC_DELAY_MS = 1800;
+
+  const safeJSON = (key, fallback) => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  };
+  const number = value => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const unique = values => [...new Set((Array.isArray(values) ? values : []).map(String).filter(Boolean))];
+  const dailyProgressKey = day => 'plixo_daily_progress_' + day;
+
+  function getAccountCode() {
+    const values = [
+      localStorage.getItem('pg_account_code'),
+      localStorage.getItem('pg_player_id'),
+      localStorage.getItem('plixo_sync_code')
+    ];
+    return values.map(value => String(value || '').trim().toUpperCase()).find(value => /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/.test(value)) || null;
+  }
+
+  let currentDay = DAY_KEY();
+  let globalProgress = safeJSON('plixo_mission_progress', {});
+  let dailyProgress = safeJSON(dailyProgressKey(currentDay), {});
+  let playedGames = unique(safeJSON('plixo_played_games', []));
+  let dailyGames = unique(safeJSON('plixo_daily_games_' + currentDay, []));
+  let isPlaying = false;
+  let lastStartAt = 0;
+  // Track the death flag so a completed 3-second respawn countdown counts as a new match.
+  let previousDeadState = null;
+  let lastTickAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  let activeSecondRemainder = 0;
+  let activeMinuteRemainder = 0;
+  let vmRef = null;
+  let runtimeRef = null;
+  let scoreVariable = null;
+  let deadVariable = null;
+  let selectedSkinVariable = null;
+  let localSaveTimer = null;
+  let cloudSyncTimer = null;
+  let firebaseDatabase = null;
+  let firebaseSdkPromise = null;
+  let syncInFlight = null;
+  let syncAgain = false;
+
+  function refreshLocalCounters() {
+    const newDay = DAY_KEY();
+    const localGlobal = safeJSON('plixo_mission_progress', {});
+    for (const [id, value] of Object.entries(localGlobal)) {
+      if (Number.isFinite(Number(value))) globalProgress[id] = Math.max(number(globalProgress[id]), number(value));
+      else if (globalProgress[id] === undefined) globalProgress[id] = value;
+    }
+    if (newDay !== currentDay) {
+      currentDay = newDay;
+      dailyProgress = safeJSON(dailyProgressKey(currentDay), {});
+      dailyGames = unique(safeJSON('plixo_daily_games_' + currentDay, []));
+    } else {
+      const localDaily = safeJSON(dailyProgressKey(currentDay), {});
+      for (const [id, value] of Object.entries(localDaily)) {
+        if (Number.isFinite(Number(value))) dailyProgress[id] = Math.max(number(dailyProgress[id]), number(value));
+        else if (dailyProgress[id] === undefined) dailyProgress[id] = value;
+      }
+      dailyGames = unique([...dailyGames, ...safeJSON('plixo_daily_games_' + currentDay, [])]);
+    }
+    playedGames = unique([...playedGames, ...safeJSON('plixo_played_games', [])]);
+  }
+
+  function saveLocalNow() {
+    refreshLocalCounters();
+    try {
+      localStorage.setItem('plixo_mission_progress', JSON.stringify(globalProgress));
+      localStorage.setItem(dailyProgressKey(currentDay), JSON.stringify(dailyProgress));
+      localStorage.setItem('plixo_played_games', JSON.stringify(playedGames));
+      localStorage.setItem('plixo_daily_games_' + currentDay, JSON.stringify(dailyGames));
+    } catch (error) {
+      console.warn('Dodging Arena: could not save PLIXO mission progress locally.', error);
+    }
+  }
+
+  function scheduleLocalSave() {
+    if (localSaveTimer) return;
+    localSaveTimer = setTimeout(() => {
+      localSaveTimer = null;
+      saveLocalNow();
+    }, 100);
+  }
+
+  function scheduleCloudSync() {
+    if (!getAccountCode() || cloudSyncTimer) return;
+    cloudSyncTimer = setTimeout(() => {
+      cloudSyncTimer = null;
+      syncProgressToFirebase().catch(error => {
+        console.warn('Dodging Arena: PLIXO progress could not be synced.', error);
+      });
+    }, CLOUD_SYNC_DELAY_MS);
+  }
+
+  function writeProgress(id, value, daily = false) {
+    refreshLocalCounters();
+    const n = Math.max(0, number(value));
+    if (n > number(globalProgress[id])) globalProgress[id] = n;
+    if (daily && n > number(dailyProgress[id])) dailyProgress[id] = n;
+    scheduleLocalSave();
+    scheduleCloudSync();
+  }
+
+  function setMaxProgress(id, value) {
+    refreshLocalCounters();
+    const n = Math.max(0, number(value));
+    if (n <= number(globalProgress[id])) return;
+    globalProgress[id] = n;
+    scheduleLocalSave();
+    scheduleCloudSync();
+  }
+
+  // The profile page's existing helper writes daily mission progress to both maps.
+  function addProgress(id, amount = 1, countDaily = false) {
+    const n = number(amount);
+    if (!id || n <= 0) return;
+    refreshLocalCounters();
+    globalProgress[id] = number(globalProgress[id]) + n;
+    if (countDaily) dailyProgress[id] = number(dailyProgress[id]) + n;
+    scheduleLocalSave();
+    scheduleCloudSync();
+  }
+
+  function setMaxDailyAndGlobal(id, value) {
+    const n = Math.max(0, number(value));
+    writeProgress(id, n, true);
+  }
+
+  function markGamePlayed() {
+    refreshLocalCounters();
+    const oldLifetime = playedGames.slice();
+    playedGames = unique([...playedGames, GAME_ID]);
+    const oldToday = dailyGames.slice();
+    dailyGames = unique([...dailyGames, GAME_ID]);
+    if (playedGames.length !== oldLifetime.length) {
+      try { localStorage.setItem('plixo_played_games', JSON.stringify(playedGames)); } catch (_) {}
+    }
+    try { localStorage.setItem('plixo_daily_games_' + currentDay, JSON.stringify(dailyGames)); } catch (_) {}
+    setMaxProgress('a9', playedGames.length);
+
+    // The three daily arcade missions count distinct games, not each restart.
+    if (dailyGames.length > oldToday.length) {
+      for (const id of ['dm_1', 'dm_2', 'dm_3']) setMaxDailyAndGlobal(id, dailyGames.length);
+    }
+    scheduleLocalSave();
+    scheduleCloudSync();
+  }
+
+  function ensureFirebaseSDK() {
+    if (window.firebase && typeof window.firebase.database === 'function') return Promise.resolve();
+    if (firebaseSdkPromise) return firebaseSdkPromise;
+    const loadScript = src => new Promise((resolve, reject) => {
+      const existing = [...document.scripts].find(script => script.src === src);
+      if (existing) {
+        if (existing.dataset.plixoLoaded === 'true') return resolve();
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.onload = () => { script.dataset.plixoLoaded = 'true'; resolve(); };
+      script.onerror = () => reject(new Error('Could not load ' + src));
+      (document.head || document.documentElement).appendChild(script);
+    });
+    firebaseSdkPromise = loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js')
+      .then(() => {
+        if (window.firebase && typeof window.firebase.database === 'function') return;
+        return loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js');
+      })
+      .then(() => {
+        if (!window.firebase || typeof window.firebase.database !== 'function') {
+          throw new Error('Firebase database SDK is not available.');
+        }
+      });
+    return firebaseSdkPromise;
+  }
+
+  async function getDatabase() {
+    if (firebaseDatabase) return firebaseDatabase;
+    await ensureFirebaseSDK();
+    if (!window.firebase.apps || !window.firebase.apps.some(app => app && app.name === '[DEFAULT]')) {
+      window.firebase.initializeApp(FIREBASE_CONFIG);
+    }
+    firebaseDatabase = window.firebase.database();
+    return firebaseDatabase;
+  }
+
+  function mergeNumberMaps(remote, local) {
+    const merged = { ...(remote && typeof remote === 'object' ? remote : {}) };
+    for (const [id, value] of Object.entries(local && typeof local === 'object' ? local : {})) {
+      if (Number.isFinite(Number(value)) && value !== '') {
+        merged[id] = Math.max(number(merged[id]), number(value));
+      } else if (merged[id] === undefined) {
+        merged[id] = value;
+      }
+    }
+    return merged;
+  }
+
+  function pickIds(source, ids) {
+    const out = {};
+    for (const id of ids) {
+      if (source && Object.prototype.hasOwnProperty.call(source, id)) out[id] = Math.max(0, number(source[id]));
+    }
+    return out;
+  }
+
+
+  async function syncProgressToFirebase() {
+    const code = getAccountCode();
+    if (!code) return;
+    if (syncInFlight) {
+      syncAgain = true;
+      return syncInFlight;
+    }
+    syncInFlight = (async () => {
+      const db = await getDatabase();
+      refreshLocalCounters();
+      const root = db.ref('plixo_users/' + code);
+      const snapshot = await root.once('value');
+      const record = snapshot && snapshot.exists() ? (snapshot.val() || {}) : {};
+      const remoteGlobal = record.mission_progress && typeof record.mission_progress === 'object' ? record.mission_progress : {};
+      const remotePlayedGames = Array.isArray(record.played_games) ? record.played_games : [];
+      const mergedPlayedGames = unique([...remotePlayedGames, ...playedGames]);
+      const remoteDayGames = record.daily_games && record.daily_games.date === currentDay && Array.isArray(record.daily_games.games)
+        ? record.daily_games.games : [];
+      const mergedDailyGames = unique([...remoteDayGames, ...dailyGames]);
+      playedGames = mergedPlayedGames;
+      dailyGames = mergedDailyGames;
+      globalProgress.a9 = Math.max(number(globalProgress.a9), playedGames.length);
+      if (dailyGames.length) {
+        for (const id of ['dm_1', 'dm_2', 'dm_3']) {
+          globalProgress[id] = Math.max(number(globalProgress[id]), dailyGames.length);
+          dailyProgress[id] = Math.max(number(dailyProgress[id]), dailyGames.length);
+        }
+      }
+
+      // Only achievement/mission progress IDs relevant to this game are written.
+      // No PLIX, skin ownership, selected skin, skin image, controls, or game data is written.
+      const globalUpdates = {};
+      for (const id of GLOBAL_PROGRESS_IDS) {
+        const val = Math.max(number(remoteGlobal[id]), number(globalProgress[id]));
+        if (val > 0 || remoteGlobal[id] !== undefined || globalProgress[id] !== undefined) {
+          globalUpdates[id] = val;
+          globalProgress[id] = val;
+        }
+      }
+      if (Object.keys(globalUpdates).length) {
+        await root.child('mission_progress').update(globalUpdates);
+      }
+
+      const today = currentDay = DAY_KEY();
+      const localTodayProgress = mergeNumberMaps(safeJSON(dailyProgressKey(today), {}), dailyProgress);
+      const remoteDaily = record.daily && typeof record.daily === 'object' ? record.daily : {};
+      let dailyUpdates;
+      if (remoteDaily.date === today) {
+        const remoteDailyProgress = remoteDaily.progress && typeof remoteDaily.progress === 'object' ? remoteDaily.progress : {};
+        dailyUpdates = {};
+        for (const id of DAILY_PROGRESS_IDS) {
+          const val = Math.max(number(remoteDailyProgress[id]), number(localTodayProgress[id]), number(dailyProgress[id]));
+          if (val > 0 || remoteDailyProgress[id] !== undefined || localTodayProgress[id] !== undefined || dailyProgress[id] !== undefined) {
+            dailyUpdates[id] = val;
+            dailyProgress[id] = val;
+          }
+        }
+        if (Object.keys(dailyUpdates).length) await root.child('daily/progress').update(dailyUpdates);
+      } else {
+        // A new day resets daily progress, while preserving only today's local claims/bonus.
+        const currentDayProgress = mergeNumberMaps({}, localTodayProgress);
+        dailyUpdates = currentDayProgress;
+        dailyProgress = currentDayProgress;
+        await root.child('daily').update({
+          date: today,
+          progress: dailyUpdates,
+          claimed: safeJSON('plixo_daily_claimed_' + today, {}),
+          bonus: localStorage.getItem('plixo_daily_bonus_date') || ''
+        });
+      }
+
+      await root.update({
+        played_games: mergedPlayedGames,
+        daily_games: { date: today, games: mergedDailyGames }
+      });
+
+      playedGames = mergedPlayedGames;
+      dailyGames = mergedDailyGames;
+      saveLocalNow();
+    })().catch(error => {
+      // If the Firebase SDK/network is unavailable, local mission tracking remains functional.
+      console.warn('Dodging Arena: Firebase progress sync failed; local progress is retained.', error);
+    }).finally(() => {
+      syncInFlight = null;
+      if (syncAgain) {
+        syncAgain = false;
+        scheduleCloudSync();
+      }
+    });
+    return syncInFlight;
+  }
+
+  function onGameStarted() {
+    isPlaying = true;
+    const now = Date.now();
+    // startHats runs once for each sprite listening to the same broadcast.
+    if (now - lastStartAt < START_DEDUPE_MS) return;
+    lastStartAt = now;
+    activeSecondRemainder = 0;
+    markGamePlayed();
+    addProgress('dm_71', 1, true);
+    addProgress('dm_72', 1, true);
+  }
+
+  function getBroadcastName(fields) {
+    const value = fields && fields.BROADCAST_OPTION;
+    return String(value && typeof value === 'object' ? (value.value || value.name || '') : (value || '')).trim().toLowerCase();
+  }
+
+  function installBroadcastObserver(runtime) {
+    if (!runtime || runtime.__plixoDodgingMissionsOnlyHook || typeof runtime.startHats !== 'function') return;
+    const originalStartHats = runtime.startHats;
+    runtime.__plixoDodgingMissionsOnlyHook = true;
+    runtime.startHats = function(opcode, fields, target, ...rest) {
+      try {
+        if (opcode === 'event_whenbroadcastreceived') {
+          const broadcast = getBroadcastName(fields);
+          if (broadcast === 'start') onGameStarted();
+          else if (broadcast === 'quit' || broadcast === 'skin menu') isPlaying = false;
+        }
+      } catch (error) {
+        console.warn('Dodging Arena: progress observer warning.', error);
+      }
+      return originalStartHats.call(this, opcode, fields, target, ...rest);
+    };
+  }
+
+  function getStageVariable(name) {
+    if (!runtimeRef) return null;
+    try {
+      const stage = typeof runtimeRef.getTargetForStage === 'function' ? runtimeRef.getTargetForStage() : null;
+      if (!stage || !stage.variables) return null;
+      const expected = String(name).trim().toLowerCase();
+      return Object.values(stage.variables).find(variable =>
+        variable && String(variable.name || '').trim().toLowerCase() === expected
+      ) || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function attachToScratch() {
+    const vm = window.vm || (window.scaffolding && window.scaffolding.vm);
+    const runtime = vm && vm.runtime;
+    if (!runtime) return false;
+    vmRef = vm;
+    runtimeRef = runtime;
+    installBroadcastObserver(runtime);
+    scoreVariable = getStageVariable('score');
+    deadVariable = getStageVariable('deads');
+    selectedSkinVariable = getStageVariable('selectedskin');
+    return true;
+  }
+
+  function tick() {
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const elapsed = Math.max(0, Math.min(1, (now - lastTickAt) / 1000));
+    lastTickAt = now;
+    if (!runtimeRef || !scoreVariable || !deadVariable || !selectedSkinVariable) {
+      attachToScratch();
+      scoreVariable = getStageVariable('score');
+      deadVariable = getStageVariable('deads');
+      selectedSkinVariable = getStageVariable('selectedskin');
+    }
+
+    refreshLocalCounters();
+    const isDead = number(deadVariable && deadVariable.value) !== 0;
+    // The original project sets Stage variable "deads" to 1 when the player dies,
+    // waits three seconds for the 3-2-1 countdown, then resets it to 0 to resume.
+    // Count that transition as another played match. The existing 1.2s de-dupe
+    // prevents double-counting if the game also emits its "start" broadcast.
+    if (isPlaying && previousDeadState === true && !isDead) {
+      onGameStarted();
+    }
+    if (deadVariable) previousDeadState = isDead;
+
+    if (isPlaying && document.visibilityState !== 'hidden') {
+      const score = number(scoreVariable && scoreVariable.value);
+      if (score > 0) setMaxProgress('a_arena_151', score);
+
+      // Credit score only to the Dodging Arena skin currently selected inside the game.
+      // Progress updates during the run, so each per-skin daily mission can show a live bar.
+      const selectedSkinNumber = Math.round(number(selectedSkinVariable && selectedSkinVariable.value));
+      const skinMissionId = ARENA_SKIN_MISSION_IDS[selectedSkinNumber];
+      if (!isDead && skinMissionId && score > 0) setMaxDailyAndGlobal(skinMissionId, score);
+
+      if (!isDead && elapsed > 0) {
+        activeSecondRemainder += elapsed;
+        activeMinuteRemainder += elapsed;
+        while (activeSecondRemainder >= 1) {
+          activeSecondRemainder -= 1;
+          addProgress('dm_75', 1, true);
+        }
+        while (activeMinuteRemainder >= 60) {
+          activeMinuteRemainder -= 60;
+          addProgress('a13', 1, false);
+        }
+      } else if (isDead) {
+        // Do not count any part of the death/respawn delay as survival time.
+        activeSecondRemainder = 0;
+      }
+    }
+  }
+
+  function monitorForScratch() {
+    attachToScratch();
+    setInterval(tick, 250);
+    // Firebase sync requires a valid 20-character leaderboard account code (legacy numeric codes also work).
+    if (getAccountCode()) {
+      syncProgressToFirebase().catch(() => {});
+    }
+    setInterval(() => {
+      if (getAccountCode()) syncProgressToFirebase().catch(() => {});
+    }, 15000);
+  }
+
+  window.addEventListener('storage', event => {
+    if (event.key === 'pg_account_code' || event.key === 'pg_player_id' || event.key === 'plixo_sync_code') {
+      if (getAccountCode()) syncProgressToFirebase().catch(() => {});
+    }
+    if (event.key === 'plixo_mission_progress' || event.key === dailyProgressKey(DAY_KEY()) || event.key === 'plixo_played_games' || event.key === 'plixo_daily_games_' + DAY_KEY()) {
+      refreshLocalCounters();
+      scheduleCloudSync();
+    }
+  });
+  window.addEventListener('focus', () => {
+    refreshLocalCounters();
+    if (getAccountCode()) syncProgressToFirebase().catch(() => {});
+  });
+  window.addEventListener('pagehide', () => {
+    if (localSaveTimer) { clearTimeout(localSaveTimer); localSaveTimer = null; saveLocalNow(); }
+    if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
+    if (getAccountCode()) syncProgressToFirebase().catch(() => {});
+  });
+
+  monitorForScratch();
+})();
+
+</script>
+<!-- PLIXO DODGING ARENA PROGRESS-ONLY ADDITION END -->
 </body>
 </html>
