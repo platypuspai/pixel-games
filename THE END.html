@@ -388,3 +388,288 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
   </script>
 </body>
 </html>
+
+<script>
+(function PlixoGameProgressBridge() {
+  'use strict';
+  const GAME_ID = 'the_end';
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+    authDomain: "money-digger-9b05e.firebaseapp.com",
+    databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "money-digger-9b05e",
+    storageBucket: "money-digger-9b05e.firebasestorage.app",
+    messagingSenderId: "883506536944",
+    appId: "1:883506536944:web:921b342dff76154fcbbd35"
+  };
+  const DAY_KEY = () => new Date().toDateString();
+  const safeJSON = (key, fallback) => {
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+    catch (_) { return fallback; }
+  };
+  const number = value => { const n = Number(value); return Number.isFinite(n) ? n : 0; };
+  const unique = list => [...new Set((Array.isArray(list) ? list : []).map(String).filter(Boolean))];
+  function accountCode() {
+    const candidates = [localStorage.getItem('pg_account_code'), localStorage.getItem('pg_player_id'), localStorage.getItem('plixo_sync_code')];
+    return candidates.map(v => String(v || '').trim().toUpperCase())
+      .find(v => /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/.test(v)) || null;
+  }
+  function dailyKey() { return 'plixo_daily_progress_' + DAY_KEY(); }
+  let activeDate = DAY_KEY();
+  let globalProgress = safeJSON('plixo_mission_progress', {});
+  let dailyProgress = safeJSON(dailyKey(), {});
+  let playedGames = unique(safeJSON('plixo_played_games', []));
+  let dailyGames = unique(safeJSON('plixo_daily_games_' + activeDate, []));
+  let database = null;
+  let syncing = null;
+  let syncQueued = false;
+  let syncTimer = null;
+  let cloudInitialized = false;
+  let localArcadeMinutes = Math.max(0, number(localStorage.getItem('plixo_arcade_minutes_' + GAME_ID)));
+
+  function refreshDay() {
+    const now = DAY_KEY();
+    if (now === activeDate) return;
+    activeDate = now;
+    dailyProgress = safeJSON(dailyKey(), {});
+    dailyGames = unique(safeJSON('plixo_daily_games_' + activeDate, []));
+  }
+  function persistLocal() {
+    try {
+      localStorage.setItem('plixo_mission_progress', JSON.stringify(globalProgress));
+      localStorage.setItem(dailyKey(), JSON.stringify(dailyProgress));
+      localStorage.setItem('plixo_played_games', JSON.stringify(playedGames));
+      localStorage.setItem('plixo_daily_games_' + activeDate, JSON.stringify(dailyGames));
+      localStorage.setItem('plixo_arcade_minutes_' + GAME_ID, String(localArcadeMinutes));
+    } catch (error) { console.warn('PLIXO local progress save failed:', error); }
+  }
+  function scheduleSync() {
+    if (syncTimer) clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => { syncTimer = null; syncCloud(); }, 650);
+  }
+  function maxGlobal(id, value) {
+    value = Math.max(0, number(value));
+    if (value > number(globalProgress[id])) { globalProgress[id] = value; persistLocal(); scheduleSync(); }
+  }
+  function maxDaily(id, value) {
+    refreshDay();
+    value = Math.max(0, number(value));
+    let changed = false;
+    if (value > number(globalProgress[id])) { globalProgress[id] = value; changed = true; }
+    if (value > number(dailyProgress[id])) { dailyProgress[id] = value; changed = true; }
+    if (changed) { persistLocal(); scheduleSync(); }
+  }
+  function addBoth(id, amount = 1) {
+    refreshDay(); amount = Math.max(0, number(amount)); if (!id || amount <= 0) return;
+    globalProgress[id] = number(globalProgress[id]) + amount;
+    dailyProgress[id] = number(dailyProgress[id]) + amount;
+    persistLocal(); scheduleSync();
+  }
+  function addGlobal(id, amount = 1) {
+    amount = Math.max(0, number(amount)); if (!id || amount <= 0) return;
+    globalProgress[id] = number(globalProgress[id]) + amount;
+    persistLocal(); scheduleSync();
+  }
+  function markGamePlayed() {
+    refreshDay();
+    playedGames = unique([...playedGames, GAME_ID]);
+    dailyGames = unique([...dailyGames, GAME_ID]);
+    maxGlobal('a9', playedGames.length);
+    // These missions count different games played, not page reloads.
+    const count = dailyGames.length;
+    maxDaily('dm_1', count); maxDaily('dm_2', count); maxDaily('dm_3', count);
+    persistLocal(); scheduleSync();
+  }
+  function mergeMaximum(remote, local) {
+    const out = { ...(remote && typeof remote === 'object' ? remote : {}) };
+    for (const [key, value] of Object.entries(local && typeof local === 'object' ? local : {})) {
+      if (value !== '' && Number.isFinite(Number(value))) out[key] = Math.max(number(out[key]), number(value));
+      else if (out[key] === undefined) out[key] = value;
+    }
+    return out;
+  }
+  function adoptCloudRecord(record) {
+    if (!record || typeof record !== 'object') return;
+    globalProgress = mergeMaximum(record.mission_progress, globalProgress);
+    refreshDay();
+    if (record.daily && record.daily.date === activeDate) {
+      dailyProgress = mergeMaximum(record.daily.progress, dailyProgress);
+    }
+    playedGames = unique([...(Array.isArray(record.played_games) ? record.played_games : []), ...playedGames]);
+    const remoteDailyGames = record.daily_games && record.daily_games.date === activeDate && Array.isArray(record.daily_games.games)
+      ? record.daily_games.games : [];
+    dailyGames = unique([...remoteDailyGames, ...dailyGames]);
+    const remoteMinutes = record.arcade_minutes_by_game && record.arcade_minutes_by_game[GAME_ID];
+    localArcadeMinutes = Math.max(localArcadeMinutes, number(remoteMinutes));
+    const count = dailyGames.length;
+    for (const id of ['dm_1','dm_2','dm_3']) dailyProgress[id] = Math.max(number(dailyProgress[id]), count);
+    globalProgress.a9 = Math.max(number(globalProgress.a9), playedGames.length);
+    persistLocal();
+  }
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      if ([...document.scripts].some(s => s.src === src) && window.firebase) { resolve(); return; }
+      const current = [...document.scripts].find(s => s.src === src);
+      if (current) {
+        current.addEventListener('load', resolve, { once: true });
+        current.addEventListener('error', reject, { once: true });
+        return;
+      }
+      const script = document.createElement('script'); script.src = src; script.async = true;
+      script.onload = resolve; script.onerror = () => reject(new Error('Could not load ' + src));
+      (document.head || document.documentElement).appendChild(script);
+    });
+  }
+  async function getDatabase() {
+    if (database) return database;
+    if (!window.firebase || typeof window.firebase.initializeApp !== 'function') {
+      await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+    }
+    if (!window.firebase || typeof window.firebase.database !== 'function') {
+      await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js');
+    }
+    if (!window.firebase.apps || !window.firebase.apps.some(app => app && app.name === '[DEFAULT]')) {
+      window.firebase.initializeApp(FIREBASE_CONFIG);
+    }
+    database = window.firebase.database();
+    return database;
+  }
+  async function syncCloud() {
+    refreshDay();
+    const code = accountCode();
+    if (!code) return;
+    if (syncing) { syncQueued = true; return syncing; }
+    syncing = (async () => {
+      try {
+        const db = await getDatabase();
+        const today = activeDate;
+        const localGlobal = { ...globalProgress };
+        const localDaily = { ...dailyProgress };
+        const localPlayed = playedGames.slice();
+        const localDailyGames = dailyGames.slice();
+        const localMinutes = localArcadeMinutes;
+        const result = await db.ref('plixo_users/' + code).transaction(current => {
+          current = current && typeof current === 'object' ? { ...current } : {};
+          const remoteGlobal = current.mission_progress && typeof current.mission_progress === 'object' ? current.mission_progress : {};
+          const mergedGlobal = mergeMaximum(remoteGlobal, localGlobal);
+          const minutesByGame = current.arcade_minutes_by_game && typeof current.arcade_minutes_by_game === 'object'
+            ? { ...current.arcade_minutes_by_game } : {};
+          const oldGameMinutes = number(minutesByGame[GAME_ID]);
+          const nextGameMinutes = Math.max(oldGameMinutes, localMinutes);
+          const newMinutes = Math.max(0, nextGameMinutes - oldGameMinutes);
+          // Merge arcade time additively across separate games/devices without repeated syncs paying it twice.
+          mergedGlobal.a13 = Math.max(number(remoteGlobal.a13), number(localGlobal.a13), number(remoteGlobal.a13) + newMinutes);
+          minutesByGame[GAME_ID] = nextGameMinutes;
+          current.arcade_minutes_by_game = minutesByGame;
+          const remotePlayed = Array.isArray(current.played_games) ? current.played_games : [];
+          current.played_games = unique([...remotePlayed, ...localPlayed]);
+          mergedGlobal.a9 = Math.max(number(mergedGlobal.a9), current.played_games.length);
+          current.mission_progress = mergedGlobal;
+          const remoteDaily = current.daily && typeof current.daily === 'object' ? current.daily : {};
+          const dailyProgressMerged = mergeMaximum(remoteDaily.date === today ? remoteDaily.progress : {}, localDaily);
+          const remoteDailyGames = current.daily_games && current.daily_games.date === today && Array.isArray(current.daily_games.games)
+            ? current.daily_games.games : [];
+          const dailyGamesMerged = unique([...remoteDailyGames, ...localDailyGames]);
+          for (const id of ['dm_1','dm_2','dm_3']) dailyProgressMerged[id] = Math.max(number(dailyProgressMerged[id]), dailyGamesMerged.length);
+          current.daily = {
+            ...remoteDaily,
+            date: today,
+            progress: dailyProgressMerged,
+            claimed: remoteDaily.date === today && remoteDaily.claimed && typeof remoteDaily.claimed === 'object' ? remoteDaily.claimed : {},
+            bonus: remoteDaily.date === today ? (remoteDaily.bonus || '') : ''
+          };
+          current.daily_games = { date: today, games: dailyGamesMerged };
+          return current;
+        }, undefined, false);
+        if (result && result.snapshot && result.snapshot.exists()) {
+          adoptCloudRecord(result.snapshot.val());
+        }
+        cloudInitialized = true;
+      } catch (error) {
+        console.warn('PLIXO mission sync unavailable for ' + GAME_ID + ':', error);
+      }
+    })().finally(() => {
+      syncing = null;
+      if (syncQueued) { syncQueued = false; scheduleSync(); }
+    });
+    return syncing;
+  }
+  async function pullCloud() {
+    const code = accountCode();
+    if (!code) { cloudInitialized = true; return; }
+    try {
+      const db = await getDatabase();
+      const snap = await db.ref('plixo_users/' + code).once('value');
+      if (snap.exists()) adoptCloudRecord(snap.val());
+      cloudInitialized = true;
+      scheduleSync();
+    } catch (error) { console.warn('PLIXO progress pull failed for ' + GAME_ID + ':', error); }
+  }
+  function addArcadeMinute() {
+    localArcadeMinutes += 1;
+    localStorage.setItem('plixo_arcade_minutes_' + GAME_ID, String(localArcadeMinutes));
+    addGlobal('a13', 1);
+  }
+  // Public only for easy diagnosis; game code/gameplay is not modified by this bridge.
+  window.__plixoProgressBridge = window.__plixoProgressBridge || {};
+  window.__plixoProgressBridge[GAME_ID] = { markGamePlayed, maxGlobal, maxDaily, addBoth, addGlobal, pullCloud, syncCloud, addArcadeMinute };
+  persistLocal();
+  pullCloud();
+  
+  // THE END: opening the page satisfies today's existing daily mission.
+  maxDaily('dm_100', 1);
+  let runtimeRef = null;
+  let gameStarted = false;
+  let gameCompleted = false;
+  let startSeenAt = 0;
+  let activeSeconds = Math.max(0, number(localStorage.getItem('plixo_the_end_active_seconds')));
+  let lastMinuteMilestone = localArcadeMinutes;
+  function getBroadcastName(fields) {
+    const v = fields && fields.BROADCAST_OPTION;
+    return String(v && typeof v === 'object' ? (v.value || v.name || '') : (v || '')).trim().toUpperCase();
+  }
+  function onBroadcast(message) {
+    const now = Date.now();
+    if (message === 'START') {
+      if (now - startSeenAt > 800) {
+        gameStarted = true; gameCompleted = false; startSeenAt = now; markGamePlayed();
+      }
+    } else if ((message === 'NEW STOP' || message === 'GO_HIDE') && gameStarted) {
+      gameCompleted = true;
+      maxGlobal('a97', 1);
+      persistLocal(); scheduleSync();
+    }
+  }
+  function attachVm() {
+    const vm = window.vm || (window.scaffolding && window.scaffolding.vm);
+    const runtime = vm && vm.runtime;
+    if (!runtime) return false;
+    runtimeRef = runtime;
+    if (!runtime.__plixoTheEndProgressHook && typeof runtime.startHats === 'function') {
+      const original = runtime.startHats;
+      runtime.__plixoTheEndProgressHook = true;
+      runtime.startHats = function(opcode, fields, target, ...rest) {
+        try { if (opcode === 'event_whenbroadcastreceived') onBroadcast(getBroadcastName(fields)); }
+        catch (error) { console.warn('THE END progress hook warning:', error); }
+        return original.call(this, opcode, fields, target, ...rest);
+      };
+    }
+    return true;
+  }
+  let activeInterval = 0;
+  setInterval(() => {
+    refreshDay();
+    if (!runtimeRef) attachVm();
+    if (gameStarted && !gameCompleted && document.visibilityState !== 'hidden') {
+      activeSeconds += 1; activeInterval += 1;
+      try { localStorage.setItem('plixo_the_end_active_seconds', String(activeSeconds)); } catch (_) {}
+      if (activeInterval >= 60) { activeInterval = 0; addArcadeMinute(); }
+      persistLocal();
+      if (activeSeconds % 15 === 0) scheduleSync();
+    }
+  }, 1000);
+  // Track Scratch runtime signals as soon as the packager exposes its VM.
+  attachVm();
+
+})();
+</script>
