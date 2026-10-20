@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLIXO — Skins, Missions & Achievements</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- FIREBASE SCRIPTS -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<style>
+:root{--bg:#0a0a0f;--surface:#12121a;--card:#1a1a28;--border:#2a2a42;--text:#e8e8ff;--muted:#7777aa;--red:#ff4444;--yellow:#ffdd00;--green:#00ff88;--legendary:#aaffff;}
+*{box-sizing:border-box;margin:0;padding:0} 
+body{font-family:'Inconsolata',monospace;background:radial-gradient(circle at 50% 0%,#1d0c0c 0%,#0a0a0f 45%);color:var(--text);min-height:100vh;overflow-x:hidden;padding-bottom:88px}
+body:before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.12) 2px,rgba(0,0,0,.12) 4px);pointer-events:none;z-index:1000}
+.top{height:64px;display:flex;align-items:center;gap:14px;padding:0 18px;border-bottom:1px solid var(--border);background:rgba(10,10,15,.94);position:sticky;top:0;z-index:20}
+.back{border:1px solid #444;background:#15151d;color:#aaa;font:700 1rem 'Inconsolata',monospace;width:38px;height:38px;cursor:pointer;text-decoration:none;display:grid;place-items:center}
+.back:hover{color:#fff;border-color:#777}
+.brand{font-family:'Press Start 2P',monospace;color:var(--red);font-size:.72rem;letter-spacing:.08em}
+.balance{margin-left:auto;padding:9px 13px;border:1px solid #554a00;color:var(--yellow);background:#181500;font-weight:700;transition: transform 0.2s}
+.content{max-width:980px;margin:0 auto;padding:28px 18px 30px}
+.money-digger-rule{background:#12121a;border:1px solid var(--red);padding:20px;display:flex;flex-direction:column;gap:10px;margin:14px 0 18px;line-height:1.55;color:var(--text)}.money-digger-rule .rule-heading{font-family:'Press Start 2P',monospace;font-size:.58rem;color:var(--red);line-height:1.7}.money-digger-rule p{color:var(--muted);font-size:.75rem;line-height:1.5}.money-digger-rule .rule-rate{color:var(--red);font-weight:700}.money-digger-rule .rule-inner{display:block}.money-digger-rule .rule-reward{display:none}
+.view{display:none}.view.active{display:block}
+.title{font-family:'Press Start 2P',monospace;font-size:1rem;color:#ff5555;margin:4px 0 18px;line-height:1.6}
+.sub{color:var(--muted);line-height:1.6;margin-bottom:22px}
+.home-grid{display:grid;grid-template-columns:minmax(230px,.8fr) minmax(280px,1.2fr);gap:18px}
+.profile-card,.stat-card,.mission-card{background:#12121a;border:1px solid var(--border);padding:20px}
+.profile-card{min-height:390px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.skin-name{font-family:'Press Start 2P',monospace;margin-top:18px;font-size:.72rem;color:#fff; text-align: center; line-height: 1.4;}
+.skin-label{color:var(--muted);font-size:.72rem;margin-top:7px}
+.plix-big{font-family:'Press Start 2P',monospace;font-size:1.1rem;color:var(--yellow);margin-top:12px}
+.home-stats{display:grid;gap:18px}
+.stat-card strong{display:block;font-family:'Press Start 2P',monospace;color:#ff8888;font-size:.6rem;margin-bottom:10px}
+.stat-card span{font-size:1.35rem;font-weight:700;color:#f1f1ff}
+.skin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+.skin-card{background:#12121a;border:1px solid var(--border);padding:14px;text-align:center;transition:transform .12s,border-color .12s,box-shadow .12s}
+.skin-card:hover{transform:translateY(-2px);border-color:#55557a}
+.skin-card.legendary:hover{border-color:var(--legendary);box-shadow:0 0 15px rgba(170,255,255,0.2)}
+.skin-card.event:hover{border-color:var(--yellow);box-shadow:0 0 15px rgba(255,221,0,0.2)}
+.preview{height:116px;display:grid;place-items:center;background:#0c0c12;border:1px solid #222237;margin-bottom:12px}
+.preview canvas,.hero canvas{image-rendering:auto}
+.skin-card.chicken-jockey-skin .preview{background:#050508;border-color:#303044;box-shadow:inset 0 0 0 1px #09090c}
+.skin-card.chicken-jockey-skin .preview canvas{image-rendering:pixelated}
+.name{font-weight:700;color:#f0f0ff;font-size:.75rem;margin-bottom:5px;min-height: 24px; line-height:1.3;}
+.cost{color:var(--yellow);font-size:.75rem;margin-bottom:12px}
+.skin-card button,.mission-card button{width:100%;padding:8px 7px;border:1px solid #555;background:#191922;color:#aaa;font:700 .66rem 'Inconsolata',monospace;cursor:pointer;transition: all 0.2s;}
+.skin-card button:hover,.mission-card button:hover{color:#fff;border-color:#888}
+.skin-card button.equipped{border-color:var(--green);color:var(--green);background:#0b1d16;cursor:default}
+.skin-card button.buy,.mission-card button{border-color:#ff5555;color:#ff8888}
+.skin-card button.buy:hover,.mission-card button:hover{background:#2a0e0e}
+.skin-card.locked{opacity:.75}
+.skin-card.rainbow-reward .preview{box-shadow:0 0 18px rgba(255,0,170,.25),inset 0 0 16px rgba(0,255,255,.16)}
+.skin-card.rainbow-reward canvas{filter:drop-shadow(0 0 5px rgba(255,80,220,.7))}
+.skin-card.special-reward .cost{color:var(--legendary)}
+.missions{display:grid;gap:14px;margin-bottom:28px;}
+.mission-group-heading{font-family:'Press Start 2P',monospace;font-size:.62rem;color:#ff7777;padding:12px 0 4px;margin-top:8px;border-bottom:1px solid var(--border);line-height:1.7;}
+.mission-card{display:flex;flex-direction:column;gap:12px;}
+.mission-card .mission-inner{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;}
+.mission-card h3{font-family:'Press Start 2P',monospace;font-size:.58rem;color:#fff;margin-bottom:8px;line-height:1.6}
+.mission-card p{color:var(--muted);font-size:.75rem;line-height:1.5}
+.bar{margin-top:10px;height:7px;background:#242432;overflow:hidden}
+.bar span{display:block;height:100%;background:#ff4444!important;transition:width .3s;}
+.reward{color:var(--yellow);font-weight:700;font-size:.8rem;white-space:nowrap;text-align:right}
+.mission-card button{width:auto;margin-top:8px;padding:8px 11px}
+.mission-card button:disabled{opacity:.45;cursor:default;background:#12121a;border-color:#333;color:#555;}
+.daily-bonus{border-color: var(--yellow); background: linear-gradient(45deg, #12121a, #1a1a00);}
+.daily-bonus h3{color: var(--yellow);}
+.note{color:#666688;font-size:.7rem;line-height:1.6; border-top: 1px dashed #333; padding-top: 18px;}
+.nav{position:fixed;bottom:0;left:0;right:0;height:78px;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--border);background:rgba(10,10,15,.97);z-index:30}
+.nav button{border:0;background:transparent;color:#666688;font:700 .68rem 'Press Start 2P',monospace;cursor:pointer;position:relative}
+.nav button.active{color:#ff6666;background:#170b0b}
+.nav button.active:before{content:'';position:absolute;top:0;left:18%;right:18%;height:3px;background:#ff4444}
+.hero{width:160px;height:160px;margin-bottom:6px;background:#0c0c12;border:1px solid #222237;display:grid;place-items:center}
+.level-tabs { display: flex; gap: 6px; margin-bottom: 4px; }
+.level-tabs button { flex:1; padding: 5px 0; font-size: 0.55rem; background: #0c0c12; border: 1px solid #333; color: #777; cursor:pointer; border-radius:3px; transition: 0.2s; margin-top:0 !important; width:100%;}
+.level-tabs button:hover { background: #1a1a28; color: #aaa; }
+.level-tabs button.active { background: #2a0e0e; border-color: #ff5555; color: #ff8888; }
+.level-tabs button.claimed { color: #00ff88; border-color: #00ff88; background: #061d11; }
+/* Money Digger conversion rule: use the same red accent as the other PLIXO mission cards. */
+.money-digger-rule{background:#12121a;border:1px solid var(--red);padding:20px;display:flex;flex-direction:column;gap:10px;margin:14px 0 18px;line-height:1.55;color:var(--text)}
+@media(max-width:700px){.home-grid{grid-template-columns:1fr}.mission-inner{grid-template-columns:1fr}.balance{font-size:.85rem}.brand{font-size:.58rem}.content{padding-left:12px;padding-right:12px}}
+
+#account-gate[hidden]{display:none!important}
+#account-gate{position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(3,3,8,.92);backdrop-filter:blur(8px)}
+.account-gate-card{width:min(100%,480px);max-height:90vh;overflow:auto;padding:28px;background:#12121a;border:1px solid #34344b;border-top:3px solid #4488ff;box-shadow:0 20px 70px rgba(0,0,0,.55)}
+.account-gate-card h2{font-family:'Press Start 2P',monospace;font-size:.78rem;color:#4488ff;line-height:1.7;margin-bottom:12px}
+.account-gate-card p{font-size:.82rem;line-height:1.65;color:#9999bb;margin-bottom:16px}
+.account-gate-card label{display:block;font-size:.7rem;color:#aaa;margin:12px 0 6px}
+.account-gate-card input{width:100%;padding:12px;background:#0a0a0f;color:#eee;border:1px solid #35354c;font:700 .9rem 'Inconsolata',monospace;outline:none}
+.account-gate-card input:focus{border-color:#4488ff}
+.account-gate-card button{width:100%;padding:12px;margin-top:10px;background:#4488ff;color:#05050a;border:1px solid #4488ff;font:700 .58rem 'Press Start 2P',monospace;line-height:1.6;cursor:pointer}
+.account-gate-card button.secondary{background:#15151f;color:#aaa;border-color:#444}
+.account-gate-error{min-height:1.2em;margin-top:10px;color:#ff6666;font-size:.75rem;line-height:1.5}
+.account-gate-separator{display:flex;align-items:center;gap:12px;color:#666688;font-size:.65rem;margin:20px 0}
+.account-gate-separator:before,.account-gate-separator:after{content:'';height:1px;background:#29293b;flex:1}
+
+</style>
+</head>
+<body>
+
+<div id="account-gate" hidden role="dialog" aria-modal="true" aria-labelledby="account-gate-title">
+  <div class="account-gate-card">
+    <h2 id="account-gate-title">PLIXO ACCOUNT REQUIRED</h2>
+    <p>You need one PLIXO leaderboard account to use skins and save your PLIX, achievements and missions. Create one once, or connect the account you already use on the leaderboard.</p>
+    <label for="skin-account-name">NEW ACCOUNT — PLAYER NAME</label>
+    <input id="skin-account-name" maxlength="24" autocomplete="nickname" placeholder="Choose your player name">
+    <button type="button" onclick="createSkinAccount()">CREATE ACCOUNT & CONTINUE</button>
+    <div class="account-gate-separator">OR CONNECT AN EXISTING ACCOUNT</div>
+    <label for="skin-account-code">20-CHARACTER ACCOUNT CODE</label>
+    <input id="skin-account-code" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Enter your leaderboard code">
+    <button class="secondary" type="button" onclick="connectSkinAccount()">CONNECT EXISTING ACCOUNT</button>
+    <div id="account-gate-error" class="account-gate-error" aria-live="polite"></div>
+  </div>
+</div>
+
+<header class="top">
+    <a class="back" href="index.html" title="Back to arcade">←</a>
+    <div class="brand" onclick="addPlixoProgress('dm_9', 1)" style="cursor:pointer;">PLIXO / PROFILE</div>
+    <div class="balance" id="balance">0 PLIX</div>
+</header>
+
+<main class="content">
+<section class="view active" data-view="home">
+  <div class="title">// HOME</div>
+  <p class="sub">Your current block, your profile, and your PLIX balance.</p>
+  <div class="home-grid">
+      <div class="profile-card">
+          <div class="hero"><canvas id="home-preview" width="160" height="160"></canvas></div>
+          <div class="skin-name" id="home-name">PLAYER</div>
+          <div class="skin-label">current skin</div>
+          <div class="plix-big" id="home-plix">0 PLIX</div>
+      </div>
+      <div class="home-stats">
+          <div class="stat-card"><strong>OWNED SKINS</strong><span id="owned-count">1</span></div>
+          <div class="stat-card"><strong>ACHIEVEMENTS</strong><span id="claimed-count">0</span> / <span id="achievement-total">23</span></div>
+          <div class="stat-card"><strong>SKIN COMPATIBILITY</strong><span>ALL GAMES</span></div>
+      </div>
+  </div>
+</section>
+
+<section class="view" data-view="skins">
+    <div class="title">// SKINS</div>
+    <p class="sub">Upgrade your block! Event skins only appear during holidays.</p>
+    <div class="skin-grid" id="skin-grid"></div>
+</section>
+
+<section class="view" data-view="coins">
+    <div class="title">// EARN PLIX</div>
+    <p class="sub">Claim your daily bonus, complete daily and long-term missions, and unlock rare achievements.</p>
+    
+    <div class="mission-card daily-bonus" style="flex-direction:row;" id="daily-bonus-card">
+        <div class="mission-inner" style="width:100%">
+            <div>
+                <h3>DAILY LOGIN BONUS</h3>
+                <p>Come back every day for free PLIX!</p>
+            </div>
+            <div>
+                <div class="reward">+50 PLIX</div>
+                <button id="btn-daily-bonus" onclick="claimDailyBonus()">CLAIM</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="mission-card money-digger-rule" role="note" aria-label="Money Digger PLIX conversion rule">
+        <div class="rule-heading">💵 MONEY DIGGER → PLIX</div>
+        <div class="rule-inner">
+            <p>Every <b>10 clicks</b> in Money Digger earn <span class="rule-rate">1 PLIX</span>.</p>
+        </div>
+    </div>
+
+    <div class="title" style="margin-top: 24px; font-size: 0.8rem;">// DAILY &amp; LONG-TERM MISSIONS</div>
+    <div class="sub" style="margin-top:-10px; margin-bottom:14px;">7 daily missions reset each day. Long-term mission progress stays saved.</div>
+    <div class="missions" id="daily-missions"></div>
+
+
+
+    <div class="title" style="margin-top: 24px; font-size: 0.8rem;">// ACHIEVEMENTS</div>
+    <div class="missions" id="achievements"></div>
+
+    <div class="note">PLIX, skins, and progress are synced automatically in the background.</div>
+</section>
+</main>
+
+<nav class="nav">
+    <button data-view-btn="home" class="active">⌂ HOME</button>
+    <button data-view-btn="skins">◆ SKINS</button>
+    <button data-view-btn="coins">◎ EARN</button>
+</nav>
+
+<script>
+const firebaseConfig = {
+  databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "money-digger-9b05e"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+function getSyncCode() {
+    // Accept the leaderboard's 20-character alphanumeric account code and legacy numeric codes.
+    const candidates = [
+        localStorage.getItem('pg_account_code'),
+        localStorage.getItem('pg_player_id'),
+        localStorage.getItem('plixo_sync_code')
+    ];
+    return candidates.map(value => String(value || '').trim().toUpperCase()).find(value => /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/.test(value)) || null;
+}
+
+window.onload = async () => {
+    const code = getSyncCode();
+    if (code) {
+        try {
+            const accountSnapshot = await db.ref('accountCodes/' + code).once('value');
+            const accountRecord = accountSnapshot.val();
+            if (accountRecord && accountRecord.deviceId && accountRecord.name) {
+                localStorage.setItem('pg_player_name', String(accountRecord.name));
+                localStorage.setItem('pg_device_id', String(accountRecord.deviceId));
+                if (accountRecord.createdAt) {
+                    localStorage.setItem('pg_account_created_at', String(accountRecord.createdAt));
+                    localStorage.setItem('plixo_account_created_at', String(accountRecord.createdAt));
+                    localStorage.setItem('plixo_account_created_at_source', 'firebase');
+                }
+                await linkFirebase(code);
+                return;
+            }
+        } catch (error) {
+            // A previously registered account can still open locally during a brief Firebase outage.
+            console.warn('Could not verify account registry; continuing with the saved account code.', error);
+            await linkFirebase(code);
+            return;
+        }
+    }
+    // No registered leaderboard account: block skin access and show the create/connect flow.
+    document.getElementById('account-gate').hidden = false;
+    const existingName = localStorage.getItem('pg_player_name') || localStorage.getItem('pixel_games_username') || '';
+    if (existingName) document.getElementById('skin-account-name').value = existingName;
+    document.getElementById('skin-account-name').focus();
+    refresh();
+};
+
+function isValidPlixoAccountCode(value) {
+    const code = String(value || '').trim().toUpperCase();
+    return /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/.test(code);
+}
+function newPlixoDeviceId() {
+    let id = localStorage.getItem('pg_device_id');
+    if (!id) { id = 'lb-' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36); }
+    localStorage.setItem('pg_device_id', id);
+    return id;
+}
+function setAccountGateError(message) {
+    const el = document.getElementById('account-gate-error');
+    if (el) el.textContent = message || '';
+}
+function getOfflineDiggerTransferId() {
+    let id = localStorage.getItem('md6_plixo_offline_transfer_id');
+    if (!id) { id = 'offline-' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36); localStorage.setItem('md6_plixo_offline_transfer_id', id); }
+    return id.replace(/[.#$\[\]/]/g, '_');
+}
+function localDiggerState() {
+    const total = Math.max(0, Number(localStorage.getItem('md6_plixo_local_total_clicks')) || 0,
+        Number(localStorage.getItem('md6_sp_bills')) || 0);
+    const paid = Math.max(0, Number(localStorage.getItem('md6_plixo_local_paid_milestones')) || 0);
+    return { total_clicks: Math.floor(total), plix_awarded_clicks: Math.floor(paid), legacy_seeded: true };
+}
+function prepareOfflineDiggerBalance() {
+    // Apply any historic local Money Digger clicks before a brand-new profile is created.
+    const state = localDiggerState();
+    const previousPaid = Math.max(0, Number(localStorage.getItem('md6_plixo_local_paid_milestones')) || 0);
+    const targetPaid = Math.max(previousPaid, Math.floor(state.total_clicks / 10));
+    state.plix_awarded_clicks = targetPaid;
+    const delta = Math.max(0, targetPaid - previousPaid);
+    if (delta) {
+        const pendingBefore = Math.max(0, Number(localStorage.getItem('md6_plixo_offline_plix_pending')) || 0);
+        if (pendingBefore <= 0) {
+            localStorage.setItem('md6_plixo_offline_transfer_id', 'offline-' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36));
+        }
+        awardPlix(delta);
+        localStorage.setItem('md6_plixo_offline_plix_pending', String(pendingBefore + delta));
+    }
+    localStorage.setItem('md6_plixo_local_total_clicks', String(state.total_clicks));
+    localStorage.setItem('md6_plixo_local_paid_milestones', String(state.plix_awarded_clicks));
+    return state;
+}
+async function createSkinAccount() {
+    const nameEl = document.getElementById('skin-account-name');
+    const name = String(nameEl.value || '').trim();
+    if (!name) { setAccountGateError('Enter a player name first.'); nameEl.focus(); return; }
+    if (name.length > 24) { setAccountGateError('Your player name may contain up to 24 characters.'); return; }
+    const button = document.querySelector('#account-gate-card button');
+    const createButton = document.querySelector('#account-gate button:not(.secondary)');
+    if (createButton) { createButton.disabled = true; createButton.textContent = 'CREATING ACCOUNT...'; }
+    setAccountGateError('');
+    try {
+        const deviceId = newPlixoDeviceId();
+        const ownersSnap = await db.ref('nameOwners').once('value');
+        const owners = ownersSnap.val() || {};
+        const collision = Object.entries(owners).find(([id, val]) => id !== deviceId && val && val.name && String(val.name).toLowerCase() === name.toLowerCase());
+        if (collision) throw new Error('That player name is already taken. Choose another name.');
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        let reserved = false;
+        for (let attempt = 0; attempt < 12 && !reserved; attempt++) {
+            code = Array.from({length:20}, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+            const now = Date.now();
+            const result = await db.ref('accountCodes/' + code).transaction(current => current || {deviceId, name, createdAt: now}, undefined, false);
+            const record = result.snapshot && result.snapshot.val();
+            reserved = !!(result.committed && record && record.deviceId === deviceId);
+        }
+        if (!reserved) throw new Error('Could not reserve an account code. Please try again.');
+        const createdAt = Date.now();
+        const state = prepareOfflineDiggerBalance();
+        localStorage.setItem('pg_account_code', code);
+        localStorage.setItem('pg_player_name', name);
+        localStorage.setItem('pg_device_id', deviceId);
+        localStorage.setItem('pg_account_created_at', String(createdAt));
+        localStorage.setItem('plixo_account_created_at', String(createdAt));
+        localStorage.setItem('plixo_account_created_at_source', 'firebase');
+        if (!localStorage.getItem('md6_did')) localStorage.setItem('md6_did', deviceId);
+        localStorage.setItem('md6_n', name);
+        await db.ref('nameOwners/' + deviceId).set({name, createdAt});
+        await db.ref('accountCodes/' + code).update({deviceId, name, createdAt});
+        await db.ref('plixo_users/' + code).transaction(current => {
+            const data = current && typeof current === 'object' ? {...current} : {};
+            const existingBalance = Number(data.plix);
+            data.plix = Number.isFinite(existingBalance) ? existingBalance : plix();
+            data.player_name = name;
+            data.account_created_at = Number(data.account_created_at) || createdAt;
+            data.money_digger = data.money_digger && typeof data.money_digger === 'object'
+                ? {...data.money_digger, total_clicks: Math.max(Number(data.money_digger.total_clicks)||0, state.total_clicks), plix_awarded_clicks: Math.max(Number(data.money_digger.plix_awarded_clicks)||0, state.plix_awarded_clicks), legacy_seeded:true}
+                : state;
+            return data;
+        });
+        localStorage.setItem('md6_plixo_offline_plix_pending', '0');
+        document.getElementById('account-gate').hidden = true;
+        await linkFirebase(code);
+        await syncToFirebase();
+    } catch (error) {
+        console.error('Could not create PLIXO account:', error);
+        setAccountGateError(error && error.message ? error.message : 'Could not create your account. Check your connection and try again.');
+    } finally {
+        if (createButton) { createButton.disabled = false; createButton.textContent = 'CREATE ACCOUNT & CONTINUE'; }
+    }
+}
+async function connectSkinAccount() {
+    const code = String(document.getElementById('skin-account-code').value || '').trim().toUpperCase();
+    const previousCode = getSyncCode();
+    // Preserve the previous binding before replacing the active code so local data cannot leak between accounts.
+    if (previousCode && previousCode !== code && !localStorage.getItem('plixo_bound_account_code')) {
+        localStorage.setItem('plixo_bound_account_code', previousCode);
+    }
+    const button = document.querySelector('#account-gate button.secondary');
+    if (!isValidPlixoAccountCode(code)) { setAccountGateError('Enter the complete 20-character leaderboard account code.'); return; }
+    if (button) { button.disabled = true; button.textContent = 'CONNECTING...'; }
+    setAccountGateError('');
+    try {
+        const snap = await db.ref('accountCodes/' + code).once('value');
+        const account = snap.val();
+        if (!account || !account.deviceId || !account.name) throw new Error('Account code not found. Open the Leaderboard and copy the code again.');
+        localStorage.setItem('pg_account_code', code);
+        localStorage.setItem('pg_player_name', String(account.name));
+        localStorage.setItem('pg_device_id', String(account.deviceId));
+        localStorage.setItem('md6_n', String(account.name));
+        if (!localStorage.getItem('md6_did')) localStorage.setItem('md6_did', String(account.deviceId));
+        if (account.createdAt) {
+            localStorage.setItem('pg_account_created_at', String(account.createdAt));
+            localStorage.setItem('plixo_account_created_at', String(account.createdAt));
+            localStorage.setItem('plixo_account_created_at_source', 'firebase');
+        }
+        document.getElementById('account-gate').hidden = true;
+        await linkFirebase(code);
+    } catch (error) {
+        console.error('Could not connect PLIXO account:', error);
+        setAccountGateError(error && error.message ? error.message : 'Could not connect your account. Check your connection.');
+    } finally {
+        if (button) { button.disabled = false; button.textContent = 'CONNECT EXISTING ACCOUNT'; }
+    }
+}
+async function transferPendingOfflineMoneyDiggerCredits(code) {
+    const pending = Math.max(0, Number(localStorage.getItem('md6_plixo_offline_plix_pending')) || 0);
+    if (!pending) return;
+    const transferId = getOfflineDiggerTransferId();
+    const result = await db.ref('plixo_users/' + code).transaction(current => {
+        const data = current && typeof current === 'object' ? {...current} : {};
+        const transfers = data.money_digger_offline_transfers && typeof data.money_digger_offline_transfers === 'object' ? {...data.money_digger_offline_transfers} : {};
+        if (!transfers[transferId]) {
+            data.plix = (Number(data.plix) || 0) + pending;
+            transfers[transferId] = true;
+            data.money_digger_offline_transfers = transfers;
+        }
+        return data;
+    });
+    if (result.committed && result.snapshot && result.snapshot.exists()) {
+        localStorage.setItem('md6_plixo_offline_plix_pending', '0');
+        localStorage.setItem('plixo_plix', String(Number(result.snapshot.val().plix) || 0));
+        refresh();
+    }
+}
+async function reconcileMoneyDiggerLedgerAfterLink(code, hadProfile) {
+    const pending = Math.max(0, Number(localStorage.getItem('md6_plixo_offline_plix_pending')) || 0);
+    const localState = localDiggerState();
+    const transactionId = getOfflineDiggerTransferId();
+    const result = await db.ref('plixo_users/' + code).transaction(current => {
+        const data = current && typeof current === 'object' ? {...current} : {};
+        const md = data.money_digger && typeof data.money_digger === 'object' ? {...data.money_digger} : {};
+        if (!md.legacy_seeded) {
+            const totalClicks = Math.max(Number(md.total_clicks)||0, localState.total_clicks);
+            const eligible = Math.floor(totalClicks / 10);
+            const previouslyAwarded = Math.max(Number(md.plix_awarded_clicks)||0, localState.plix_awarded_clicks);
+            if (pending <= 0 && !Number(md.total_clicks) && !Number(md.plix_awarded_clicks)) {
+                // Existing leaderboard score predates this conversion ledger: backfill one time.
+                data.plix = (Number(data.plix)||0) + Math.max(0, eligible - previouslyAwarded);
+            }
+            md.total_clicks = totalClicks;
+            md.plix_awarded_clicks = pending > 0
+                ? Math.max(previouslyAwarded, eligible)
+                : Math.max(previouslyAwarded, eligible);
+            md.legacy_seeded = true;
+        }
+        const transfers = data.money_digger_offline_transfers && typeof data.money_digger_offline_transfers === 'object' ? {...data.money_digger_offline_transfers} : {};
+        if (hadProfile && pending > 0 && !transfers[transactionId]) {
+            data.plix = (Number(data.plix)||0) + pending;
+            transfers[transactionId] = true;
+            data.money_digger_offline_transfers = transfers;
+        }
+        data.money_digger = md;
+        return data;
+    });
+    if (result.committed && result.snapshot && result.snapshot.exists()) {
+        const data = result.snapshot.val();
+        if (data.money_digger) {
+            localStorage.setItem('md6_plixo_local_total_clicks', String(Number(data.money_digger.total_clicks)||0));
+            localStorage.setItem('md6_plixo_local_paid_milestones', String(Number(data.money_digger.plix_awarded_clicks)||0));
+        }
+        if (data.plix !== undefined) localStorage.setItem('plixo_plix', String(Number(data.plix)||0));
+        if (pending > 0) localStorage.setItem('md6_plixo_offline_plix_pending', '0');
+    }
+}
+
+function linkFirebase(code) {
+    return db.ref('plixo_users/' + code).once('value').then(async (snapshot) => {
+        const today = getToday();
+        const data = snapshot.exists() ? (snapshot.val() || {}) : {};
+        const previousBoundCode = localStorage.getItem('plixo_bound_account_code');
+        const sameAccount = !previousBoundCode || previousBoundCode === code;
+
+        // Do not mix locally cached progress from a different account into this profile.
+        if (!sameAccount) clearAccountLocalState();
+
+        const localUpdatedAt = Number(localStorage.getItem('plixo_profile_updated_at')) || 0;
+        const cloudUpdatedAt = Number(data.profile_updated_at) || 0;
+        // Legacy records have no timestamp. Import local balance once when linking such a record.
+        const localIsNewer = sameAccount && (localUpdatedAt > cloudUpdatedAt || (!cloudUpdatedAt && localStorage.getItem('plixo_plix') !== null));
+
+        if (snapshot.exists()) {
+            const localBalance = plix();
+            if (data.plix !== undefined) {
+                localStorage.setItem('plixo_plix', String(localIsNewer ? localBalance : Math.max(0, Number(data.plix) || 0)));
+            } else if (!sameAccount) {
+                localStorage.setItem('plixo_plix', '0');
+            }
+
+            if (data.money_digger && typeof data.money_digger === 'object') {
+                localStorage.setItem('md6_plixo_local_total_clicks', String(Number(data.money_digger.total_clicks) || 0));
+                localStorage.setItem('md6_plixo_local_paid_milestones', String(Number(data.money_digger.plix_awarded_clicks) || 0));
+            }
+
+            const localOwned = owned();
+            const cloudOwned = data.skins && typeof data.skins === 'object' ? data.skins : {classic:true};
+            const mergedOwned = sameAccount ? {...cloudOwned, ...localOwned, classic:true} : {...cloudOwned, classic:true};
+            localStorage.setItem('plixo_owned_skins', JSON.stringify(mergedOwned));
+
+            const localSelected = selected();
+            const cloudSelected = SKINS[data.selected_skin] ? data.selected_skin : 'classic';
+            const mergedSelected = localIsNewer ? localSelected : cloudSelected;
+            localStorage.setItem('plixo_selected_skin', mergedOwned[mergedSelected] ? mergedSelected : (mergedOwned[localSelected] ? localSelected : 'classic'));
+
+            const mergedProgress = sameAccount
+                ? mergeNumericProgress(data.mission_progress, parse('plixo_mission_progress', {}))
+                : (data.mission_progress && typeof data.mission_progress === 'object' ? data.mission_progress : {});
+            localStorage.setItem('plixo_mission_progress', JSON.stringify(mergedProgress));
+
+            const mergedMissionClaims = sameAccount
+                ? mergeClaimMaps(data.claimed_missions, parse('plixo_claimed_missions', {}))
+                : (data.claimed_missions && typeof data.claimed_missions === 'object' ? data.claimed_missions : {});
+            localStorage.setItem('plixo_claimed_missions', JSON.stringify(mergedMissionClaims));
+
+            const mergedAchievementClaims = sameAccount
+                ? mergeClaimMaps(data.claimed_achievements, parse('plixo_claimed_achievements', {}))
+                : (data.claimed_achievements && typeof data.claimed_achievements === 'object' ? data.claimed_achievements : {});
+            localStorage.setItem('plixo_claimed_achievements', JSON.stringify(mergedAchievementClaims));
+
+            const cloudLevels = data.active_mission_levels && typeof data.active_mission_levels === 'object' ? data.active_mission_levels : {};
+            const localLevels = sameAccount ? parse('plixo_active_mission_levels', {}) : {};
+            const mergedLevels = localIsNewer ? {...cloudLevels, ...localLevels} : {...localLevels, ...cloudLevels};
+            localStorage.setItem('plixo_active_mission_levels', JSON.stringify(mergedLevels));
+            activeLevels = mergedLevels;
+
+            if (typeof data.skin_image === 'string' && /^data:image\//.test(data.skin_image)) {
+                if (!sameAccount || !localIsNewer || !localStorage.getItem('plixo_skin_image')) {
+                    localStorage.setItem('plixo_skin_image', data.skin_image);
+                }
+            }
+
+            const localPlayed = sameAccount ? parse('plixo_played_games', []) : [];
+            const cloudPlayed = Array.isArray(data.played_games) ? data.played_games : [];
+            localStorage.setItem('plixo_played_games', JSON.stringify([...new Set([...cloudPlayed, ...localPlayed]) ]));
+
+            // Merge today's daily progress and claims without resetting already-completed work.
+            if (data.daily && data.daily.date === today) {
+                const localDailyProg = sameAccount ? dailyProgress() : {};
+                const localDailyClaims = sameAccount ? dailyClaimed() : {};
+                localStorage.setItem('plixo_daily_progress_' + today, JSON.stringify(mergeNumericProgress(data.daily.progress, localDailyProg)));
+                localStorage.setItem('plixo_daily_claimed_' + today, JSON.stringify(mergeClaimMaps(data.daily.claimed, localDailyClaims)));
+                if (data.daily.bonus === today || (sameAccount && localStorage.getItem('plixo_daily_bonus_date') === today)) {
+                    localStorage.setItem('plixo_daily_bonus_date', today);
+                } else if (data.daily.bonus) {
+                    localStorage.setItem('plixo_daily_bonus_date', String(data.daily.bonus));
+                }
+            } else if (!sameAccount) {
+                localStorage.removeItem('plixo_daily_progress_' + today);
+                localStorage.removeItem('plixo_daily_claimed_' + today);
+                localStorage.removeItem('plixo_daily_bonus_date');
+            }
+
+            if (data.daily_games && data.daily_games.date === today && Array.isArray(data.daily_games.games)) {
+                const localDailyGames = sameAccount ? parse('plixo_daily_games_' + today, []) : [];
+                localStorage.setItem('plixo_daily_games_' + today, JSON.stringify([...new Set([...data.daily_games.games, ...localDailyGames])]));
+            }
+
+            // The exact 12 missions picked for this account today are saved separately from their progress.
+            const cloudMissionSelection = data.daily_missions && data.daily_missions.date === today && Array.isArray(data.daily_missions.ids)
+                ? data.daily_missions.ids.filter(id => getEligibleDailyMissionsPool().some(m => m.id === id)).slice(0, 12)
+                : [];
+            const localMissionDate = sameAccount ? localStorage.getItem('plixo_daily_missions_date') : null;
+            const localMissionSelection = localMissionDate === today ? parse('plixo_daily_missions_ids', []) : [];
+            let chosenMissionSelection = localIsNewer && localMissionSelection.length ? localMissionSelection : cloudMissionSelection;
+            if (!chosenMissionSelection.length && localMissionSelection.length) chosenMissionSelection = localMissionSelection;
+            if (chosenMissionSelection.length) {
+                localStorage.setItem('plixo_daily_missions_date', today);
+                localStorage.setItem('plixo_daily_missions_ids', JSON.stringify(chosenMissionSelection));
+            } else {
+                localStorage.removeItem('plixo_daily_missions_date');
+                localStorage.removeItem('plixo_daily_missions_ids');
+            }
+
+            const accountCreatedAt = findAccountCreatedAt(data);
+            if (accountCreatedAt) {
+                localStorage.setItem('plixo_account_created_at', String(accountCreatedAt));
+                localStorage.setItem('plixo_account_created_at_source', 'firebase');
+                localStorage.setItem('pg_account_created_at', String(accountCreatedAt));
+            }
+        } else {
+            // Keep this browser's progress for a first account, but start clean when switching to an empty account.
+            if (!sameAccount) clearAccountLocalState();
+        }
+
+        localStorage.setItem('plixo_bound_account_code', code);
+
+        const dateFromRecord = findAccountCreatedAt(data);
+        if (dateFromRecord) {
+            localStorage.setItem('plixo_account_created_at', String(dateFromRecord));
+            localStorage.setItem('plixo_account_created_at_source', 'firebase');
+            localStorage.setItem('pg_account_created_at', String(dateFromRecord));
+        }
+
+        // Prefer an existing trusted creation date; never replace it with a new date on reconnect.
+        if (code && !dateFromRecord) {
+            let dateToPersist = knownAccountCreatedAt();
+            if (!dateToPersist) {
+                dateToPersist = Date.now();
+                localStorage.setItem('plixo_account_first_seen_at', String(dateToPersist));
+                localStorage.setItem('plixo_account_created_at_source', 'first_seen');
+            } else if (localStorage.getItem('plixo_account_created_at_source') !== 'first_seen' && !localStorage.getItem('plixo_account_created_at')) {
+                localStorage.setItem('plixo_account_created_at', String(dateToPersist));
+                localStorage.setItem('plixo_account_created_at_source', 'local');
+            }
+            await db.ref('plixo_users/' + code + '/account_created_at').transaction(current => current || dateToPersist);
+        }
+
+        const preferredLocalBalance = localIsNewer ? plix() : null;
+        await reconcileMoneyDiggerLedgerAfterLink(code, snapshot.exists());
+        // Reconciliation imports Money Digger transfers; retain a newer offline balance as well.
+        if (preferredLocalBalance !== null) localStorage.setItem('plixo_plix', String(preferredLocalBalance));
+        // Ensure this exact daily mission set exists before writing the full profile back.
+        getDailyMissionsForToday();
+        await syncToFirebase();
+        refresh();
+    }).catch(e => { console.warn('PLIXO account sync failed', e); refresh(); });
+}
+
+function mergeNumericProgress(cloudValue, localValue) {
+    const cloud = cloudValue && typeof cloudValue === 'object' ? cloudValue : {};
+    const local = localValue && typeof localValue === 'object' ? localValue : {};
+    const merged = {};
+    for (const key of new Set([...Object.keys(cloud), ...Object.keys(local)])) {
+        const a = Number(cloud[key]);
+        const b = Number(local[key]);
+        if (Number.isFinite(a) || Number.isFinite(b)) merged[key] = Math.max(Number.isFinite(a) ? a : 0, Number.isFinite(b) ? b : 0);
+        else if (local[key] !== undefined || cloud[key] !== undefined) merged[key] = local[key] !== undefined ? local[key] : cloud[key];
+    }
+    return merged;
+}
+function mergeClaimMaps(cloudValue, localValue) {
+    const cloud = cloudValue && typeof cloudValue === 'object' ? cloudValue : {};
+    const local = localValue && typeof localValue === 'object' ? localValue : {};
+    const merged = {...cloud};
+    for (const [key, value] of Object.entries(local)) if (value) merged[key] = true;
+    return merged;
+}
+function clearAccountLocalState() {
+    const exactKeys = [
+        'plixo_plix', 'plixo_owned_skins', 'plixo_selected_skin', 'plixo_mission_progress',
+        'plixo_claimed_missions', 'plixo_claimed_achievements', 'plixo_played_games',
+        'plixo_active_mission_levels', 'plixo_skin_image', 'plixo_daily_bonus_date',
+        'plixo_daily_missions_date', 'plixo_daily_missions_ids', 'plixo_profile_updated_at',
+        'plixo_account_created_at', 'plixo_account_first_seen_at', 'plixo_account_created_at_source'
+    ];
+    exactKeys.forEach(key => localStorage.removeItem(key));
+    const prefixes = ['plixo_daily_progress_', 'plixo_daily_claimed_', 'plixo_daily_games_'];
+    const oldDailyKeys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && prefixes.some(prefix => key.startsWith(prefix))) oldDailyKeys.push(key);
+    }
+    oldDailyKeys.forEach(key => localStorage.removeItem(key));
+}
+
+function syncToFirebase() {
+    const code = getSyncCode();
+    if (!code) return Promise.resolve();
+    const today = getToday();
+    let dailyMissionIds = localStorage.getItem('plixo_daily_missions_date') === today
+        ? parse('plixo_daily_missions_ids', [])
+        : [];
+    if (!Array.isArray(dailyMissionIds) || !dailyMissionIds.length) {
+        dailyMissionIds = getDailyMissionsForToday().map(m => m.id);
+    }
+    const profileUpdatedAt = Date.now();
+    localStorage.setItem('plixo_profile_updated_at', String(profileUpdatedAt));
+    const payload = {
+        plix: plix(),
+        skins: owned(),
+        selected_skin: selected(),
+        mission_progress: achievementProgress(),
+        claimed_missions: missionClaimed(),
+        claimed_achievements: achievementClaimed(),
+        active_mission_levels: parse('plixo_active_mission_levels', {}),
+        skin_image: localStorage.getItem('plixo_skin_image') || '',
+        played_games: [...new Set(parse('plixo_played_games', []))],
+        daily_missions: { date: today, ids: dailyMissionIds },
+        daily_games: {
+            date: today,
+            games: [...new Set(parse('plixo_daily_games_' + today, []))]
+        },
+        daily: {
+            date: today,
+            progress: dailyProgress(),
+            claimed: dailyClaimed(),
+            bonus: localStorage.getItem('plixo_daily_bonus_date') || ''
+        },
+        profile_updated_at: profileUpdatedAt
+    };
+    const accountCreatedAt = knownAccountCreatedAt();
+    if (accountCreatedAt) payload.account_created_at = accountCreatedAt;
+
+    // Use a transaction so an older concurrent sync cannot overwrite a newer profile.
+    return db.ref('plixo_users/' + code).transaction(current => {
+        const existing = current && typeof current === 'object' ? {...current} : {};
+        if ((Number(existing.profile_updated_at) || 0) > profileUpdatedAt) return;
+        return {...existing, ...payload};
+    }, undefined, false).catch(e => console.warn('PLIXO sync failed', e));
+}
+
+function addPlixoProgress(missionId, amount = 1) {
+    let globalProg = JSON.parse(localStorage.getItem('plixo_mission_progress') || '{}');
+    globalProg[missionId] = (globalProg[missionId] || 0) + amount;
+    localStorage.setItem('plixo_mission_progress', JSON.stringify(globalProg));
+
+    let today = new Date().toDateString();
+    let dailyKey = 'plixo_daily_progress_' + today;
+    let dailyProg = JSON.parse(localStorage.getItem(dailyKey) || '{}');
+    dailyProg[missionId] = (dailyProg[missionId] || 0) + amount;
+    localStorage.setItem(dailyKey, JSON.stringify(dailyProg));
+    
+    syncToFirebase();
+}
+
+function recordDailyPlixEarning(amount) {
+    const earned = Math.max(0, Math.floor(Number(amount) || 0));
+    if (!earned) return;
+    const key = 'plixo_daily_progress_' + getToday();
+    const progress = parse(key, {});
+    progress.dm_7 = (Number(progress.dm_7) || 0) + earned;
+    localStorage.setItem(key, JSON.stringify(progress));
+}
+
+function awardPlix(amount) {
+    const earned = Math.max(0, Math.floor(Number(amount) || 0));
+    if (!earned) return plix();
+    localStorage.setItem('plixo_plix', String(plix() + earned));
+    recordDailyPlixEarning(earned);
+    return plix();
+}
+
+function setPlixoMaxProgress(missionId, value) {
+    let globalProg = JSON.parse(localStorage.getItem('plixo_mission_progress') || '{}');
+    if (value > (globalProg[missionId] || 0)) {
+        globalProg[missionId] = value;
+        localStorage.setItem('plixo_mission_progress', JSON.stringify(globalProg));
+        syncToFirebase();
+    }
+}
+
+function isEventActive(evt) {
+    const d = new Date();
+    const m = d.getMonth(); 
+    const day = d.getDate();
+    if (evt === 'halloween') return (m === 9 && day >= 30) || (m === 10 && day === 1);
+    if (evt === 'sint') return (m === 11 && day >= 4 && day <= 6);
+    if (evt === 'kerst') return (m === 11 && day >= 24 && day <= 26);
+    if (evt === 'nieuwjaar') return (m === 11 && day === 31) || (m === 0 && day <= 2);
+    return false;
+}
+
+const SKINS = {
+ classic: {name:'Classic Red', cost:0, color:'#e53935'},
+ blue:    {name:'Electric Blue', cost:100, color:'#2878ff'},
+ green:   {name:'Pixel Green', cost:100, color:'#22c55e'},
+ pink:    {name:'Pastel Pink', cost:100, color:'#ff88cc'},
+ game_dvd: {name:'Bouncing DVD', cost:500, color:'#1a0011'},
+ game_plat: {name:'The Spike', cost:500, color:'#1a0505'},
+ game_dodge: {name:'Stickman', cost:500, color:'#1a0011'},
+ game_bug: {name:'Bug', cost:500, color:'#06152e'},
+ game_dig: {name:'Money Bill', cost:500, color:'#1a0d00'},
+ game_luck: {name:'Lucky Wheel', cost:500, color:'#001a1a'},
+ game_apoc: {name:'Zombie Face', cost:500, color:'#0f1f0f'},
+ game_time: {name:'Time Clock', cost:500, color:'#fffdfa'},
+ purple:  {name:'Void Purple', cost:1000, color:'#9b59ff'},
+ cyan:    {name:'Cyan Core', cost:1000, color:'#00d9ff'},
+ checker: {name:'Checker', cost:1500, color:'#ff4455'},
+ flame:   {name:'Flame', cost:1500, color:'#f04b23'},
+ face:    {name:'Pixel Face', cost:1500, color:'#ffb3b3'},
+ ev_sint: {name:'Sinterklaas', cost:2000, color:'#e53935', event:'sint'},
+ ev_hal:  {name:'Halloween', cost:2000, color:'#ff7700', event:'halloween'},
+ ev_kerst:{name:'Christmas', cost:2000, color:'#008800', event:'kerst'},
+ ev_nwjr: {name:'New Year', cost:2000, color:'#111111', event:'nieuwjaar'},
+ rainbow: {name:'Rainbow', cost:5000, color:'#ff4477'},
+ diamond: {name:'Ice Diamond', cost:10000, color:'#aaffff'},
+ void:    {name:'The Void', cost:15000, color:'#050505'},
+  gold:    {name:'Golden Block', cost:50000, color:'#ffcc22'},
+  chicken_jockey: {name:'Chicken Jockey', cost:0, color:'#7cff5b', achievementOnly:true},
+  rainbow_spiral: {name:'Glowing Rainbow Spiral', cost:0, color:'#ff44dd', achievementOnly:true, animated:true}
+ };
+
+const DAILY_MISSIONS_POOL = [
+ {id:'dm_1', title:'DAILY GAMER', desc:'Play 1 random game today.', target:1, reward:25},
+ {id:'dm_2', title:'ARCADE HOPPER', desc:'Play 3 different games today.', target:3, reward:35},
+ {id:'dm_3', title:'THE TASTING', desc:'Play 5 different games today.', target:5, reward:50},
+ {id:'dm_4', title:'WARDROBE CHANGE', desc:'Change your skin once on the Skin page.', target:1, reward:20},
+ {id:'dm_5', title:'LEADERBOARD PEEK', desc:'Open the Leaderboard.', target:1, reward:20},
+ {id:'dm_6', title:'REGULAR VIEWER', desc:'Read a rule or the info page.', target:1, reward:20},
+ {id:'dm_7', title:'WEALTHY', desc:'Earn a total of 50 PLIX today.', target:50, reward:40},
+ {id:'dm_9', title:'WELCOME BACK', desc:'Click the PLIXO logo in the top bar 10 times.', target:10, reward:25},
+ {id:'dm_10', title:'SNAKE BITE', desc:'Get a score of 5 in the hidden Snake minigame.', target:5, reward:35},
+ {id:'dm_11', title:'GOLD DIGGER I', desc:'Click the button in Money Digger 100 times.', target:100, reward:25},
+ {id:'dm_12', title:'GOLD DIGGER II', desc:'Click the button in Money Digger 300 times.', target:300, reward:40},
+ {id:'dm_13', title:'GOLD DIGGER III', desc:'Click the button in Money Digger 500 times.', target:500, reward:60},
+ {id:'dm_21', title:'GRASSHOPPER I', desc:'Jump 25 times in Platformer.', target:25, reward:25},
+ {id:'dm_22', title:'GRASSHOPPER II', desc:'Jump 75 times in Platformer.', target:75, reward:45},
+ {id:'dm_25', title:'NO PAIN NO GAIN I', desc:'Die 5 times in Mini Spikes Platformer.', target:5, reward:25},
+ {id:'dm_26', title:'NO PAIN NO GAIN II', desc:'Die 15 times in Mini Spikes Platformer.', target:15, reward:45},
+ {id:'dm_28', title:'SMOOTH JUMPER', desc:'Play Platformer for 2 minutes.', target:120, reward:35},
+ {id:'dm_29', title:'SPIKE HUGGER', desc:'Touch a spike 10 times in Mini Spikes.', target:10, reward:30},
+ {id:'dm_34', title:'CORNER HUNTER I', desc:'Get 1 corner hit in DVD+.', target:1, reward:35},
+ {id:'dm_35', title:'CORNER HUNTER II', desc:'Get 3 corner hits in DVD+.', target:3, reward:60},
+ {id:'dm_51', title:'BUILDER I', desc:'Place 25 blocks in One Square.', target:25, reward:25},
+ {id:'dm_52', title:'BUILDER II', desc:'Place 100 blocks in One Square.', target:100, reward:50},
+ {id:'dm_53', title:'DEMOLISHER I', desc:'Break 25 blocks in One Square.', target:25, reward:25},
+ {id:'dm_54', title:'DEMOLISHER II', desc:'Break 100 blocks in One Square.', target:100, reward:50},
+ {id:'dm_61', title:'DODGER I', desc:'Dodge 10 balloons in Bug Escape.', target:10, reward:25},
+ {id:'dm_62', title:'DODGER II', desc:'Dodge 30 balloons in Bug Escape.', target:30, reward:45},
+ {id:'dm_63', title:'DODGER III', desc:'Dodge 60 balloons in Bug Escape.', target:60, reward:70},
+ {id:'dm_64', title:'FLYER I', desc:'Survive for 30 seconds total in Bug Escape.', target:30, reward:30},
+ {id:'dm_65', title:'FLYER II', desc:'Survive for 90 seconds total in Bug Escape.', target:90, reward:60},
+ {id:'dm_69', title:'STUNG I', desc:'Die 3 times in Bug Escape.', target:3, reward:20},
+ {id:'dm_70', title:'STUNG II', desc:'Die 10 times in Bug Escape.', target:10, reward:40},
+ {id:'dm_71', title:'ARENA FIGHTER I', desc:'Play 2 matches in Dodging Arena.', target:2, reward:25},
+ {id:'dm_72', title:'ARENA FIGHTER II', desc:'Play 5 matches in Dodging Arena.', target:5, reward:50},
+ {id:'dm_75', title:'STAY ALIVE', desc:'Survive for 1 minute total in the arena.', target:60, reward:35},
+ {id:'dm_91', title:'ZOMBIE HUNTER I', desc:'Kill 15 zombies in Mini Apocalypse.', target:15, reward:30},
+ {id:'dm_92', title:'ZOMBIE HUNTER II', desc:'Kill 40 zombies in Mini Apocalypse.', target:40, reward:60},
+ {id:'dm_93', title:'ZOMBIE HUNTER III', desc:'Kill 75 zombies in Mini Apocalypse.', target:75, reward:90},
+ {id:'dm_96', title:'TIME WATCHER I', desc:'Stare at Time Ticker for 1 minute.', target:1, reward:20},
+ {id:'dm_97', title:'TIME WATCHER II', desc:'Stare at Time Ticker for 3 minutes.', target:3, reward:40},
+ {id:'dm_arena_skin_normal', title:'ARENA SKIN — NORMAL', desc:'Reach a score of 30 in Dodging Arena using the Normal skin.', target:30, reward:50},
+ {id:'dm_arena_skin_minecraft', title:'ARENA SKIN — MINECRAFT', desc:'Reach a score of 30 in Dodging Arena using the Minecraft skin.', target:30, reward:50},
+ {id:'dm_arena_skin_triangle', title:'ARENA SKIN — TRIANGLE', desc:'Reach a score of 30 in Dodging Arena using the Triangle skin.', target:30, reward:50},
+ {id:'dm_arena_skin_astro', title:'ARENA SKIN — ASTRO', desc:'Reach a score of 30 in Dodging Arena using the Astro skin.', target:30, reward:50},
+ {id:'dm_arena_skin_weather', title:'ARENA SKIN — WEATHER', desc:'Reach a score of 30 in Dodging Arena using the Weather skin.', target:30, reward:50},
+ {id:'a_extension_click', title:'EXTENSION EXPLORER', desc:'Click an extension button on the Home page.', target:1, reward:50},
+ {id:'a_lucky_spin_3', title:'LUCKY GUY — 3 SPINS', desc:'Complete 3 spins in Lucky Guy.', target:3, reward:100},
+ {id:'a_lucky_spin_5', title:'LUCKY GUY — 5 SPINS', desc:'Complete 5 spins in Lucky Guy.', target:5, reward:200},
+ {id:'a_snake_bite_2', title:'SNAKE BITE 2', desc:'Reach a score of 10 in the hidden Snake game.', target:10, reward:100},
+ {id:'a_snake_bite_3', title:'SNAKE BITE 3', desc:'Reach a score of 20 in the hidden Snake game.', target:20, reward:150},
+  {id:'dm_os_mine_dirt_3', title:'ONE SQUARE — MINE 3 DIRT', desc:'Mine 3 Dirt blocks in One Square today.', target:3, reward:25},
+  {id:'dm_os_mine_dirt_5', title:'ONE SQUARE — MINE 5 DIRT', desc:'Mine 5 Dirt blocks in One Square today.', target:5, reward:40},
+  {id:'dm_os_mine_dirt_9', title:'ONE SQUARE — MINE 9 DIRT', desc:'Mine 9 Dirt blocks in One Square today.', target:9, reward:60},
+  {id:'dm_os_mine_grass_3', title:'ONE SQUARE — MINE 3 GRASS', desc:'Mine 3 Grass blocks in One Square today.', target:3, reward:25},
+  {id:'dm_os_mine_grass_5', title:'ONE SQUARE — MINE 5 GRASS', desc:'Mine 5 Grass blocks in One Square today.', target:5, reward:40},
+  {id:'dm_os_mine_grass_9', title:'ONE SQUARE — MINE 9 GRASS', desc:'Mine 9 Grass blocks in One Square today.', target:9, reward:60},
+  {id:'dm_os_mine_stone_3', title:'ONE SQUARE — MINE 3 STONE', desc:'Mine 3 Stone blocks in One Square today.', target:3, reward:25},
+  {id:'dm_os_mine_stone_5', title:'ONE SQUARE — MINE 5 STONE', desc:'Mine 5 Stone blocks in One Square today.', target:5, reward:40},
+  {id:'dm_os_mine_stone_9', title:'ONE SQUARE — MINE 9 STONE', desc:'Mine 9 Stone blocks in One Square today.', target:9, reward:60},
+  {id:'dm_os_mine_log_3', title:'ONE SQUARE — MINE 3 LOG', desc:'Mine 3 Log blocks in One Square today.', target:3, reward:25},
+  {id:'dm_os_mine_log_5', title:'ONE SQUARE — MINE 5 LOG', desc:'Mine 5 Log blocks in One Square today.', target:5, reward:40},
+  {id:'dm_os_mine_log_9', title:'ONE SQUARE — MINE 9 LOG', desc:'Mine 9 Log blocks in One Square today.', target:9, reward:60},
+  {id:'dm_os_mine_wool_3', title:'ONE SQUARE — MINE 3 WOOL', desc:'Mine 3 Wool blocks in One Square today.', target:3, reward:25},
+  {id:'dm_os_mine_wool_5', title:'ONE SQUARE — MINE 5 WOOL', desc:'Mine 5 Wool blocks in One Square today.', target:5, reward:40},
+  {id:'dm_os_mine_wool_9', title:'ONE SQUARE — MINE 9 WOOL', desc:'Mine 9 Wool blocks in One Square today.', target:9, reward:60},
+  {id:'dm_os_mine_ladder_3', title:'ONE SQUARE — MINE 3 LADDER', desc:'Mine 3 Ladder blocks in One Square today.', target:3, reward:25},
+  {id:'dm_os_mine_ladder_5', title:'ONE SQUARE — MINE 5 LADDER', desc:'Mine 5 Ladder blocks in One Square today.', target:5, reward:40},
+  {id:'dm_os_mine_ladder_9', title:'ONE SQUARE — MINE 9 LADDER', desc:'Mine 9 Ladder blocks in One Square today.', target:9, reward:60},
+  {id:'dm_os_mine_glass_3', title:'ONE SQUARE — MINE 3 GLASS', desc:'Mine 3 Glass blocks in One Square today.', target:3, reward:25},
+  {id:'dm_os_mine_glass_5', title:'ONE SQUARE — MINE 5 GLASS', desc:'Mine 5 Glass blocks in One Square today.', target:5, reward:40},
+  {id:'dm_os_mine_glass_9', title:'ONE SQUARE — MINE 9 GLASS', desc:'Mine 9 Glass blocks in One Square today.', target:9, reward:60},
+];
+
+function getEligibleDailyMissionsPool() {
+    // The game-specific skins are selected inside Dodging Arena, not on the PLIXO Skin page.
+    return DAILY_MISSIONS_POOL;
+}
+
+function getDailyMissionsForToday() {
+    const dateStr = getToday();
+    const eligiblePool = getEligibleDailyMissionsPool();
+    const poolById = new Map(eligiblePool.map(m => [m.id, m]));
+    const savedDate = localStorage.getItem('plixo_daily_missions_date');
+    const savedIds = savedDate === dateStr ? parse('plixo_daily_missions_ids', []) : [];
+    const validSaved = Array.isArray(savedIds) && savedIds.length === 7
+        ? savedIds.map(id => poolById.get(id)).filter(Boolean) : [];
+    const savedMineCount = validSaved.filter(m => m.id.startsWith('dm_os_mine_')).length;
+    if (validSaved.length === 7 && savedMineCount <= 2) return validSaved;
+
+    // Deterministically select exactly 7 missions; no more than 2 can be One Square mine missions.
+    let seed = 0;
+    for (let i = 0; i < dateStr.length; i++) seed += dateStr.charCodeAt(i);
+    const pool = [...eligiblePool];
+    const selectedMissions = [];
+    let mineMissionCount = 0;
+    while (selectedMissions.length < 7 && pool.length > 0) {
+        seed = (seed * 9301 + 49297) % 233280;
+        const rnd = seed / 233280;
+        const index = Math.floor(rnd * pool.length);
+        const candidate = pool.splice(index, 1)[0];
+        const isMineMission = candidate.id.startsWith('dm_os_mine_');
+        if (isMineMission && mineMissionCount >= 2) continue;
+        selectedMissions.push(candidate);
+        if (isMineMission) mineMissionCount++;
+    }
+    localStorage.setItem('plixo_daily_missions_date', dateStr);
+    localStorage.setItem('plixo_daily_missions_ids', JSON.stringify(selectedMissions.map(m => m.id)));
+    return selectedMissions;
+}
+// Former achievements remain available as long-term missions, except the four
+// entries explicitly removed from the system.
+const PERMANENT_MISSIONS = [
+ {id:'a2', title:'CONTACT MADE', desc:'Open the contact page.', target:1, reward:50},
+ {id:'a3', title:'EAGER TO LEARN', desc:'Read the Info page.', target:1, reward:50},
+ {id:'a4', title:'RULE FOLLOWER', desc:'Read the rules in the menu.', target:1, reward:50},
+ {id:'a5', title:'POLYGLOT', desc:'Switch the language 3 times.', target:3, reward:75},
+ {id:'a6', title:'COMPETITIVE', desc:'Open the Leaderboard.', target:1, reward:50},
+ {id:'a8', title:'SNAKE CHARMER', desc:'Get a score of 25 in the hidden Snake game.', target:25, reward:150},
+ {id:'a13', title:'ARCADE ADDICT', desc:'Spend a total of 30 minutes in the arcade.', target:30, reward:200},
+ {id:'a15', title:'SKIN EXPLORER', desc:'Open the PLIX Skin page.', target:1, reward:50},
+ {id:'a24', title:'MARATHON CLICKER', desc:'Click continuously for 3 minutes.', target:3, reward:150},
+ {id:'a29', title:'MOBILE DIGGER', desc:'Open the mobile version of Money Digger.', target:1, reward:100},
+ {id:'a52', title:'PERFECT PREDICTION', desc:'Hit the corner using the prediction line.', target:1, reward:150},
+ {id:'a54', title:'COMBO BOUNCE', desc:'Hit a wall or corner with 2 logos at the same time.', target:1, reward:200},
+ {id:'a76', title:'BUG SURVIVOR', desc:'Survive 1 minute in Bug Escape.', target:60, reward:150},
+ {id:'a20', title:'MISSIONS COMPLETED', levels:[
+   {levelId:'a20_1', target:3, desc:'Complete 3 daily missions in total.', reward:50},
+   {levelId:'a20_2', target:6, desc:'Complete 6 daily missions in total.', reward:150},
+   {levelId:'a20_3', target:11, desc:'Complete 11 daily missions in total.', reward:300}
+ ]},
+ {id:'a21', title:'GOLD RUSH', levels:[
+   {levelId:'a21_1', target:100, desc:'Click 100 times in Money Digger.', reward:50},
+   {levelId:'a21_2', target:1000, desc:'Click 1,000 times in Money Digger.', reward:200}
+ ]},
+ // Removed: SPEEDRUNNER PRACTICE duplicated the dedicated speedrun achievement.
+ {id:'a46', title:'BOUNCES', levels:[
+   {levelId:'a46_1', target:50, desc:'Let the DVD logo bounce 50 times.', reward:50},
+   {levelId:'a46_2', target:100, desc:'Let the DVD logo bounce 100 times.', reward:100},
+   {levelId:'a46_3', target:300, desc:'Let the DVD logo bounce 300 times.', reward:200}
+ ]},
+ {id:'a47', title:'CORNER GOD', levels:[
+   {levelId:'a47_1', target:10, desc:'Hit the exact corner 10 times.', reward:100},
+   {levelId:'a47_2', target:15, desc:'Hit the exact corner 15 times.', reward:200},
+   {levelId:'a47_3', target:20, desc:'Hit the exact corner 20 times.', reward:300}
+ ]},
+ {id:'a49', title:'MAX SPEED', levels:[
+   {levelId:'a49_1', target:1, desc:'Upgrade DVD speed to x2.', reward:50},
+   {levelId:'a49_2', target:2, desc:'Upgrade DVD speed to x2.5.', reward:100},
+   {levelId:'a49_3', target:3, desc:'Upgrade DVD speed to x3.', reward:150}
+ ]},
+ {id:'a51', title:'COUCH POTATO', levels:[
+   {levelId:'a51_1', target:5, desc:'Stare at DVD+ for 5 minutes.', reward:50},
+   {levelId:'a51_2', target:15, desc:'Stare at DVD+ for 15 minutes.', reward:150},
+   {levelId:'a51_3', target:25, desc:'Stare at DVD+ for 25 minutes.', reward:250}
+ ]},
+ {id:'a66', title:'DEMOLISHER', levels:[
+   {levelId:'a66_1', target:15, desc:'Break 15 blocks in One Square.', reward:50},
+   {levelId:'a66_2', target:25, desc:'Break 25 blocks in One Square.', reward:100},
+   {levelId:'a66_3', target:50, desc:'Break 50 blocks in One Square.', reward:200}
+ ]},
+ {id:'a77', title:'BALLOON DODGER', levels:[
+   {levelId:'a77_1', target:15, desc:'Dodge 15 balloons in Bug Escape.', reward:50},
+   {levelId:'a77_2', target:40, desc:'Dodge 40 balloons in Bug Escape.', reward:100},
+   {levelId:'a77_3', target:70, desc:'Dodge 70 balloons in Bug Escape.', reward:200}
+ ]},
+ {id:'a90', title:'ZOMBIE KILLER', levels:[
+   {levelId:'a90_1', target:50, desc:'Kill 50 zombies in total in Mini Apocalypse.', reward:100},
+   {levelId:'a90_2', target:100, desc:'Kill 100 zombies in total in Mini Apocalypse.', reward:200},
+   {levelId:'a90_3', target:150, desc:'Kill 150 zombies in total in Mini Apocalypse.', reward:300}
+ ]},
+ {id:'a95', title:'TIME TICKER', levels:[
+   {levelId:'a95_1', target:15, desc:'Look at Time Ticker for 15 minutes.', reward:50},
+   {levelId:'a95_2', target:30, desc:'Look at Time Ticker for 30 minutes.', reward:150},
+   {levelId:'a95_3', target:60, desc:'Look at Time Ticker for 1 hour.', reward:300}
+ ]}
+];
+
+// These are the only achievements displayed. Existing IDs are retained where possible
+// so old game progress and already-claimed awards can migrate safely.
+const ACHIEVEMENTS = [
+ {id:'a1', title:'NEWCOMER', desc:'Open the arcade for the first time.', target:1, reward:50},
+ {id:'a9', title:'GAME HOPPER', desc:'Play all 11 arcade games at least once.', target:11, reward:250},
+ {id:'a36', title:'COMPLETED — MINI BROWSER PLATFORMER', desc:'Finish all levels in Mini Browser Platformer.', target:1, reward:300},
+ {id:'a_completed_spikes', title:'COMPLETED — MINI SPIKES PLATFORMER', desc:'Finish all levels in Mini Spikes Platformer.', target:1, reward:300},
+ {id:'a39', title:'RAGE QUIT', desc:'Die 100 times in the same level in Mini Spikes Platformer.', target:100, reward:200},
+ {id:'a41', title:'MASTER RUN', desc:'Beat the whole Mini Browser Platformer without dying once.', target:1, reward:500},
+ {id:'a55', title:'DVD COMPLETED', desc:'Unlock every possible option and skin in DVD+.', target:1, reward:3500},
+ {id:'a94', title:'TANK DEFEATED', desc:'Kill the giant Boss Zombie.', target:1, reward:700},
+ {id:'a97', title:'THE END COMPLETED', desc:'Finish THE END.', target:1, reward:500},
+ {id:'a16', title:'FIRST PURCHASE', desc:'Buy your first skin.', target:1, reward:100},
+ {id:'a_speedrun_mbp', title:'SPEEDRUNNER — MINI BROWSER PLATFORMER', desc:'Finish Mini Browser Platformer in under 1 minute.', target:1, reward:5000},
+ {id:'a_speedrun_spikes', title:'SPEEDRUNNER — MINI SPIKES PLATFORMER', desc:'Finish Mini Spikes Platformer in under 35 seconds.', target:1, reward:3000},
+ {id:'a_zombies_one_run_150', title:'ZOMBIE MASSACRE', desc:'Kill 150 zombies in a single game.', target:150, reward:2000},
+ {id:'a_snake_50', title:'SNAKE MASTER', desc:'Reach a score of 50 in the hidden Snake game.', target:50, reward:2000},
+ {id:'a_arena_151', title:'ARENA CHAMPION', desc:'Score above 150 in Dodging Arena.', target:151, reward:2000},
+ {id:'a_apoc_131', title:'APOCALYPSE SURVIVOR', desc:'Score above 130 in Mini Apocalypse.', target:131, reward:2000},
+ {id:'a_lucky_level25', title:'LUCKY GUY — LEVEL 25', desc:'Reach level 25 in Lucky Guy.', target:25, reward:2000},
+ {id:'a_dvd_level200', title:'DVD+ — LEVEL 200', desc:'Reach level 200 in DVD+.', target:200, reward:2000},
+ {id:'a_digger_3000', title:'MONEY DIGGER 3000', desc:'Click 3,000 times in Money Digger.', target:3000, reward:2000, progressId:'a21'},
+ {id:'a_chicken_jockey', title:'THE IMPOSSIBLE CHICKEN JOCKEY', desc:'Get the incredibly rare Chicken Jockey block in One Square. Claiming this unlocks the Chicken Jockey skin.', target:1, reward:10000, unlockSkin:'chicken_jockey'},
+ {id:'a_bug_escape_150', title:'BUG ESCAPE ACE', desc:'Score 150 in Bug Escape.', target:150, reward:2000},
+ {id:'a_account_year', title:'ONE YEAR OF PLIXO', desc:'Have a PLIXO-ARCADE account for at least one year.', target:1, reward:15000},
+ {id:'a_all_skins', title:'COLLECTOR SUPREME', desc:'Own every regular skin (event skins and Chicken Jockey are excluded). Claim to unlock the Glowing Rainbow Spiral skin.', target:1, reward:0, unlockSkin:'rainbow_spiral', rewardLabel:'EXCLUSIVE GLOWING SKIN'}
+];
+
+let activeLevels = parse('plixo_active_mission_levels', {});
+
+window.switchLevel = function(baseId, lvl) {
+    activeLevels[baseId] = lvl;
+    localStorage.setItem('plixo_active_mission_levels', JSON.stringify(activeLevels));
+    syncToFirebase();
+    refresh();
+};
+
+function firstUnclaimedLevelIndex(mission, claims) {
+    if (!mission || !Array.isArray(mission.levels)) return 0;
+    const next = mission.levels.findIndex(level => !claims[level.levelId]);
+    return next < 0 ? mission.levels.length - 1 : next;
+}
+
+function getToday() { return new Date().toDateString(); }
+function parse(key,fallback){try{const r=localStorage.getItem(key);return r?JSON.parse(r):fallback}catch(e){return fallback}}
+function plix(){const n=parseInt(localStorage.getItem('plixo_plix')||'0',10);return Number.isFinite(n)&&n>0?n:0}
+function owned(){const o=parse('plixo_owned_skins',{classic:true});o.classic=true;return o}
+function selected(){const id=localStorage.getItem('plixo_selected_skin')||'classic';return SKINS[id]?id:'classic'}
+
+function achievementProgress() { return parse('plixo_mission_progress', {}); }
+function missionClaimed() { return parse('plixo_claimed_missions', {}); }
+function achievementClaimed() { return parse('plixo_claimed_achievements', {}); }
+function dailyProgress() { return parse('plixo_daily_progress_' + getToday(), {}); }
+function dailyClaimed() { return parse('plixo_daily_claimed_' + getToday(), {}); }
+function normalizeTimestamp(value) {
+    if (value == null || value === '') return 0;
+    let n = typeof value === 'number' ? value : (String(value).trim() !== '' && /^\d+(?:\.\d+)?$/.test(String(value).trim()) ? Number(value) : Date.parse(value));
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    if (n < 100000000000) n *= 1000;
+    return n;
+}
+function findAccountCreatedAt(data) {
+    if (!data || typeof data !== 'object') return 0;
+    const candidates = [data.account_created_at,data.accountCreatedAt,data.created_at,data.createdAt,data.joined_at,data.joinedAt,data.registered_at,data.registeredAt,data.created,data.profile && data.profile.createdAt,data.meta && data.meta.createdAt];
+    for (const value of candidates) { const ts = normalizeTimestamp(value); if (ts) return ts; }
+    return 0;
+}
+function knownAccountCreatedAt() {
+    // First-seen-on-this-browser is not proof of when a leaderboard account was created.
+    for (const key of ['pg_account_created_at','account_created_at','pg_created_at']) {
+        const ts = normalizeTimestamp(localStorage.getItem(key));
+        if (ts) return ts;
+    }
+    if (localStorage.getItem('plixo_account_created_at_source') !== 'first_seen') {
+        const ts = normalizeTimestamp(localStorage.getItem('plixo_account_created_at'));
+        if (ts) return ts;
+    }
+    return 0;
+}
+function checkAccountAgeAchievement() {
+    // The one-year achievement requires a real leaderboard account code (20 characters).
+    if (!getSyncCode()) return;
+    const ts = knownAccountCreatedAt();
+    if (ts && Date.now() - ts >= 365 * 24 * 60 * 60 * 1000) setPlixoMaxProgress('a_account_year', 1);
+}
+function migrateLegacyClaims() {
+    const legacy = missionClaimed();
+    const migrated = achievementClaimed();
+    let changed = false;
+    for (const a of ACHIEVEMENTS) {
+        if (legacy[a.id] && !migrated[a.id]) { migrated[a.id] = true; changed = true; }
+        if (legacy[a.id]) delete legacy[a.id];
+    }
+    if (changed || localStorage.getItem('plixo_claimed_achievements') == null) {
+        localStorage.setItem('plixo_claimed_achievements', JSON.stringify(migrated));
+    }
+    const legacySerialized = JSON.stringify(legacy);
+    if (localStorage.getItem('plixo_claimed_missions') !== legacySerialized) {
+        localStorage.setItem('plixo_claimed_missions', legacySerialized);
+    }
+}
+function checkAllRegularSkinsAchievement() {
+    const o = owned();
+    const eligible = Object.entries(SKINS).filter(([id,skin]) => !skin.event && !skin.achievementOnly && id !== 'chicken_jockey' && id !== 'rainbow_spiral');
+    if (eligible.length && eligible.every(([id]) => !!o[id])) setPlixoMaxProgress('a_all_skins', 1);
+}
+
+
+function draw(canvas, id, isExport = false, animationTime = (performance.now() / 1000)) {
+    const ctx = canvas.getContext('2d');
+    const skinId = SKINS[id] ? id : 'classic';
+    const s = SKINS[skinId];
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const designW = 20;
+    const designH = 28;
+    
+    const scaleMult = isExport ? 1 : 0.8; 
+    const scale = Math.min(canvas.width / designW, canvas.height / designH) * scaleMult; 
+    const xOffset = isExport ? 0 : (canvas.width - (designW * scale)) / 2;
+    const yOffset = isExport ? 0 : (canvas.height - (designH * scale)) / 2;
+    
+    ctx.save();
+    ctx.translate(xOffset, yOffset);
+    ctx.scale(scale, scale);
+
+    if (skinId !== 'chicken_jockey') {
+        ctx.fillStyle = s.color;
+        ctx.fillRect(1, 1, 18, 26);
+    }
+
+    if(skinId !== 'chicken_jockey' && skinId !== 'void' && skinId !== 'game_dvd') {
+        ctx.fillStyle = 'rgba(255,255,255,0.2)'; 
+        ctx.fillRect(1, 1, 18, 2); 
+        ctx.fillRect(1, 1, 2, 26);
+    }
+
+    if (skinId === 'flame') {
+        let grad = ctx.createLinearGradient(0, 0, 0, 28);
+        grad.addColorStop(0, '#ffff00'); grad.addColorStop(0.5, '#ff5500'); grad.addColorStop(1, '#aa0000');
+        ctx.fillStyle = grad; ctx.fillRect(1, 1, 18, 26);
+    } else if (skinId === 'gold') {
+        let grad = ctx.createLinearGradient(0, 1, 0, 27);
+        grad.addColorStop(0, '#ffee55'); 
+        grad.addColorStop(0.5, '#ffbb00'); 
+        grad.addColorStop(1, '#997700');
+        ctx.fillStyle = grad; 
+        ctx.fillRect(1, 1, 18, 26);
+        ctx.strokeStyle = '#fffaaa';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(3, 3, 14, 22);
+        ctx.fillStyle = '#fffaaa';
+        ctx.fillRect(5, 5, 3, 3);
+        ctx.fillRect(12, 5, 3, 3);
+    } else if (skinId === 'rainbow') {
+        const colors = ['#ff3b3b','#ffb000','#ffe600','#28e36f','#36a3ff','#4b0082','#8b00ff'];
+        const stripe = 28 / colors.length;
+        colors.forEach((c,i)=>{ ctx.fillStyle = c; ctx.fillRect(1, i*stripe, 18, stripe+0.5); });
+    } else if (skinId === 'void') {
+        ctx.fillStyle = '#050505'; ctx.fillRect(1, 1, 18, 26);
+        ctx.strokeStyle = '#9b59ff'; ctx.lineWidth = 1; ctx.strokeRect(1, 1, 18, 26);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(6, 8, 2, 2); ctx.fillRect(12, 16, 2, 2);
+    } else if (skinId === 'diamond') {
+        ctx.fillStyle = '#aaffff'; ctx.fillRect(1, 1, 18, 26);
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.moveTo(10, 8); ctx.lineTo(14, 14); ctx.lineTo(10, 20); ctx.lineTo(6, 14);
+        ctx.closePath(); ctx.fill();
+    } else if (skinId === 'checker' || skinId === 'neon') {
+        ctx.fillStyle = skinId === 'neon' ? '#003300' : '#331122'; ctx.fillRect(1,1,18,26);
+        ctx.fillStyle = skinId === 'neon' ? '#00ff00' : '#ffffff';
+        for(let ry=0; ry<5; ry++) {
+            for(let rx=0; rx<3; rx++) {
+                if((rx+ry)%2===0) ctx.fillRect(1 + rx*6, 1 + ry*5, 6, 5);
+            }
+        }
+    } else if (skinId === 'face') {
+        ctx.fillStyle = '#ffb3b3'; ctx.fillRect(1,1,18,26);
+        ctx.fillStyle = '#331122'; ctx.fillRect(5, 8, 3, 3); ctx.fillRect(12, 8, 3, 3);
+        ctx.fillRect(6, 18, 8, 2);
+    } else if (skinId === 'game_dvd') {
+        ctx.fillStyle = '#ff44aa'; 
+        ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText("DVD", 10, 14);
+    } else if (skinId === 'game_plat') {
+        ctx.fillStyle = '#1a0505'; ctx.fillRect(1,1,18,26);
+        ctx.fillStyle = '#ff2222';
+        ctx.beginPath(); ctx.moveTo(10, 4); ctx.lineTo(17, 22); ctx.lineTo(3, 22); ctx.closePath(); ctx.fill();
+    } else if (skinId === 'game_dodge') {
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(10, 7, 3, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(10, 10); ctx.lineTo(10, 20); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(6, 14); ctx.lineTo(14, 14); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(10, 20); ctx.lineTo(5, 26); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(10, 20); ctx.lineTo(15, 26); ctx.stroke();
+    } else if (skinId === 'game_bug') {
+        ctx.fillStyle = '#06152e'; ctx.fillRect(1,1,18,26);
+        ctx.fillStyle = '#66bbff'; ctx.beginPath(); ctx.ellipse(10, 15, 6, 7, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ffcc00'; ctx.fillRect(8, 12, 2, 2); ctx.fillRect(11, 12, 2, 2);
+        ctx.strokeStyle = '#66bbff'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(8, 8); ctx.lineTo(4, 3); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(12, 8); ctx.lineTo(16, 3); ctx.stroke();
+    } else if (skinId === 'game_dig') {
+        ctx.fillStyle = '#85bb65'; ctx.fillRect(1, 1, 18, 26);
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText("$", 10, 14);
+    } else if (skinId === 'game_luck') {
+        ctx.fillStyle = '#001a1a'; ctx.fillRect(1,1,18,26);
+        ctx.fillStyle = '#ff44aa'; ctx.beginPath(); ctx.moveTo(10,14); ctx.arc(10,14,8,0,Math.PI/2); ctx.fill();
+        ctx.fillStyle = '#00ff88'; ctx.beginPath(); ctx.moveTo(10,14); ctx.arc(10,14,8,Math.PI/2,Math.PI); ctx.fill();
+        ctx.fillStyle = '#ffdd00'; ctx.beginPath(); ctx.moveTo(10,14); ctx.arc(10,14,8,Math.PI,Math.PI*1.5); ctx.fill();
+        ctx.fillStyle = '#ff8844'; ctx.beginPath(); ctx.moveTo(10,14); ctx.arc(10,14,8,Math.PI*1.5,Math.PI*2); ctx.fill();
+    } else if (skinId === 'game_apoc') {
+        ctx.fillStyle = '#0f1f0f'; ctx.fillRect(1, 1, 18, 26);
+        ctx.fillStyle = '#7cff5b'; ctx.fillRect(1, 1, 18, 26);
+        ctx.fillStyle = '#ff0000'; ctx.fillRect(4, 9, 3, 3); ctx.fillRect(12, 9, 3, 3);
+    } else if (skinId === 'game_time') {
+        ctx.fillStyle = '#fffdfa'; ctx.fillRect(1,1,18,26);
+        ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(10, 14, 7, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(10, 14); ctx.lineTo(10, 10); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(10, 14); ctx.lineTo(13, 14); ctx.stroke();
+    } else if (skinId === 'ev_sint') {
+        ctx.fillStyle = '#e53935'; ctx.fillRect(1,1,18,26);
+        ctx.fillStyle = '#ffdd00'; 
+        ctx.fillRect(8, 7, 4, 12);  
+        ctx.fillRect(5, 11, 10, 4); 
+    } else if (skinId === 'ev_hal') {
+        ctx.fillStyle = '#ff7700'; ctx.fillRect(1,1,18,26);
+        ctx.fillStyle = '#0a0a0f';
+        ctx.beginPath(); ctx.moveTo(4,8); ctx.lineTo(7,11); ctx.lineTo(4,11); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(15,8); ctx.lineTo(12,11); ctx.lineTo(15,11); ctx.closePath(); ctx.fill();
+        ctx.fillRect(7, 18, 6, 2);
+    } else if (skinId === 'ev_kerst') {
+        ctx.fillStyle = '#004400'; ctx.fillRect(1, 1, 18, 26);
+        ctx.fillStyle = '#3a2103'; ctx.fillRect(8, 21, 4, 5);
+        ctx.fillStyle = '#00aa00';
+        ctx.beginPath(); ctx.moveTo(10, 3); ctx.lineTo(3, 13); ctx.lineTo(17, 13); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(10, 9); ctx.lineTo(2, 19); ctx.lineTo(18, 19); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ffdd00'; ctx.fillRect(9, 2, 2, 2);
+        ctx.fillStyle = '#ff3333'; ctx.fillRect(6, 11, 2, 2); ctx.fillRect(12, 15, 2, 2);
+        ctx.fillStyle = '#33ffff'; ctx.fillRect(11, 10, 2, 2); ctx.fillRect(7, 17, 2, 2);
+    } else if (skinId === 'ev_nwjr') {
+        ctx.fillStyle = '#050510'; ctx.fillRect(1,1,18,26);
+        ctx.fillStyle = '#ff0055'; ctx.fillRect(9, 1, 2, 2); ctx.fillRect(5, 3, 2, 2); ctx.fillRect(13, 3, 2, 2);
+        ctx.fillStyle = '#ffcc00'; ctx.fillRect(3, 6, 2, 2); ctx.fillRect(15, 6, 2, 2); ctx.fillRect(9, 5, 2, 2);
+        ctx.fillStyle = '#00ffff'; ctx.fillRect(6, 8, 2, 2); ctx.fillRect(12, 8, 2, 2);
+        ctx.fillStyle = '#333355'; ctx.fillRect(7, 11, 6, 11);
+        ctx.fillStyle = '#ff3333';
+        ctx.beginPath(); ctx.moveTo(10, 8); ctx.lineTo(5, 12); ctx.lineTo(15, 12); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ffaa00'; ctx.fillRect(8, 22, 4, 3);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(9, 25, 2, 1);
+    } else if (skinId === 'chicken_jockey') {
+        // Same pixel-art colours and layer order as One Square's chicken.png.
+        // Crop the transparent margins (visible source area x=4..11, y=1..15),
+        // then scale the artwork proportionally to the full character height.
+        // This keeps the Chicken Jockey recognisable at the same visual size as
+        // the other skins, without stretching it or adding a coloured block behind it.
+        const sourceLeft = 4, sourceTop = 1;
+        const sourceWidth = 8, sourceHeight = 15;
+        const spriteScale = 26 / sourceHeight;
+        const spriteX = (designW - sourceWidth * spriteScale) / 2;
+        const spriteY = 1;
+        const pixels = [
+            [5,1,6,5,'#388e3c'], [6,3,1,1,'#111111'], [9,3,1,1,'#111111'],
+            [6,6,4,3,'#0288d1'], [4,6,2,1,'#388e3c'], [10,6,2,1,'#388e3c'],
+            [5,10,6,4,'#ffffff'], [4,11,1,2,'#dddddd'], [11,11,1,2,'#dddddd'],
+            [6,7,4,4,'#ffffff'], [6,8,1,1,'#111111'], [9,8,1,1,'#111111'],
+            [7,9,2,1,'#ffb300'], [7,10,1,1,'#e53935'],
+            [6,14,1,2,'#ffb300'], [9,14,1,2,'#ffb300']
+        ];
+        for (const [x, y, w, h, color] of pixels) {
+            ctx.fillStyle = color;
+            ctx.fillRect(
+                spriteX + (x - sourceLeft) * spriteScale,
+                spriteY + (y - sourceTop) * spriteScale,
+                w * spriteScale,
+                h * spriteScale
+            );
+        }
+    } else if (skinId === 'rainbow_spiral') {
+        // Animated, glowing rainbow spiral. The exported PNG holds one frame;
+        // the preview and One Square animate this same motif while playing.
+        ctx.fillStyle = '#080812'; ctx.fillRect(1,1,18,26);
+        ctx.save();
+        ctx.beginPath(); ctx.rect(1,1,18,26); ctx.clip();
+        ctx.shadowBlur = 3;
+        const phase = animationTime * 2.4;
+        for (let t = 0; t < Math.PI * 10; t += 0.12) {
+            const radius = 0.25 + t * 0.34;
+            const x = 10 + Math.cos(t + phase) * radius * 0.53;
+            const y = 14 + Math.sin(t + phase) * radius * 0.92;
+            const hue = (t * 42 + animationTime * 115) % 360;
+            ctx.fillStyle = `hsl(${hue},100%,62%)`;
+            ctx.shadowColor = `hsl(${hue},100%,62%)`;
+            ctx.fillRect(Math.round(x), Math.round(y), 1.35, 1.35);
+        }
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+let lastSavedSkinImageId = null;
+function saveSkinImage(id) {
+    if (lastSavedSkinImageId === id && localStorage.getItem('plixo_skin_image')) return;
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = 20;
+    tempCanvas.height = 28;
+    draw(tempCanvas, id, true);
+    const imageData = tempCanvas.toDataURL();
+    if (localStorage.getItem('plixo_skin_image') !== imageData) {
+        localStorage.setItem('plixo_skin_image', imageData);
+    }
+    lastSavedSkinImageId = id;
+}
+
+function animateBalance() {
+    const bal = document.getElementById('balance');
+    bal.style.transform = 'scale(1.1)';
+    setTimeout(() => bal.style.transform = 'scale(1)', 200);
+}
+
+function refresh(){
+    migrateLegacyClaims();
+    checkAccountAgeAchievement();
+    checkAllRegularSkinsAchievement();
+    const currentPlix = plix();
+    document.getElementById('balance').textContent = currentPlix + ' PLIX';
+    document.getElementById('home-plix').textContent = currentPlix + ' PLIX';
+    const name = localStorage.getItem('pg_player_name') || 'PLAYER';
+    document.getElementById('home-name').textContent = name;
+    const o = owned();
+    const claimedAchievements = achievementClaimed();
+    const totClaimed = ACHIEVEMENTS.filter(a => !!claimedAchievements[a.id]).length;
+    document.getElementById('owned-count').textContent = Object.values(o).filter(Boolean).length;
+    document.getElementById('claimed-count').textContent = totClaimed;
+    document.getElementById('achievement-total').textContent = ACHIEVEMENTS.length;
+    renderSkinCanvas(document.getElementById('home-preview'), selected());
+    saveSkinImage(selected());
+    renderSkins();
+    const combinedMissions = [
+        ...getDailyMissionsForToday().map(m => ({ ...m, _missionKind: 'daily' })),
+        { id: '__long_term_heading', sectionTitle: 'LONG-TERM MISSIONS', _missionKind: 'heading' },
+        ...PERMANENT_MISSIONS.map(m => ({ ...m, _missionKind: 'permanent' }))
+    ];
+    renderMissions('daily-missions', combinedMissions, achievementProgress(), missionClaimed(), false, false, true);
+    renderMissions('achievements', ACHIEVEMENTS, achievementProgress(), achievementClaimed(), false, true);
+    checkDailyBonusUI();
+}
+
+function renderSkinCanvas(canvas, id) {
+    if (!canvas) return;
+    canvas.dataset.skinId = id;
+    if (id !== 'rainbow_spiral') { canvas.dataset.rainbowAnimating = 'false'; draw(canvas, id); return; }
+    if (canvas.dataset.rainbowAnimating === 'true') return;
+    canvas.dataset.rainbowAnimating = 'true';
+    const frame = () => {
+        if (!canvas.isConnected) { canvas.dataset.rainbowAnimating = 'false'; return; }
+        if (canvas.dataset.skinId !== 'rainbow_spiral') { canvas.dataset.rainbowAnimating = 'false'; return; }
+        draw(canvas, 'rainbow_spiral', false, performance.now() / 1000);
+        requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+}
+
+function renderSkins(){
+    const box = document.getElementById('skin-grid');
+    const o = owned(), cur = selected();
+    const signature = JSON.stringify({ owned: o, selected: cur, plix: plix(), day: getToday() });
+    if (box.dataset.renderSignature === signature) return;
+
+    const fragment = document.createDocumentFragment();
+    for(const [id, s] of Object.entries(SKINS)) {
+        if (s.event && !isEventActive(s.event) && !o[id]) continue;
+
+        const card = document.createElement('div');
+        let classes = 'skin-card';
+        if (!o[id]) classes += ' locked';
+        if (s.cost >= 5000) classes += ' legendary';
+        if (s.event) classes += ' event';
+        if (s.animated) classes += ' rainbow-reward';
+        if (s.achievementOnly) classes += ' special-reward';
+        if (id === 'chicken_jockey') classes += ' chicken-jockey-skin';
+        card.className = classes;
+
+        const p = document.createElement('div'); p.className = 'preview';
+        const c = document.createElement('canvas'); c.width = 100; c.height = 100;
+        p.appendChild(c); card.appendChild(p); renderSkinCanvas(c, id);
+
+        const n = document.createElement('div'); n.className = 'name'; n.textContent = s.name;
+        card.appendChild(n);
+
+        const cost = document.createElement('div'); cost.className = 'cost'; cost.textContent = s.achievementOnly ? (o[id] ? 'SPECIAL REWARD' : 'ACHIEVEMENT REWARD') : (s.cost === 0 ? 'FREE' : s.cost + ' PLIX');
+        card.appendChild(cost);
+
+        const b = document.createElement('button');
+        if(cur === id) {
+            b.textContent = 'EQUIPPED'; b.className = 'equipped'; b.disabled = true;
+        } else if(o[id]) {
+            b.textContent = 'EQUIP';
+            b.onclick = () => {
+                localStorage.setItem('plixo_selected_skin', id);
+                addPlixoProgress('dm_4', 1);
+                refresh();
+                // refresh() redraws the selected 20x28 PLIXO skin before syncing it.
+                syncToFirebase();
+            };
+        } else if(s.achievementOnly) {
+            b.textContent = 'LOCKED'; b.disabled = true;
+        } else {
+            b.textContent = plix() >= s.cost ? 'BUY' : 'NEED PLIX';
+            b.className = 'buy'; b.disabled = plix() < s.cost;
+            b.onclick = () => buy(id);
+        }
+        card.appendChild(b);
+        fragment.appendChild(card);
+    }
+    box.replaceChildren(fragment);
+    box.dataset.renderSignature = signature;
+}
+function buy(id) {
+    const s = SKINS[id], o = owned();
+    if(!s || s.achievementOnly || o[id] || plix() < s.cost) return;
+    localStorage.setItem('plixo_plix', String(plix() - s.cost));
+    o[id] = true;
+    localStorage.setItem('plixo_owned_skins', JSON.stringify(o));
+    localStorage.setItem('plixo_selected_skin', id);
+    addPlixoProgress('a16', 1); 
+    animateBalance();
+    refresh();
+    // Persist the selected skin image after refresh() generates it.
+    syncToFirebase();
+}
+
+function renderMissions(containerId, missionArray, progData, claimData, isDaily, isAchievement = false, mixedMissions = false) {
+    const box = document.getElementById(containerId);
+    const mixedDailyProg = mixedMissions ? dailyProgress() : null;
+    const mixedDailyClaims = mixedMissions ? dailyClaimed() : null;
+    const mixedPermanentClaims = mixedMissions ? missionClaimed() : null;
+    const signature = JSON.stringify({
+        missionArray, progData, claimData, mixedDailyProg, mixedDailyClaims,
+        mixedPermanentClaims, activeLevels, isDaily, isAchievement, mixedMissions
+    });
+    if (box.dataset.renderSignature === signature) return;
+
+    const fragment = document.createDocumentFragment();
+    for (const m of missionArray) {
+        if (m.sectionTitle) {
+            const heading = document.createElement('div');
+            heading.className = 'mission-group-heading';
+            heading.textContent = m.sectionTitle;
+            fragment.appendChild(heading);
+            continue;
+        }
+
+        const missionKind = mixedMissions ? m._missionKind : (isDaily ? 'daily' : (isAchievement ? 'achievement' : 'permanent'));
+        const itemIsDaily = mixedMissions ? missionKind === 'daily' : isDaily;
+        const itemIsAchievement = mixedMissions ? missionKind === 'achievement' : isAchievement;
+        const itemProgData = mixedMissions && missionKind === 'daily' ? mixedDailyProg : progData;
+        const itemClaimData = mixedMissions
+            ? (missionKind === 'daily' ? mixedDailyClaims : mixedPermanentClaims)
+            : claimData;
+
+        const isMulti = !!m.levels;
+        const defaultLevelIdx = isMulti ? firstUnclaimedLevelIndex(m, itemClaimData) : 0;
+        const storedLevelIdx = isMulti && Number.isInteger(Number(activeLevels[m.id]))
+            ? Math.max(0, Math.min(Number(activeLevels[m.id]), m.levels.length - 1))
+            : null;
+        const lvlIdx = isMulti ? (storedLevelIdx === null ? defaultLevelIdx : storedLevelIdx) : 0;
+        const level = isMulti ? m.levels[lvlIdx] : null;
+        const currentM = isMulti ? {
+            id: level.levelId, title: m.title, desc: level.desc,
+            target: level.target, reward: level.reward
+        } : m;
+        const trackingId = isMulti ? m.id : (currentM.progressId || currentM.id);
+        let progVal = Number(itemProgData[trackingId] || 0);
+        // Some older game bridges reported a level-specific key instead of the base mission id.
+        if (isMulti && Number(itemProgData[currentM.id] || 0) > progVal) {
+            progVal = Number(itemProgData[currentM.id] || 0);
+        }
+        if (currentM.id === 'a9' && itemIsAchievement) progVal = parse('plixo_played_games', []).length;
+        const was = !!itemClaimData[currentM.id];
+        const prog = was ? currentM.target : Math.min(currentM.target, progVal);
+        const done = prog >= currentM.target;
+        const card = document.createElement('div');
+        card.className = 'mission-card';
+        card.dataset.missionKind = missionKind;
+
+        if (isMulti) {
+            const tabs = document.createElement('div'); tabs.className = 'level-tabs';
+            m.levels.forEach((l, i) => {
+                const btn = document.createElement('button');
+                btn.textContent = 'LVL ' + (i + 1);
+                if (i === lvlIdx) btn.classList.add('active');
+                if (itemClaimData[l.levelId]) { btn.classList.add('claimed'); btn.textContent += ' ✓'; }
+                else if (progVal >= l.target) btn.textContent += ' !';
+                btn.onclick = () => window.switchLevel(m.id, i);
+                tabs.appendChild(btn);
+            });
+            card.appendChild(tabs);
+        }
+        const inner = document.createElement('div'); inner.className = 'mission-inner';
+        const left = document.createElement('div');
+        const h = document.createElement('h3'); h.textContent = currentM.title; left.appendChild(h);
+        const p = document.createElement('p'); p.textContent = currentM.desc + ' ' + prog + '/' + currentM.target; left.appendChild(p);
+        const bar = document.createElement('div'); bar.className = 'bar';
+        const fill = document.createElement('span');
+        const barPercent = (was || prog >= currentM.target)
+            ? 100
+            : (currentM.target > 0 ? Math.min(100, prog / currentM.target * 100) : 0);
+        fill.style.width = barPercent + '%';
+        fill.style.backgroundColor = '#ff4444';
+        if (barPercent > 0) fill.style.minWidth = '2px';
+        bar.appendChild(fill); left.appendChild(bar);
+        const right = document.createElement('div');
+        let rewardText = currentM.rewardLabel || m.rewardLabel;
+        const rewardValue = Number(currentM.reward || 0);
+        if (!rewardText) {
+            if (m.unlockSkin || currentM.unlockSkin) rewardText = rewardValue > 0 ? `+${rewardValue.toLocaleString()} PLIX + SKIN` : 'EXCLUSIVE SKIN';
+            else rewardText = `+${rewardValue.toLocaleString()} PLIX`;
+        }
+        right.innerHTML = `<div class="reward">${rewardText}</div>`;
+        const btn = document.createElement('button');
+        btn.textContent = was ? 'CLAIMED' : 'CLAIM';
+        btn.disabled = !done || was;
+        btn.onclick = () => claim(currentM, itemClaimData, itemIsDaily, itemIsAchievement, m);
+        right.appendChild(btn);
+        inner.append(left, right); card.appendChild(inner); fragment.appendChild(card);
+    }
+    box.replaceChildren(fragment);
+    box.dataset.renderSignature = signature;
+}
+function claim(m, claimData, isDaily, isAchievement, parentMission = null) {
+    if (claimData[m.id]) return;
+    claimData[m.id] = true;
+    if (isDaily) {
+        localStorage.setItem('plixo_daily_claimed_' + getToday(), JSON.stringify(claimData));
+        addPlixoProgress('a20', 1); // lifetime count of completed daily missions
+    } else if (isAchievement) {
+        localStorage.setItem('plixo_claimed_achievements', JSON.stringify(claimData));
+    } else {
+        localStorage.setItem('plixo_claimed_missions', JSON.stringify(claimData));
+    }
+    if (parentMission && Array.isArray(parentMission.levels)) {
+        const completedLevelIndex = parentMission.levels.findIndex(level => level.levelId === m.id);
+        if (completedLevelIndex >= 0) {
+            activeLevels[parentMission.id] = Math.min(completedLevelIndex + 1, parentMission.levels.length - 1);
+            localStorage.setItem('plixo_active_mission_levels', JSON.stringify(activeLevels));
+        }
+    }
+    awardPlix(Number(m.reward) || 0);
+    const skinReward = m.unlockSkin || (parentMission && parentMission.unlockSkin);
+    if (skinReward && SKINS[skinReward]) {
+        const o = owned(); o[skinReward] = true;
+        localStorage.setItem('plixo_owned_skins', JSON.stringify(o));
+    }
+    animateBalance();
+    syncToFirebase();
+    refresh();
+}
+
+function checkDailyBonusUI() {
+    const btn = document.getElementById('btn-daily-bonus');
+    const claimedDate = localStorage.getItem('plixo_daily_bonus_date');
+    
+    if(claimedDate === getToday()) {
+        btn.textContent = 'CLAIMED'; btn.disabled = true;
+        btn.style.borderColor = 'var(--green)'; btn.style.color = 'var(--green)';
+    } else {
+        btn.textContent = 'CLAIM'; btn.disabled = false;
+        btn.style.borderColor = '#ff5555'; btn.style.color = '#ff8888';
+    }
+}
+
+function claimDailyBonus() {
+    const claimedDate = localStorage.getItem('plixo_daily_bonus_date');
+    if(claimedDate === getToday()) return;
+    
+    localStorage.setItem('plixo_daily_bonus_date', getToday());
+    awardPlix(50);
+    syncToFirebase();
+    animateBalance();
+    refresh();
+}
+
+function activate(v){
+    document.querySelectorAll('.view').forEach(x => x.classList.toggle('active', x.dataset.view === v));
+    document.querySelectorAll('.nav button').forEach(x => x.classList.toggle('active', x.dataset.viewBtn === v));
+    refresh();
+}
+
+document.querySelectorAll('.nav button').forEach(b => b.addEventListener('click', () => activate(b.dataset.viewBtn)));
+window.addEventListener('storage', (e) => {
+    if (!e.key || e.key === 'plixo_skin_image' || e.key === 'plixo_account_first_seen_at' || e.key === 'plixo_account_created_at_source') return;
+    const explicitKeys = new Set([
+        'plixo_plix', 'plixo_owned_skins', 'plixo_selected_skin',
+        'plixo_mission_progress', 'plixo_claimed_missions', 'plixo_claimed_achievements',
+        'plixo_played_games', 'plixo_active_mission_levels', 'plixo_daily_bonus_date', 'plixo_daily_missions_date',
+        'plixo_daily_missions_ids', 'plixo_account_created_at', 'plixo_sync_code',
+        'pg_account_code', 'pg_player_id', 'pg_player_name', 'pg_account_created_at', 'pg_created_at'
+    ]);
+    const isDailyProgress = e.key.startsWith('plixo_daily_progress_') || e.key.startsWith('plixo_daily_claimed_') || e.key.startsWith('plixo_daily_games_');
+    if (explicitKeys.has(e.key) || isDailyProgress) {
+        syncToFirebase();
+        refresh();
+    }
+});
+activate('home');
+</script>
+</body>
+</html>
