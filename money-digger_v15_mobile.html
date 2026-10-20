@@ -207,6 +207,351 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 function safeGetLS(key, def) { try { return localStorage.getItem(key) || def; } catch(e) { return def; } }
 function safeSetLS(key, val) { try { localStorage.setItem(key, val); } catch(e) {} }
 
+// ═══════════════════════════════════════════════════════════════
+// PLIXO SKIN PAGE PROGRESS BRIDGE
+// Sends Money Digger mission progress to skin.html localStorage
+// and, for a valid 20-character leaderboard account code, to Firebase.
+// ═══════════════════════════════════════════════════════════════
+const MONEY_DIGGER_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+  authDomain: "money-digger-9b05e.firebaseapp.com",
+  databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "money-digger-9b05e",
+  storageBucket: "money-digger-9b05e.firebasestorage.app",
+  messagingSenderId: "883506536944",
+  appId: "1:883506536944:web:921b342dff76154fcbbd35"
+};
+const PLIXO_MISSION_IDS_TO_SYNC = [
+  "dm_1", "dm_2", "dm_3", "dm_11", "dm_12", "dm_13",
+  "a9", "a13", "a21", "a24", "a29"
+];
+const PLIXO_DAILY_MISSION_IDS = ["dm_1", "dm_2", "dm_3", "dm_11", "dm_12", "dm_13"];
+let plixoMissionCloudTimer = null;
+let plixoArcadeMinuteTimer = null;
+
+function getPlixoAccountCodeForSync() {
+  const candidates = [
+    safeGetLS("pg_account_code", ""),
+    safeGetLS("pg_player_id", ""),
+    safeGetLS("plixo_sync_code", "")
+  ];
+  return candidates.map(v => String(v || "").trim().toUpperCase()).find(v => /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/.test(v)) || null;
+}
+
+function ensureMoneyDiggerFirebaseApp() {
+  if (typeof firebase === "undefined") return null;
+  try {
+    if (!firebase.apps || firebase.apps.length === 0) {
+      firebase.initializeApp(MONEY_DIGGER_FIREBASE_CONFIG);
+    }
+    return firebase.database();
+  } catch (error) {
+    console.warn("PLIXO mission sync is unavailable:", error);
+    return null;
+  }
+}
+
+function plixoNumericValue(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+function plixoLocalBalance() { return plixoNumericValue(safeGetLS("plixo_plix", "0")); }
+function plixoValidCode(code) { return /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/i.test(String(code || "").trim()); }
+function plixoOfflineTransferId() {
+  let id = safeGetLS("md6_plixo_offline_transfer_id", "");
+  if (!id) { id = "offline-" + Math.random().toString(36).slice(2, 12) + Date.now().toString(36); safeSetLS("md6_plixo_offline_transfer_id", id); }
+  return id.replace(/[.#$\[\]/]/g, "_");
+}
+function plixoApplyOfflineClickTotal(totalClicks) {
+  const total = Math.max(0, Math.floor(Number(totalClicks) || 0), Math.floor(plixoNumericValue(safeGetLS("md6_plixo_local_total_clicks", "0"))));
+  safeSetLS("md6_plixo_local_total_clicks", String(total));
+  const eligible = Math.floor(total / 10);
+  const alreadyPaid = Math.floor(plixoNumericValue(safeGetLS("md6_plixo_local_paid_milestones", "0")));
+  const newlyEarned = Math.max(0, eligible - alreadyPaid);
+  if (newlyEarned > 0) {
+    const pendingBefore = Math.floor(plixoNumericValue(safeGetLS("md6_plixo_offline_plix_pending", "0")));
+    // Each disconnected earning period needs a fresh id so a later offline batch
+    // cannot be mistaken for a transfer that was already credited in the past.
+    if (pendingBefore <= 0) {
+      safeSetLS("md6_plixo_offline_transfer_id", "offline-" + Math.random().toString(36).slice(2, 12) + Date.now().toString(36));
+    }
+    safeSetLS("plixo_plix", String(plixoLocalBalance() + newlyEarned));
+    safeSetLS("md6_plixo_local_paid_milestones", String(eligible));
+    safeSetLS("md6_plixo_offline_plix_pending", String(pendingBefore + newlyEarned));
+  }
+}
+function plixoMergeLocalAccountResult(data) {
+  if (!data || typeof data !== "object") return;
+  if (data.plix !== undefined) safeSetLS("plixo_plix", String(plixoNumericValue(data.plix)));
+  const md = data.money_digger && typeof data.money_digger === "object" ? data.money_digger : {};
+  safeSetLS("md6_plixo_local_total_clicks", String(Math.floor(plixoNumericValue(md.total_clicks))));
+  safeSetLS("md6_plixo_local_paid_milestones", String(Math.floor(plixoNumericValue(md.plix_awarded_clicks))));
+  const localGlobal = readPlixoJson("plixo_mission_progress", {});
+  const remoteGlobal = data.mission_progress && typeof data.mission_progress === "object" ? data.mission_progress : {};
+  localGlobal.a21 = Math.max(Number(localGlobal.a21) || 0, Number(remoteGlobal.a21) || 0, Number(md.total_clicks) || 0);
+  safeSetLS("plixo_mission_progress", JSON.stringify(localGlobal));
+  if (data.daily && data.daily.date === plixoTodayKey() && data.daily.progress) {
+    const key = "plixo_daily_progress_" + plixoTodayKey();
+    const localDaily = readPlixoJson(key, {});
+    for (const id of ["dm_11", "dm_12", "dm_13"]) localDaily[id] = Math.max(Number(localDaily[id]) || 0, Number(data.daily.progress[id]) || 0);
+    safeSetLS(key, JSON.stringify(localDaily));
+  }
+}
+function plixoRunAccountMoneyDiggerTransaction(code, legacyBaseline, addCurrentClick) {
+  if (!plixoValidCode(code)) return;
+  const db = ensureMoneyDiggerFirebaseApp();
+  if (!db) return;
+  const today = plixoTodayKey();
+  db.ref("plixo_users/" + code).transaction(current => {
+    const user = current && typeof current === "object" ? {...current} : {};
+    const md = user.money_digger && typeof user.money_digger === "object" ? {...user.money_digger} : {};
+    let totalClicks = Math.max(0, Math.floor(Number(md.total_clicks) || 0));
+    let plixAwarded = Math.max(0, Math.floor(Number(md.plix_awarded_clicks) || 0));
+    const offlinePending = Math.max(0, Math.floor(plixoNumericValue(safeGetLS("md6_plixo_offline_plix_pending", "0"))));
+    const localPaid = Math.max(0, Math.floor(plixoNumericValue(safeGetLS("md6_plixo_local_paid_milestones", "0"))));
+    if (!md.legacy_seeded) {
+      totalClicks = Math.max(totalClicks, Math.floor(Number(legacyBaseline) || 0));
+      const priorEligible = Math.floor(totalClicks / 10);
+      if (offlinePending > 0) plixAwarded = Math.max(plixAwarded, localPaid, priorEligible);
+      else {
+        if (priorEligible > plixAwarded) user.plix = plixoNumericValue(user.plix) + (priorEligible - plixAwarded);
+        plixAwarded = Math.max(plixAwarded, priorEligible);
+      }
+      md.legacy_seeded = true;
+    } else if (offlinePending > 0) {
+      totalClicks = Math.max(totalClicks, Math.floor(Number(legacyBaseline) || 0));
+      plixAwarded = Math.max(plixAwarded, localPaid, Math.floor(totalClicks / 10));
+    }
+    // Migrate locally earned, not-yet-clouded credits once per browser even if
+    // the account's click ledger had already been initialized on another visit.
+    if (offlinePending > 0) {
+      const transferId = plixoOfflineTransferId();
+      const transfers = user.money_digger_offline_transfers && typeof user.money_digger_offline_transfers === "object" ? {...user.money_digger_offline_transfers} : {};
+      if (!transfers[transferId]) {
+        user.plix = plixoNumericValue(user.plix) + offlinePending;
+        transfers[transferId] = true;
+        user.money_digger_offline_transfers = transfers;
+      }
+    }
+    if (addCurrentClick) totalClicks += 1;
+    const newEligible = Math.floor(totalClicks / 10);
+    if (newEligible > plixAwarded) user.plix = plixoNumericValue(user.plix) + (newEligible - plixAwarded);
+    plixAwarded = Math.max(plixAwarded, newEligible);
+    md.total_clicks = totalClicks;
+    md.plix_awarded_clicks = plixAwarded;
+
+    const oldDailyClicks = md.daily_date === today ? Math.max(0, Math.floor(Number(md.daily_clicks) || 0)) : 0;
+    const existingDaily = user.daily && user.daily.date === today && user.daily.progress && typeof user.daily.progress === "object" ? user.daily.progress : {};
+    const oldMissionsDailyClicks = Math.max(Number(existingDaily.dm_11)||0, Number(existingDaily.dm_12)||0, Number(existingDaily.dm_13)||0);
+    const dailyClicks = addCurrentClick ? Math.max(oldDailyClicks, oldMissionsDailyClicks) + 1 : Math.max(oldDailyClicks, oldMissionsDailyClicks, 0);
+    md.daily_date = today;
+    md.daily_clicks = dailyClicks;
+    user.money_digger = md;
+
+    const missionProgress = user.mission_progress && typeof user.mission_progress === "object" ? {...user.mission_progress} : {};
+    missionProgress.a21 = Math.max(Number(missionProgress.a21) || 0, totalClicks);
+    user.mission_progress = missionProgress;
+    const daily = user.daily && user.daily.date === today ? {...user.daily} : {date:today, progress:{}, claimed:{}, bonus:""};
+    const dp = daily.progress && typeof daily.progress === "object" ? {...daily.progress} : {};
+    dp.dm_11 = Math.max(Number(dp.dm_11) || 0, dailyClicks);
+    dp.dm_12 = Math.max(Number(dp.dm_12) || 0, dailyClicks);
+    dp.dm_13 = Math.max(Number(dp.dm_13) || 0, dailyClicks);
+    daily.date = today;
+    daily.progress = dp;
+    daily.claimed = daily.claimed && typeof daily.claimed === "object" ? daily.claimed : {};
+    user.daily = daily;
+    return user;
+  }).then(result => {
+    if (result && result.committed && result.snapshot && result.snapshot.exists()) {
+      plixoMergeLocalAccountResult(result.snapshot.val());
+      safeSetLS("md6_plixo_offline_plix_pending", "0");
+    }
+  }).catch(error => {
+    console.warn("Money Digger PLIX reward sync failed; crediting this click locally until sync recovers:", error);
+    plixoApplyOfflineClickTotal(Math.max(0, Math.floor(Number(legacyBaseline) || 0) + (addCurrentClick ? 1 : 0)));
+  });
+}
+function plixoBackfillAccountClickCount(clicks) {
+  const code = getPlixoAccountCodeForSync();
+  if (!plixoValidCode(code)) return;
+  const baseline = Math.max(0, Math.floor(Number(clicks) || 0), Math.floor(plixoNumericValue(safeGetLS("md6_sp_bills", "0"))), Math.floor(plixoNumericValue(safeGetLS("md6_plixo_local_total_clicks", "0"))));
+  plixoRunAccountMoneyDiggerTransaction(code, baseline, false);
+}
+
+function readPlixoJson(key, fallback = {}) {
+  try {
+    const raw = safeGetLS(key, "");
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function plixoTodayKey() {
+  return new Date().toDateString();
+}
+
+function schedulePlixoMissionCloudSync() {
+  if (!getPlixoAccountCodeForSync() || plixoMissionCloudTimer) return;
+  // Coalesce rapid click updates rather than making Firebase requests per click.
+  plixoMissionCloudTimer = setTimeout(() => {
+    plixoMissionCloudTimer = null;
+    syncPlixoMissionProgressToFirebase();
+  }, 900);
+}
+
+function syncPlixoMissionProgressToFirebase() {
+  const code = getPlixoAccountCodeForSync();
+  if (!code) return;
+  const db = ensureMoneyDiggerFirebaseApp();
+  if (!db) return;
+
+  const root = db.ref("plixo_users/" + code);
+  const globalProgress = readPlixoJson("plixo_mission_progress", {});
+  const today = plixoTodayKey();
+  const dailyProgress = readPlixoJson("plixo_daily_progress_" + today, {});
+  const dailyClaimed = readPlixoJson("plixo_daily_claimed_" + today, {});
+  const dailyBonus = safeGetLS("plixo_daily_bonus_date", "");
+
+  // Merge only this game's counters; never replace progress from other games.
+  root.child("mission_progress").transaction(current => {
+    const merged = current && typeof current === "object" ? current : {};
+    for (const id of PLIXO_MISSION_IDS_TO_SYNC) {
+      if (Object.prototype.hasOwnProperty.call(globalProgress, id)) {
+        merged[id] = Math.max(Number(merged[id]) || 0, Number(globalProgress[id]) || 0);
+      }
+    }
+    return merged;
+  });
+
+  // Reset only this account's daily record when the local calendar date changes.
+  root.child("daily").transaction(current => {
+    if (!current || current.date !== today) {
+      return {
+        date: today,
+        progress: dailyProgress,
+        claimed: dailyClaimed,
+        bonus: dailyBonus
+      };
+    }
+    const oldProgress = current.progress && typeof current.progress === "object" ? current.progress : {};
+    const mergedProgress = { ...oldProgress };
+    for (const id of PLIXO_DAILY_MISSION_IDS) {
+      if (Object.prototype.hasOwnProperty.call(dailyProgress, id)) {
+        mergedProgress[id] = Math.max(Number(oldProgress[id]) || 0, Number(dailyProgress[id]) || 0);
+      }
+    }
+    return {
+      ...current,
+      progress: mergedProgress,
+      claimed: { ...(current.claimed || {}), ...dailyClaimed },
+      bonus: current.bonus || dailyBonus || ""
+    };
+  });
+}
+
+function plixoIncrementProgress(id, amount = 1, includeDaily = false) {
+  if (!Number.isFinite(amount) || amount <= 0) return;
+  const globalProgress = readPlixoJson("plixo_mission_progress", {});
+  globalProgress[id] = (Number(globalProgress[id]) || 0) + amount;
+  safeSetLS("plixo_mission_progress", JSON.stringify(globalProgress));
+
+  if (includeDaily) {
+    const today = plixoTodayKey();
+    const key = "plixo_daily_progress_" + today;
+    const dailyProgress = readPlixoJson(key, {});
+    dailyProgress[id] = (Number(dailyProgress[id]) || 0) + amount;
+    safeSetLS(key, JSON.stringify(dailyProgress));
+  }
+  schedulePlixoMissionCloudSync();
+}
+
+function plixoSetMaxProgress(id, value) {
+  if (!Number.isFinite(value) || value < 0) return;
+  const globalProgress = readPlixoJson("plixo_mission_progress", {});
+  if (value > (Number(globalProgress[id]) || 0)) {
+    globalProgress[id] = value;
+    safeSetLS("plixo_mission_progress", JSON.stringify(globalProgress));
+    schedulePlixoMissionCloudSync();
+  }
+}
+
+function plixoRecordMoneyDiggerStart() {
+  const today = plixoTodayKey();
+  const dailyKey = "plixo_daily_games_" + today;
+  const dailyGames = readPlixoJson(dailyKey, []);
+  if (!Array.isArray(dailyGames)) {
+    safeSetLS(dailyKey, JSON.stringify(["money_digger"]));
+  } else if (!dailyGames.includes("money_digger")) {
+    dailyGames.push("money_digger");
+    safeSetLS(dailyKey, JSON.stringify(dailyGames));
+    plixoIncrementProgress("dm_1", 1, true);
+    plixoIncrementProgress("dm_2", 1, true);
+    plixoIncrementProgress("dm_3", 1, true);
+  }
+
+  const allGames = readPlixoJson("plixo_played_games", []);
+  if (Array.isArray(allGames) && !allGames.includes("money_digger")) {
+    allGames.push("money_digger");
+    safeSetLS("plixo_played_games", JSON.stringify(allGames));
+    plixoSetMaxProgress("a9", allGames.length);
+  }
+
+  // Money Digger time also contributes to the arcade's cumulative 30-minute mission.
+  if (!plixoArcadeMinuteTimer) {
+    plixoArcadeMinuteTimer = setInterval(() => {
+      if (gameMode && document.visibilityState !== "hidden") {
+        plixoIncrementProgress("a13", 1, false);
+      }
+    }, 60000);
+  }
+}
+
+function plixoRecordMoneyDiggerClick() {
+  // Same click count feeds the 100 / 300 / 500 daily missions.
+  plixoIncrementProgress("dm_11", 1, true);
+  plixoIncrementProgress("dm_12", 1, true);
+  plixoIncrementProgress("dm_13", 1, true);
+  // Long-term GOLD RUSH levels share the lifetime Money Digger click counter.
+  plixoIncrementProgress("a21", 1, false);
+
+  // Ten Money Digger clicks earn exactly one PLIX. A Firebase transaction keeps
+  // the account-wide counter and reward milestone idempotent across refreshes/devices.
+  const code = getPlixoAccountCodeForSync();
+  const baselineBeforeThisClick = Math.max(
+    0,
+    Math.floor(plixoNumericValue(safeGetLS("md6_plixo_local_total_clicks", "0"))),
+    Math.floor(plixoNumericValue(safeGetLS("md6_sp_bills", "0"))),
+    Math.max(0, Math.floor(Number(myClicks) || 0) - 1)
+  );
+  if (plixoValidCode(code)) {
+    plixoRunAccountMoneyDiggerTransaction(code, baselineBeforeThisClick, true);
+  } else {
+    plixoApplyOfflineClickTotal(baselineBeforeThisClick + 1);
+  }
+
+  // MARATHON CLICKER: three minutes of regular clicks, with no gap over 10s.
+  const now = Date.now();
+  let started = parseInt(safeGetLS("md6_plixo_click_streak_start", "0"), 10) || now;
+  const last = parseInt(safeGetLS("md6_plixo_click_streak_last", "0"), 10) || 0;
+  if (!last || now < last || now - last > 10000) started = now;
+  safeSetLS("md6_plixo_click_streak_start", String(started));
+  safeSetLS("md6_plixo_click_streak_last", String(now));
+  plixoSetMaxProgress("a24", Math.floor((now - started) / 60000));
+}
+
+function plixoBackfillLifetimeClickProgress(clicks) {
+  if (!Number.isFinite(Number(clicks)) || Number(clicks) < 0) return;
+  const total = Math.max(0, Math.floor(Number(clicks) || 0), Math.floor(plixoNumericValue(safeGetLS("md6_sp_bills", "0"))));
+  // Legacy lifetime clicks count toward the permanent mission and the one-time
+  // PLIX conversion; old clicks do not auto-complete today's daily click missions.
+  plixoSetMaxProgress("a21", total);
+  const code = getPlixoAccountCodeForSync();
+  if (plixoValidCode(code)) plixoBackfillAccountClickCount(total);
+  else plixoApplyOfflineClickTotal(total);
+}
+
+
 // ═══════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════
@@ -1398,15 +1743,7 @@ let billsRef, scoresRef;
 function initFirebase(){
 try {
   if (typeof firebase !== 'undefined') {
-    firebase.initializeApp({
-      apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
-      authDomain: "money-digger-9b05e.firebaseapp.com",
-      databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "money-digger-9b05e",
-      storageBucket: "money-digger-9b05e.firebasestorage.app",
-      messagingSenderId: "883506536944",
-      appId: "1:883506536944:web:921b342dff76154fcbbd35"
-    });
+    ensureMoneyDiggerFirebaseApp();
     
     const db = firebase.database();
     billsRef = db.ref('totalBills');
@@ -1440,6 +1777,7 @@ scoresRef.on('value', snap => {
         
         if(did === deviceId){
           myClicks = clicks;
+          plixoBackfillLifetimeClickProgress(myClicks);
           myName   = rec.name || myName;
           safeSetLS('pg_player_name', myName);
           safeSetLS('md6_n', myName);
@@ -1469,6 +1807,7 @@ const _origStart = startGame;
 // Override startGame to also call initFirebase for mp
 function startGame(mode){
   gameMode = mode;
+  plixoRecordMoneyDiggerStart();
   const menu = document.getElementById('menu');
   menu.classList.add('hide');
   setTimeout(()=>{ menu.style.display='none'; }, 500);
@@ -1477,6 +1816,7 @@ function startGame(mode){
     document.getElementById('online').textContent = '● Singleplayer';
     totalBills   = parseInt(safeGetLS('md6_sp_bills', '0')) || 0;
     displayBills = totalBills;
+    plixoBackfillLifetimeClickProgress(totalBills);
     // Show achievements button
     const achBtn = document.getElementById('sp-btns');
     achBtn.style.display = 'flex';
@@ -1490,6 +1830,9 @@ function startGame(mode){
   updateScoreboard();
 }
 
+// Opening the dedicated mobile file completes the MOBILE DIGGER long-term mission.
+window.addEventListener('load', () => plixoSetMaxProgress('a29', 1));
+
 document.getElementById('btn-sp').addEventListener('click', ()=> startGame('sp'));
 document.getElementById('btn-mp').addEventListener('click', ()=> startGame('mp'));
 
@@ -1497,6 +1840,7 @@ document.getElementById('cbtn').addEventListener('click', ()=>{
   if(!gameMode) return; // menu still open
   myClicks++; 
   totalBills++; 
+  plixoRecordMoneyDiggerClick();
   spawnBill();
   
   if(gameMode === 'sp'){
