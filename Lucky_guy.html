@@ -405,6 +405,10 @@
         };
 
         function checkResult(guess, winningNumber) {
+            // Count a spin only after the wheel animation has completed.
+            if (typeof window.__plixoRecordLuckyGuySpin === 'function') {
+                try { window.__plixoRecordLuckyGuySpin(); } catch (error) { console.warn('Lucky Guy mission tracking failed.', error); }
+            }
             if (guess === winningNumber) {
                 resultMessage.style.color = 'var(--success)';
                 resultMessage.innerText = `BINGO! It was ${winningNumber}.`;
@@ -612,5 +616,336 @@
     }
 })();
 </script>  
+
+<script id="plixo-progress-bridge-lucky_guy">
+/* PLIXO progress-only integration for Lucky Guy.
+ * This observes the existing game and syncs only mission/achievement counters.
+ * It does not change skins, visuals, controls, or gameplay rules.
+ */
+(function PlixoLuckyGuyProgressBridge() {
+  'use strict';
+  const installedKey = '__plixoProgressBridge_LuckyGuy';
+  if (window[installedKey]) return;
+  window[installedKey] = true;
+
+  const GAME_ID = 'lucky_guy';
+  const DAY_KEY = () => new Date().toDateString();
+  const GLOBAL_IDS = ['a9', 'a13', 'a_lucky_level25', 'dm_lucky_level_5'];
+  const DAILY_IDS = ['dm_1', 'dm_2', 'dm_3', 'dm_lucky_level_5', 'a_lucky_spin_3', 'a_lucky_spin_5'];
+  const FIREBASE_CONFIG = {
+    apiKey: 'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',
+    authDomain: 'money-digger-9b05e.firebaseapp.com',
+    databaseURL: 'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app',
+    projectId: 'money-digger-9b05e'
+  };
+
+  const safeJSON = (key, fallback) => {
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+    catch (_) { return fallback; }
+  };
+  const num = value => { const n = Number(value); return Number.isFinite(n) ? n : 0; };
+  const unique = values => [...new Set((Array.isArray(values) ? values : []).map(String).filter(Boolean))];
+  const dailyKey = day => 'plixo_daily_progress_' + day;
+  const mergeProgress = (a, b) => {
+    const out = { ...(a && typeof a === 'object' ? a : {}) };
+    for (const [id, value] of Object.entries(b && typeof b === 'object' ? b : {})) {
+      if (value !== '' && Number.isFinite(Number(value))) out[id] = Math.max(num(out[id]), num(value));
+      else if (out[id] === undefined) out[id] = value;
+    }
+    return out;
+  };
+  function getAccountCode() {
+    const candidates = [localStorage.getItem('pg_account_code'), localStorage.getItem('pg_player_id'), localStorage.getItem('plixo_sync_code')];
+    return candidates.map(value => String(value || '').trim().toUpperCase()).find(value => /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/.test(value)) || null;
+  }
+
+  let currentDay = DAY_KEY();
+  let globalProgress = safeJSON('plixo_mission_progress', {});
+  let dailyProgress = safeJSON(dailyKey(currentDay), {});
+  let playedGames = unique(safeJSON('plixo_played_games', []));
+  let dailyGames = unique(safeJSON('plixo_daily_games_' + currentDay, []));
+  let localTimer = null, cloudTimer = null, syncInFlight = null, syncAgain = false;
+  let dbRef = null, sdkPromise = null;
+  let trackingReady = !getAccountCode();
+  let pendingTracking = [];
+  let lastTick = Date.now(), activeMs = 0;
+  let gameMarked = false;
+  let lastObservedLuckyLevel = null;
+
+  function ensureDay() {
+    const today = DAY_KEY();
+    if (today === currentDay) return;
+    currentDay = today;
+    dailyProgress = safeJSON(dailyKey(currentDay), {});
+    dailyGames = unique(safeJSON('plixo_daily_games_' + currentDay, []));
+  }
+  function refreshLocal() {
+    ensureDay();
+    globalProgress = mergeProgress(globalProgress, safeJSON('plixo_mission_progress', {}));
+    dailyProgress = mergeProgress(dailyProgress, safeJSON(dailyKey(currentDay), {}));
+    playedGames = unique([...playedGames, ...safeJSON('plixo_played_games', [])]);
+    dailyGames = unique([...dailyGames, ...safeJSON('plixo_daily_games_' + currentDay, [])]);
+  }
+  function saveLocalNow() {
+    refreshLocal();
+    try {
+      localStorage.setItem('plixo_mission_progress', JSON.stringify(globalProgress));
+      localStorage.setItem(dailyKey(currentDay), JSON.stringify(dailyProgress));
+      localStorage.setItem('plixo_played_games', JSON.stringify(playedGames));
+      localStorage.setItem('plixo_daily_games_' + currentDay, JSON.stringify(dailyGames));
+    } catch (error) { console.warn('Lucky Guy: could not save mission progress locally.', error); }
+  }
+  function scheduleLocalSave() {
+    if (localTimer) return;
+    localTimer = setTimeout(() => { localTimer = null; saveLocalNow(); }, 100);
+  }
+  function scheduleCloudSync() {
+    if (!getAccountCode() || cloudTimer) return;
+    cloudTimer = setTimeout(() => {
+      cloudTimer = null;
+      syncProgressToFirebase().catch(error => console.warn('Lucky Guy: mission sync failed.', error));
+    }, 1400);
+  }
+  function queueOrRun(action) {
+    if (trackingReady) action();
+    else pendingTracking.push(action);
+  }
+  function releaseTracking() {
+    if (trackingReady) return;
+    trackingReady = true;
+    const pending = pendingTracking;
+    pendingTracking = [];
+    pending.forEach(action => { try { action(); } catch (error) { console.warn('Lucky Guy: deferred tracking failed.', error); } });
+  }
+  function setGlobalMax(id, value) {
+    queueOrRun(() => {
+      refreshLocal();
+      const n = Math.max(0, num(value));
+      if (n <= num(globalProgress[id])) return;
+      globalProgress[id] = n;
+      scheduleLocalSave(); scheduleCloudSync();
+    });
+  }
+  function incrementGlobal(id, amount = 1) {
+    queueOrRun(() => {
+      refreshLocal();
+      const n = Math.max(0, num(amount));
+      if (!id || n <= 0) return;
+      globalProgress[id] = num(globalProgress[id]) + n;
+      scheduleLocalSave(); scheduleCloudSync();
+    });
+  }
+  function setDailyMax(id, value) {
+    queueOrRun(() => {
+      refreshLocal();
+      const n = Math.max(0, num(value));
+      dailyProgress[id] = Math.max(num(dailyProgress[id]), n);
+      globalProgress[id] = Math.max(num(globalProgress[id]), n);
+      scheduleLocalSave(); scheduleCloudSync();
+    });
+  }
+  function incrementDaily(id, amount = 1) {
+    queueOrRun(() => {
+      refreshLocal();
+      const n = Math.max(0, num(amount));
+      if (!id || n <= 0) return;
+      dailyProgress[id] = num(dailyProgress[id]) + n;
+      globalProgress[id] = Math.max(num(globalProgress[id]), num(dailyProgress[id]));
+      scheduleLocalSave(); scheduleCloudSync();
+    });
+  }
+  // Each completed wheel animation increments today's progress for both spin missions.
+  // These IDs are included in DAILY_IDS so the current day's progress is synced to Firebase.
+  window.__plixoRecordLuckyGuySpin = function() {
+    incrementDaily('a_lucky_spin_3', 1);
+    incrementDaily('a_lucky_spin_5', 1);
+  };
+  function markGamePlayedNow() {
+    refreshLocal();
+    playedGames = unique([...playedGames, GAME_ID]);
+    dailyGames = unique([...dailyGames, GAME_ID]);
+    globalProgress.a9 = Math.max(num(globalProgress.a9), playedGames.length);
+    for (const id of ['dm_1', 'dm_2', 'dm_3']) {
+      dailyProgress[id] = Math.max(num(dailyProgress[id]), dailyGames.length);
+      globalProgress[id] = Math.max(num(globalProgress[id]), dailyGames.length);
+    }
+    scheduleLocalSave(); scheduleCloudSync();
+  }
+  function markGamePlayed() {
+    if (gameMarked) return;
+    gameMarked = true;
+    queueOrRun(markGamePlayedNow);
+  }
+
+  function ensureFirebaseSDK() {
+    if (window.firebase && typeof window.firebase.database === 'function') return Promise.resolve();
+    if (sdkPromise) return sdkPromise;
+    const load = src => new Promise((resolve, reject) => {
+      const existing = [...document.scripts].find(script => script.src === src);
+      if (existing) {
+        if (existing.dataset.plixoLoaded === 'true' || (window.firebase && typeof window.firebase.database === 'function')) return resolve();
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src; script.async = true;
+      script.onload = () => { script.dataset.plixoLoaded = 'true'; resolve(); };
+      script.onerror = () => reject(new Error('Could not load ' + src));
+      (document.head || document.documentElement).appendChild(script);
+    });
+    sdkPromise = load('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js')
+      .then(() => window.firebase && typeof window.firebase.database === 'function' ? null : load('https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js'))
+      .then(() => { if (!window.firebase || typeof window.firebase.database !== 'function') throw new Error('Firebase database SDK not available.'); });
+    return sdkPromise;
+  }
+  async function getDatabase() {
+    if (dbRef) return dbRef;
+    await ensureFirebaseSDK();
+    const apps = window.firebase.apps || [];
+    if (!apps.some(app => app && app.name === '[DEFAULT]')) window.firebase.initializeApp(FIREBASE_CONFIG);
+    dbRef = window.firebase.database();
+    return dbRef;
+  }
+  async function syncProgressToFirebase() {
+    const code = getAccountCode();
+    if (!code) return;
+    if (syncInFlight) { syncAgain = true; return syncInFlight; }
+    syncInFlight = (async () => {
+      const db = await getDatabase();
+      refreshLocal();
+      const root = db.ref('plixo_users/' + code);
+      const snapshot = await root.once('value');
+      const record = snapshot && snapshot.exists() ? (snapshot.val() || {}) : {};
+      const remoteGlobal = record.mission_progress && typeof record.mission_progress === 'object' ? record.mission_progress : {};
+      const remotePlayed = Array.isArray(record.played_games) ? record.played_games : [];
+      const remoteDailyGames = record.daily_games && record.daily_games.date === currentDay && Array.isArray(record.daily_games.games) ? record.daily_games.games : [];
+      playedGames = unique([...remotePlayed, ...playedGames]);
+      dailyGames = unique([...remoteDailyGames, ...dailyGames]);
+      globalProgress.a9 = Math.max(num(globalProgress.a9), playedGames.length);
+      for (const id of ['dm_1', 'dm_2', 'dm_3']) {
+        dailyProgress[id] = Math.max(num(dailyProgress[id]), dailyGames.length);
+        globalProgress[id] = Math.max(num(globalProgress[id]), dailyGames.length);
+      }
+
+      // Merge only the mission/achievement IDs this game actually tracks.
+      const globalUpdates = {};
+      for (const id of GLOBAL_IDS) {
+        if (!id) continue;
+        const localValue = num(globalProgress[id]);
+        const remoteValue = num(remoteGlobal[id]);
+        if (localValue > 0 || remoteValue > 0 || globalProgress[id] !== undefined || remoteGlobal[id] !== undefined) {
+          const merged = Math.max(localValue, remoteValue);
+          globalProgress[id] = merged;
+          globalUpdates[id] = merged;
+        }
+      }
+      if (Object.keys(globalUpdates).length) await root.child('mission_progress').update(globalUpdates);
+
+      const today = currentDay = DAY_KEY();
+      const localDaily = mergeProgress(safeJSON(dailyKey(today), {}), dailyProgress);
+      dailyProgress = localDaily;
+      const remoteDaily = record.daily && typeof record.daily === 'object' ? record.daily : {};
+      const remoteDailyProgress = remoteDaily.date === today && remoteDaily.progress && typeof remoteDaily.progress === 'object' ? remoteDaily.progress : {};
+      const dailyUpdates = {};
+      for (const id of DAILY_IDS) {
+        if (!id) continue;
+        const merged = Math.max(num(remoteDailyProgress[id]), num(localDaily[id]), num(dailyProgress[id]));
+        if (merged > 0 || remoteDailyProgress[id] !== undefined || localDaily[id] !== undefined || dailyProgress[id] !== undefined) {
+          dailyProgress[id] = merged;
+          globalProgress[id] = Math.max(num(globalProgress[id]), merged);
+          dailyUpdates[id] = merged;
+        }
+      }
+      if (remoteDaily.date === today) {
+        if (Object.keys(dailyUpdates).length) await root.child('daily/progress').update(dailyUpdates);
+      } else {
+        // A new day gets today's local progress/claims; the previous day's daily progress is reset.
+        await root.child('daily').update({
+          date: today,
+          progress: dailyProgress,
+          claimed: safeJSON('plixo_daily_claimed_' + today, {}),
+          bonus: localStorage.getItem('plixo_daily_bonus_date') || ''
+        });
+      }
+      await root.update({
+        played_games: playedGames,
+        daily_games: { date: today, games: dailyGames }
+      });
+      saveLocalNow();
+    })().catch(error => {
+      console.warn('Lucky Guy: Firebase mission sync unavailable; local progress is retained.', error);
+    }).finally(() => {
+      syncInFlight = null;
+      if (syncAgain) { syncAgain = false; scheduleCloudSync(); }
+    });
+    return syncInFlight;
+  }
+
+  function isActuallyPlaying() { return (function(){ const el = document.getElementById('game-ui'); return !!el && el.style.display !== 'none' && getComputedStyle(el).display !== 'none'; })(); }
+  function gameHasStarted() { return (function(){ const el = document.getElementById('game-ui'); return !!el && el.style.display !== 'none' && getComputedStyle(el).display !== 'none'; })(); }
+  function pollGameProgress() {     const gameUI = document.getElementById('game-ui');
+    const active = !!gameUI && gameUI.style.display !== 'none' && getComputedStyle(gameUI).display !== 'none';
+    const currentLevel = Number(window.currentLevel || 0);
+    if (!active || !Number.isFinite(currentLevel) || currentLevel < 1) {
+      lastObservedLuckyLevel = null;
+      return;
+    }
+    setGlobalMax('a_lucky_level25', currentLevel);
+    if (lastObservedLuckyLevel === null) {
+      lastObservedLuckyLevel = currentLevel; // Loaded save/server level is not a level earned today.
+    } else if (currentLevel > lastObservedLuckyLevel) {
+      incrementDaily('dm_lucky_level_5', currentLevel - lastObservedLuckyLevel);
+      lastObservedLuckyLevel = currentLevel;
+    } else if (currentLevel < lastObservedLuckyLevel) {
+      lastObservedLuckyLevel = currentLevel;
+    }
+ }
+  function installGameHooks() {     // Level gains are polled from the game's existing public currentLevel variable.
+ }
+
+  try { installGameHooks(); } catch (error) { console.warn('Lucky Guy: could not attach all progress hooks.', error); }
+
+  function tick() {
+    ensureDay();
+    const now = Date.now();
+    const elapsed = Math.max(0, Math.min(5000, now - lastTick));
+    lastTick = now;
+    if (document.visibilityState !== 'hidden' && isActuallyPlaying()) {
+      activeMs += elapsed;
+      while (activeMs >= 60000) { activeMs -= 60000; incrementGlobal('a13', 1);  }
+    }
+    try { pollGameProgress(); } catch (error) { console.warn('Lucky Guy: progress poll failed.', error); }
+    if (!gameMarked && gameHasStarted()) markGamePlayed();
+  }
+
+  window.addEventListener('storage', event => {
+    const today = DAY_KEY();
+    if ([ 'plixo_mission_progress', 'plixo_played_games', 'plixo_daily_games_' + today, dailyKey(today), 'pg_account_code', 'pg_player_id', 'plixo_sync_code' ].includes(event.key)) {
+      refreshLocal();
+      if (getAccountCode()) scheduleCloudSync();
+    }
+  });
+  window.addEventListener('focus', () => { refreshLocal(); if (getAccountCode()) syncProgressToFirebase().catch(() => {}); });
+  window.addEventListener('pageshow', () => { refreshLocal(); if (getAccountCode()) scheduleCloudSync(); });
+  window.addEventListener('pagehide', () => {
+    if (localTimer) { clearTimeout(localTimer); localTimer = null; saveLocalNow(); }
+    if (cloudTimer) { clearTimeout(cloudTimer); cloudTimer = null; }
+    if (getAccountCode()) syncProgressToFirebase().catch(() => {});
+  });
+  document.addEventListener('visibilitychange', () => { lastTick = Date.now(); if (document.visibilityState !== 'hidden') { refreshLocal(); if (getAccountCode()) scheduleCloudSync(); } });
+
+  if (getAccountCode()) {
+    // Load/merge remote counters before applying new lifetime-counter increments.
+    const releaseTimer = setTimeout(releaseTracking, 6000);
+    syncProgressToFirebase().finally(() => { clearTimeout(releaseTimer); releaseTracking(); });
+  } else {
+    trackingReady = true;
+  }
+  setInterval(tick, 1000);
+  setInterval(() => { if (getAccountCode()) syncProgressToFirebase().catch(() => {}); }, 30000);
+})();
+
+</script>
 </body>
 </html>
