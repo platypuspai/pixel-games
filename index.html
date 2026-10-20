@@ -143,6 +143,7 @@
         .logo-container {
             display: inline-block;
             position: relative;
+            cursor: pointer;
         }
 
         .logo-pixel-deco {
@@ -455,48 +456,239 @@
         .animate-bob { animation: bobUp 2s ease-in-out infinite; }
         .animate-spin { animation: spin 4s linear infinite; transform-origin: center; }
         .animate-pulse { animation: pulse 2s ease-in-out infinite; }
-
-        /* LEADERBOARD */
-        .lb-wrap{position:relative;z-index:10;max-width:960px;margin:50px auto 80px;padding:0 20px}
-        .lb-wrap>h2{font-family:'Press Start 2P',monospace;font-size:.85rem;color:var(--accent-yellow);margin-bottom:6px}
-        .lb-wrap>p{color:var(--text-muted);font-size:.78rem;margin-bottom:24px}
-        .lb-name-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent-yellow);padding:14px 20px;margin-bottom:28px}
-        .lb-name-bar-label{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--text-muted);letter-spacing:.1em}
-        .lb-name-bar-value{font-size:.88rem;font-weight:700;color:var(--accent-yellow);flex:1}
-        .lb-change-btn{font-family:'Press Start 2P',monospace;font-size:.4rem;padding:7px 14px;background:transparent;color:var(--text-muted);border:1px solid var(--border);cursor:pointer;letter-spacing:.08em;transition:all .15s}
-        .lb-change-btn:hover{border-color:var(--accent-yellow);color:var(--accent-yellow)}
-        .lb-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
-        .lb-overlay.lb-hidden{display:none}
-        .lb-modal{background:var(--card);border:1px solid var(--border);border-top:3px solid var(--accent-yellow);padding:40px 36px;max-width:420px;width:90%}
-        .lb-modal h3{font-family:'Press Start 2P',monospace;font-size:.62rem;color:var(--accent-yellow);margin-bottom:10px}
-        .lb-modal p{color:var(--text-muted);font-size:.78rem;line-height:1.6;margin-bottom:22px}
-        .lb-modal input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Inconsolata',monospace;font-size:1rem;padding:11px 14px;outline:none;transition:border-color .15s}
-        .lb-modal input:focus{border-color:var(--accent-yellow)}
-        .lb-modal-btn{font-family:'Press Start 2P',monospace;font-size:.5rem;padding:12px 20px;background:var(--accent-yellow);color:#000;border:none;cursor:pointer;width:100%;letter-spacing:.1em;transition:filter .15s;margin-top:16px}
-        .lb-modal-btn:hover{filter:brightness(1.1)}
-        .lb-grid{display:grid;grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));;gap: 20px;align-items:start}
-        .lb-board{background:var(--card);border:1px solid var(--border);border-radius:2px}
-        .lb-board-head{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.18)}
-        .lb-live{width:6px;height:6px;border-radius:50%;background:var(--accent-green);animation:pulse 1.5s ease-in-out infinite;flex-shrink:0}
-        .lb-board-title{font-family:'Press Start 2P',monospace;font-size:.47rem;letter-spacing:.08em;flex:1;line-height:1.6}
-        .lb-board-meta{font-size:.6rem;color:var(--text-muted);white-space:nowrap}
-        .lb-board-body{max-height:400px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
-        .lb-board-body::-webkit-scrollbar{width:4px}
-        .lb-board-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-        .lb-row{display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid rgba(255,255,255,.03);transition:background .1s}
-        .lb-row:hover{background:rgba(255,255,255,.04)}
-        .lb-row.me{background:rgba(255,221,0,.07)}
-        .lb-rank{font-family:'Press Start 2P',monospace;font-size:.4rem;color:var(--text-muted);width:22px;text-align:center;flex-shrink:0}
-        .lb-rank.g{color:#ffd700;font-size:.68rem}.lb-rank.s{color:#c0c0c0;font-size:.68rem}.lb-rank.b{color:#cd7f32;font-size:.68rem}
-        .lb-name-c{flex:1;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .lb-name-c.me{color:var(--accent-yellow);font-weight:700}
-        .lb-score-c{font-size:.75rem;color:var(--text-muted);white-space:nowrap;font-family:'Inconsolata',monospace}
-        .lb-empty,.lb-loading{padding:24px 18px;color:var(--text-muted);font-size:.75rem;text-align:center;line-height:1.7}
-        .lb-loading::after{content:'...';animation:blink 1s step-end infinite}
-        .lb-foot{border-top:1px solid var(--border);padding:9px 18px;font-size:.7rem;color:var(--text-muted);background:rgba(255,221,0,.04);display:none}
-        .lb-foot span{color:var(--accent-yellow);font-weight:700}
-        .lb-notice{padding:8px 18px 14px;font-size:.64rem;color:var(--text-muted);line-height:1.6;border-top:1px solid var(--border)}
     </style>
+
+    <!-- PLIXO UNIVERSAL TRACKER (Inclusief setPlixoMaxProgress voor Snake) -->
+    <script>
+    function getSyncCode() {
+        // Progress sync uses the leaderboard account ID: 20 characters (legacy numeric IDs are also accepted).
+        const candidates = [
+            localStorage.getItem('pg_account_code'),
+            localStorage.getItem('pg_player_id'),
+            localStorage.getItem('plixo_sync_code')
+        ];
+        return candidates.map(value => String(value || '').trim().toUpperCase()).find(value => /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/.test(value)) || null;
+    }
+
+    function _getDb() {
+        if (typeof fbApp !== 'undefined' && fbApp.database) return fbApp.database();
+        if (window.firebase && window.firebase.apps.length > 0) return firebase.database();
+        return null;
+    }
+
+    function _plixoSafeObject(raw) {
+        try { const value = JSON.parse(raw || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
+        catch (_) { return {}; }
+    }
+
+    function _syncPlixoProgressCloud(syncCode, missionId, value, mode, isDaily, today) {
+        const db = _getDb();
+        if (!syncCode || !db) return;
+        const userRef = db.ref('plixo_users/' + syncCode);
+        const updateMap = (current) => {
+            const merged = current && typeof current === 'object' && !Array.isArray(current) ? {...current} : {};
+            const old = Number(merged[missionId]) || 0;
+            merged[missionId] = mode === 'add' ? old + value : Math.max(old, value);
+            return merged;
+        };
+        userRef.child('mission_progress').transaction(updateMap).catch(() => {});
+        if (isDaily) {
+            userRef.child('daily').transaction(current => {
+                const record = current && typeof current === 'object' ? {...current} : {};
+                const sameDay = record.date === today;
+                const progress = sameDay && record.progress && typeof record.progress === 'object'
+                    ? {...record.progress} : {};
+                const old = Number(progress[missionId]) || 0;
+                progress[missionId] = mode === 'add' ? old + value : Math.max(old, value);
+                record.date = today;
+                record.progress = progress;
+                if (!sameDay) { record.claimed = {}; record.bonus = ''; }
+                else {
+                    record.claimed = record.claimed && typeof record.claimed === 'object' ? record.claimed : {};
+                    record.bonus = record.bonus || '';
+                }
+                return record;
+            }).catch(() => {});
+        }
+    }
+
+    function addPlixoProgress(missionId, amount = 1) {
+        const delta = Number(amount);
+        if (!missionId || !Number.isFinite(delta) || delta <= 0) return;
+        const globalProg = _plixoSafeObject(localStorage.getItem('plixo_mission_progress'));
+        globalProg[missionId] = (Number(globalProg[missionId]) || 0) + delta;
+        localStorage.setItem('plixo_mission_progress', JSON.stringify(globalProg));
+
+        const today = new Date().toDateString();
+        const dailyKey = 'plixo_daily_progress_' + today;
+        const dailyProg = _plixoSafeObject(localStorage.getItem(dailyKey));
+        dailyProg[missionId] = (Number(dailyProg[missionId]) || 0) + delta;
+        localStorage.setItem(dailyKey, JSON.stringify(dailyProg));
+
+        const syncCode = getSyncCode();
+        if (syncCode) _syncPlixoProgressCloud(syncCode, missionId, delta, 'add', true, today);
+    }
+
+    const dailyTrackedMissionIds = new Set([
+        'a_extension_click', 'a_lucky_spin_3', 'a_lucky_spin_5',
+        'a_snake_bite_2', 'a_snake_bite_3'
+    ]);
+
+    function setPlixoMaxProgress(missionId, value, isDaily = false) {
+        const maximum = Number(value);
+        if (!missionId || !Number.isFinite(maximum) || maximum < 0) return;
+        const today = new Date().toDateString();
+        const trackDaily = !!isDaily || dailyTrackedMissionIds.has(missionId);
+        const storageKey = trackDaily ? 'plixo_daily_progress_' + today : 'plixo_mission_progress';
+        const prog = _plixoSafeObject(localStorage.getItem(storageKey));
+        prog[missionId] = Math.max(Number(prog[missionId]) || 0, maximum);
+        localStorage.setItem(storageKey, JSON.stringify(prog));
+        const syncCode = getSyncCode();
+        if (syncCode) _syncPlixoProgressCloud(syncCode, missionId, maximum, 'max', trackDaily, today);
+    }
+
+    // Newcomer and account-age bridge for skin.html. Keep a real creation timestamp
+    // when one is available; otherwise save first-seen time without pretending it is older.
+    function _normalizePlixoTimestamp(value) {
+        if (value == null || value === '') return 0;
+        let n = typeof value === 'number' ? value : (/^\d+(?:\.\d+)?$/.test(String(value).trim()) ? Number(value) : Date.parse(value));
+        if (!Number.isFinite(n) || n <= 0) return 0;
+        return n < 100000000000 ? n * 1000 : n;
+    }
+    function ensurePlixoAccountAge() {
+        const code = getSyncCode();
+        if (!code) return; // No valid leaderboard account code: no one-year mission progress.
+        const db = _getDb();
+        if (!db) return;
+
+        function trustedLocalCreatedAt() {
+            for (const key of ['pg_account_created_at', 'account_created_at', 'pg_created_at']) {
+                const ts = _normalizePlixoTimestamp(localStorage.getItem(key));
+                if (ts) return ts;
+            }
+            if (localStorage.getItem('plixo_account_created_at_source') !== 'first_seen') {
+                return _normalizePlixoTimestamp(localStorage.getItem('plixo_account_created_at'));
+            }
+            return 0;
+        }
+
+        db.ref('plixo_users/' + code).once('value').then(snapshot => {
+            const data = snapshot.val() || {};
+            const remoteCreated = [data.account_created_at, data.accountCreatedAt, data.created_at, data.createdAt,
+                data.joined_at, data.joinedAt, data.registered_at, data.registeredAt,
+                data.profile && data.profile.createdAt, data.meta && data.meta.createdAt]
+                .map(_normalizePlixoTimestamp).find(Boolean) || 0;
+            const localCreated = trustedLocalCreatedAt();
+            const created = remoteCreated || localCreated || Date.now();
+            const creationDateIsTrusted = !!(remoteCreated || localCreated);
+
+            if (remoteCreated) {
+                localStorage.setItem('plixo_account_created_at', String(remoteCreated));
+                localStorage.setItem('plixo_account_created_at_source', 'firebase');
+            } else if (localCreated) {
+                localStorage.setItem('plixo_account_created_at', String(localCreated));
+                localStorage.setItem('plixo_account_created_at_source', 'local');
+            } else {
+                // No historical date exists, so start the clock now rather than claiming an older account age.
+                localStorage.setItem('plixo_account_first_seen_at', String(created));
+                localStorage.setItem('plixo_account_created_at_source', 'first_seen');
+            }
+
+            if (!remoteCreated) {
+                db.ref('plixo_users/' + code + '/account_created_at').transaction(current => current || created);
+            }
+            if (creationDateIsTrusted && Date.now() - created >= 365 * 24 * 60 * 60 * 1000) {
+                setPlixoMaxProgress('a_account_year', 1, false);
+            }
+        }).catch(() => {});
+    }
+    // Keep these methods accessible to supported game pages so they can report progress.
+    // Top navigation tracking: write visit progress locally and wait briefly for Firebase
+    // before navigating away, so skin.html / leaderboard visits never lose their missions.
+    window.recordProfileNavigation = function(event, destination) {
+        if (event) event.preventDefault();
+        const link = event && event.currentTarget;
+        const targetUrl = link ? link.href : (destination === 'skin' ? 'skin.html' : 'leaderboard_2.html');
+        const pairs = destination === 'skin'
+            ? [['dm_4', 1], ['a15', 1]]
+            : [['dm_5', 1], ['a6', 1]];
+        const today = new Date().toDateString();
+        const dailyKey = 'plixo_daily_progress_' + today;
+        const readObject = (key) => {
+            try { const value = JSON.parse(localStorage.getItem(key) || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
+            catch (_) { return {}; }
+        };
+        const lifetime = readObject('plixo_mission_progress');
+        const daily = readObject(dailyKey);
+        for (const [id, amount] of pairs) {
+            lifetime[id] = (Number(lifetime[id]) || 0) + amount;
+            daily[id] = (Number(daily[id]) || 0) + amount;
+        }
+        localStorage.setItem('plixo_mission_progress', JSON.stringify(lifetime));
+        localStorage.setItem(dailyKey, JSON.stringify(daily));
+
+        const code = getSyncCode();
+        const db = _getDb();
+        const go = () => { window.location.href = targetUrl; };
+        if (!code || !db) { go(); return false; }
+
+        const userRef = db.ref('plixo_users/' + code);
+        const mergeMax = (current, incoming) => {
+            const merged = current && typeof current === 'object' ? {...current} : {};
+            for (const [key, val] of Object.entries(incoming)) {
+                merged[key] = Math.max(Number(merged[key]) || 0, Number(val) || 0);
+            }
+            return merged;
+        };
+        const writes = [
+            userRef.child('mission_progress').transaction(current => mergeMax(current, lifetime)),
+            userRef.child('daily').transaction(current => {
+                const sameDay = current && current.date === today;
+                const dailyRecord = current && typeof current === 'object' ? {...current} : {};
+                const remoteProgress = sameDay && dailyRecord.progress && typeof dailyRecord.progress === 'object' ? dailyRecord.progress : {};
+                dailyRecord.date = today;
+                dailyRecord.progress = mergeMax(remoteProgress, daily);
+                return dailyRecord;
+            })
+        ];
+        let navigated = false;
+        const navigateOnce = () => {
+            if (navigated) return;
+            navigated = true;
+            window.location.href = targetUrl;
+        };
+        const timeoutId = window.setTimeout(navigateOnce, 1200);
+        Promise.allSettled(writes).then(() => {
+            window.clearTimeout(timeoutId);
+            navigateOnce();
+        });
+        return false;
+    };
+
+    window.addPlixoProgress = addPlixoProgress;
+    window.setPlixoMaxProgress = setPlixoMaxProgress;
+    window.plixoReportProgress = function(id, value, mode = 'add', isDaily = false) {
+        if (mode === 'max') setPlixoMaxProgress(id, Number(value) || 0, !!isDaily);
+        else addPlixoProgress(id, Number(value) || 1);
+    };
+
+    // Daily mission: a click on any extension button on the Home page counts once.
+    document.addEventListener('click', function(event) {
+        const extensionButton = event.target && event.target.closest ? event.target.closest('a.btn-ext') : null;
+        if (!extensionButton) return;
+        setPlixoMaxProgress('a_extension_click', 1, true);
+        // These are placeholders, so avoid opening a useless blank tab.
+        if (extensionButton.getAttribute('href') === '#') event.preventDefault();
+    });
+
+
+    window.addEventListener('load', () => {
+        addPlixoProgress('a1', 1);
+        ensurePlixoAccountAge();
+        // A13 is now a long-term mission.
+        setInterval(() => { addPlixoProgress('a13', 1); }, 60000);
+    });
+    </script>
 </head>
 <body>
 
@@ -508,11 +700,9 @@
     <div id="rules-triangle-container" style="cursor: pointer; display: flex; align-items: center; gap: 8px; position: relative;">
         <span style="font-family: 'Press Start 2P', monospace; font-size: 0.5rem; color: var(--text-muted);" data-i18n="rulesBtn">RULES</span>
         <svg id="rules-triangle" width="28" height="28" viewBox="0 0 24 24">
-            <!-- Afgeronde driehoek (SVG) -->
             <path id="rules-triangle-path" d="M12 2.247a2 2 0 0 1 1.732 1l8 13.856a2 2 0 0 1-1.732 3H3.999a2 2 0 0 1-1.732-3l8-13.856a2 2 0 0 1 1.732-1z" fill="#00ff88"/>
         </svg>
         
-        <!-- Dropdown Box (verschijnt bij hover) -->
         <div id="rules-dropdown">
             <h3 style="font-family: 'Press Start 2P', monospace; font-size: 0.55rem; color: var(--accent-green); margin-bottom: 12px;" data-i18n="rulesTitle">// ARCADE RULES</h3>
             <ul style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; padding-left: 16px; margin-bottom: 0;">
@@ -543,16 +733,18 @@
         <svg class="pixel-block" width="20" height="20" viewBox="0 0 3 3"><rect width="1" height="1" x="1" y="0" fill="#ff44aa"/><rect width="1" height="1" x="0" y="1" fill="#ff44aa"/><rect width="1" height="1" x="2" y="1" fill="#ff44aa"/><rect width="1" height="1" x="1" y="2" fill="#ff44aa"/></svg>
     </div>
 
-    <div class="logo-container">
+    <!-- MISSION DM_9: Klik op logo -->
+    <div class="logo-container" onclick="addPlixoProgress('dm_9', 1)">
         <h1><span class="title-pixel">PLIXO</span><span class="title-dash">-</span><span class="title-games">ARCADE</span></h1>
     </div>
-    <p class="subtitle" data-i18n="subtitle">11 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span></p>
+    <p class="subtitle" data-i18n="subtitle">12 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span></p>
 
     <nav class="navbar">
         <button class="nav-btn active" onclick="showPage('home', this)" data-i18n="navHome">▶ HOME</button>
         <button class="nav-btn" onclick="showPage('contact', this)" data-i18n="navContact">✉ CONTACT</button>
         <button class="nav-btn" onclick="showPage('info', this)" data-i18n="navInfo">ℹ INFO</button>
-        <a class="nav-btn" href="leaderboard.html" data-i18n="navLb">LEADERBOARD</a>
+        <a id="nav-leaderboard" class="nav-btn" href="leaderboard_2.html" style="color:var(--accent-blue);border-color:var(--accent-blue);box-shadow:0 0 12px rgba(68,136,255,.16);" data-i18n="navLb" onclick="return recordProfileNavigation(event, 'leaderboard')">LEADERBOARD</a>
+        <a id="nav-skin" class="nav-btn" href="skin.html" style="color:var(--accent-yellow); border-color:var(--accent-yellow);" onclick="return recordProfileNavigation(event, 'skin')">SKIN</a>
     </nav>
 </header>
 
@@ -592,7 +784,7 @@
             <p class="card-desc" data-i18n="descDino">Would the dinosaurs survive without the asteroid? Find out!</p>
             <div class="card-actions">
                 <a class="btn btn-play" href="dino-world.html" data-i18n="btnPlay">▶ PLAY</a>
-                <a class="btn btn-ext" href="https://chromewebstore.google.com/detail/iejbajahighjdjjpembncgkgjolpbkfh?utm_source=item-share-cb" target="_blank" data-i18n="btnExt">⬡ EXTENSION</a>
+                <a class="btn btn-ext" href="#" target="_blank" data-i18n="btnExt">⬡ EXTENSION</a>
             </div>
         </div>
     </div>
@@ -621,8 +813,30 @@
             <h2 class="card-title">Mini Browser Platformer</h2>
             <p class="card-desc" data-i18n="descPlat">Jump, run and win!</p>
             <div class="card-actions">
-                <a class="btn btn-play" href="mini-world-sender.html" style="background:#ff2222;" data-i18n="btnPlay">▶ PLAY</a>
-                <a class="btn btn-ext" href="https://chromewebstore.google.com/detail/nhgibefomkakkimjgfddgjafdjkjfekd?utm_source=item-share-cb" target="_blank" style="color:#ff2222; border-color:#ff2222;" data-i18n="btnExt">⬡ EXTENSION</a>
+                <a class="btn btn-play" href="mini-browser-platformer-modes.html" style="background:#ff2222;" data-i18n="btnPlay">▶ PLAY</a>
+                <a class="btn btn-ext" href="#" target="_blank" style="color:#ff2222; border-color:#ff2222;" data-i18n="btnExt">⬡ EXTENSION</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mini Spikes Platformer (separate game from Mini Browser Platformer) -->
+    <div class="game-card" style="--card-accent: #ff44aa;">
+        <div class="card-corner tl"></div><div class="card-corner br"></div>
+        <div class="card-preview" style="--preview-bg: #1b0714;">
+            <svg width="80" height="80" viewBox="0 0 16 16" style="image-rendering:pixelated;">
+                <rect x="0" y="14" width="16" height="2" fill="#ff44aa" opacity="0.4"/>
+                <path d="M2 14 L4 8 L6 14 M7 14 L9 8 L11 14 M12 14 L14 8 L16 14" fill="#ff44aa" opacity="0.8"/>
+                <rect x="4" y="3" width="4" height="4" fill="#ff44aa"/>
+                <rect x="4" y="3" width="4" height="1" fill="#ffaadd" opacity="0.8"/>
+            </svg>
+        </div>
+        <div class="card-body">
+            <span class="card-tag" style="color:#ff44aa;">// 03 · precision platformer</span>
+            <h2 class="card-title">Mini Spikes Platformer</h2>
+            <p class="card-desc">Avoid the spikes, clear the levels, and race other players.</p>
+            <div class="card-actions">
+                <a class="btn btn-play" href="mini-spikes-platformer-modes.html" style="background:#ff44aa;">▶ PLAY</a>
+                <a class="btn btn-ext" href="#" target="_blank" style="color:#ff44aa; border-color:#ff44aa;" data-i18n="btnExt">⬡ EXTENSION</a>
             </div>
         </div>
     </div>
@@ -647,8 +861,8 @@
             <h2 class="card-title">One Square</h2>
             <p class="card-desc" data-i18n="descSq">Simplicity at its best. One block, infinite creativity.</p>
             <div class="card-actions">
-                <a class="btn btn-play" href="one-square-v1.6.html" style="background:#ffdd00; color:#000;" data-i18n="btnPlay">▶ PLAY</a>
-                <a class="btn btn-ext" href="https://chromewebstore.google.com/detail/foelbpdicaedppibpblliahmdceaocjc?utm_source=item-share-cb" target="_blank" style="color:#ffdd00; border-color:#ffdd00;" data-i18n="btnExt">⬡ EXTENSION</a>
+                <a class="btn btn-play" href="one-square.html" style="background:#ffdd00; color:#000;" data-i18n="btnPlay">▶ PLAY</a>
+                <a class="btn btn-ext" href="#" target="_blank" style="color:#ffdd00; border-color:#ffdd00;" data-i18n="btnExt">⬡ EXTENSION</a>
             </div>
         </div>
     </div>
@@ -750,7 +964,7 @@
             <p class="card-desc" data-i18n="descApoc">Survive endless waves of zombies and stay alive as long as possible.</p>
             <div class="card-actions">
                 <a class="btn btn-play" href="mini apocalypse.html" style="background:#7CFF5B; color:#000;" data-i18n="btnPlay">▶ PLAY</a>
-                <a class="btn btn-ext" href="https://chromewebstore.google.com/detail/aclmgioeganloaobldckgcgpdcjcgmon?utm_source=item-share-cb" target="_blank" rel="noopener noreferrer" style="color:#7CFF5B; border-color:#7CFF5B;" data-i18n="btnExt">⬡ EXTENSION</a>
+                <a class="btn btn-ext" href="#" target="_blank" rel="noopener noreferrer" style="color:#7CFF5B; border-color:#7CFF5B;" data-i18n="btnExt">⬡ EXTENSION</a>
             </div>
       </div>
     </div>
@@ -790,7 +1004,7 @@
             <p class="card-desc" data-i18n="descMon">Click as much money as you can!</p>
             <div class="card-actions">
                 <a class="btn btn-play" href="money-digger_v15.html" style="background:#ff8844;" data-i18n="btnPlay">▶ PLAY</a>
-                <a class="btn btn-app" href="money-digger_v15_mobile.html" style="color:#ff8844; border-color:#ff8844;" data-i18n="btnMob">📱 MOBILE</a>
+                <a class="btn btn-app" href="money-digger_v15_mobile.html" style="color:#ff8844; border-color:#ff8844;" onclick="addPlixoProgress('a29', 1)" data-i18n="btnMob">📱 MOBILE</a>
             </div>
         </div>
     </div>
@@ -906,9 +1120,9 @@
         </div>
         <div class="info-block">
             <h3 data-i18n="infT2">// THE GAMES</h3>
-            <p data-i18n="infP2">There are currently 11 games available: DVD+, Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker and THE END. All games are playable directly in your browser.</p>
+            <p data-i18n="infP2">There are currently 12 games available: DVD+, Dino World, Mini Browser Platformer, Mini Spikes Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker and THE END. All games are playable directly in your browser.</p>
             <div class="info-tag-list">
-                <span class="info-tag">DVD+</span><span class="info-tag">DINO WORLD</span><span class="info-tag">MINI PLATFORMER</span><span class="info-tag">ONE SQUARE</span><span class="info-tag">DODGING ARENA</span><span class="info-tag">BUG ESCAPE</span><span class="info-tag">MONEY DIGGER</span><span class="info-tag">LUCKY GUY</span><span class="info-tag">Mini Apocalypse</span><span class="info-tag">TIME TICKER</span><span class="info-tag">THE END</span>
+                <span class="info-tag">DVD+</span><span class="info-tag">DINO WORLD</span><span class="info-tag">MINI BROWSER PLATFORMER</span><span class="info-tag">MINI SPIKES PLATFORMER</span><span class="info-tag">ONE SQUARE</span><span class="info-tag">DODGING ARENA</span><span class="info-tag">BUG ESCAPE</span><span class="info-tag">MONEY DIGGER</span><span class="info-tag">LUCKY GUY</span><span class="info-tag">Mini Apocalypse</span><span class="info-tag">TIME TICKER</span><span class="info-tag">THE END</span>
             </div>
         </div>
         <div class="info-block">
@@ -918,56 +1132,6 @@
                 <span class="info-tag">HTML5</span><span class="info-tag">CSS3</span><span class="info-tag">JAVASCRIPT</span><span class="info-tag">CANVAS API</span><span class="info-tag">PYTHON</span><span class="info-tag">SCRATCH</span>
             </div>
     </div>
-</div>
-
-<!-- LEADERBOARD PAGE -->
-<div id="page-leaderboard" class="page" style="display:none; position:relative; z-index:10;">
-  <div class="lb-overlay lb-hidden" id="lb-overlay" style="display:none;">
-    <div class="lb-modal">
-      <h3 data-i18n="lbMT">// CHOOSE YOUR NAME</h3>
-      <p data-i18n="lbMP">This name will be used to identify you on the leaderboards.</p>
-      <input id="lb-modal-inp" type="text" maxlength="18" data-i18n-placeholder="lbMPh" placeholder="Your player name..." autocomplete="off">
-      <button class="lb-modal-btn" onclick="lbConfirmName()" data-i18n="lbMBtn">► CONFIRM NAME</button>
-    </div>
-  </div>
-  <div class="lb-wrap">
-    <h2 data-i18n="lbTitle">LEADERBOARD</h2>
-    <p data-i18n="lbDesc">Live leaderboards for all Plixo-Arcade games.</p>
-    <div class="lb-name-bar">
-      <span class="lb-name-bar-label" data-i18n="lbSpeler">// PLAYER</span>
-      <span class="lb-name-bar-value" id="lb-bar-name">—</span>
-      <button class="lb-change-btn" onclick="lbShowModal()" data-i18n="lbBtnNaam">CHANGE NAME</button>
-    </div>
-    <div class="lb-grid">
-      <div class="lb-board" style="border-top:2px solid var(--accent-orange)">
-        <div class="lb-board-head">
-          <span class="lb-live"></span>
-          <span class="lb-board-title" style="color:var(--accent-orange)">MONEY DIGGER</span>
-          <span class="lb-board-meta" data-i18n="lbMdMeta">clicks</span>
-        </div>
-        <div class="lb-board-body" id="lb-md-body"><div class="lb-loading"><span data-i18n="lbConn">Connecting</span></div></div>
-        <div class="lb-foot" id="lb-md-foot"></div>
-      </div>
-      <div class="lb-board" style="border-top:2px solid var(--accent-green)">
-        <div class="lb-board-head">
-          <span class="lb-board-title" style="color:var(--accent-green)">MINI PLATFORMER</span>
-          <span class="lb-board-meta" data-i18n="lbPfMeta">best time</span>
-        </div>
-        <div class="lb-board-body" id="lb-pf-body"><div class="lb-loading"><span data-i18n="lbLoad">Loading</span></div></div>
-        <div class="lb-foot" id="lb-pf-foot"></div>
-        <div class="lb-notice" data-i18n="lbNotice">⚠ Scores are saved locally per browser.</div>
-      </div>
-      <div class="lb-board" style="border-top:2px solid var(--accent-cyan)">
-        <div class="lb-board-head">
-          <span class="lb-live"></span>
-          <span class="lb-board-title" style="color:var(--accent-cyan)">LUCKY GUY</span>
-          <span class="lb-board-meta" data-i18n="lbLgMeta">highest level</span>
-        </div>
-        <div class="lb-board-body" id="lb-lg-body"><div class="lb-loading"><span data-i18n="lbConn">Connecting</span></div></div>
-        <div class="lb-foot" id="lb-lg-foot"></div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <footer>
@@ -983,26 +1147,26 @@
 <script>
 const i18n = {
   en: {
-    subtitle: "11 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span>",
+    subtitle: "12 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span>",
     navHome: "▶ HOME", navContact: "✉ CONTACT", navInfo: "ℹ INFO", navLb: "LEADERBOARD",
     tagSim: "// 10 · simulation & idle", descDvd: "The ultimate DVD bouncing simulator with upgrades, skins, and predictions!",
     tagDino: "// 01 · simulation", descDino: "Would the dinosaurs survive without the asteroid? Find out!", btnExt: "⬡ EXTENSION",
     tagPlat: "// 02 · platformer", descPlat: "Jump, run and win!",
-    tagSq: "// 03 · sandbox", descSq: "Simplicity at its best. One block, infinite creativity.",
-    tagDod: "// 04 · dodge", descDod: "Dodges everything coming at you. Reflexes tested to the limit!",
+    tagSq: "// 04 · sandbox", descSq: "Simplicity at its best. One block, infinite creativity.",
+    tagDod: "// 05 · dodge", descDod: "Dodges everything coming at you. Reflexes tested to the limit!",
     tagBug: "// 07 · dodge", descBug: "Dodge the balloons and survive as long as possible!",
-    tagApoc: "// 08 · survival", descApoc: "Survive endless waves of zombies and stay alive as long as possible.",
-    tagMon: "// 05 · click & collect", descMon: "Click as much money as you can!", btnMob: "📱 MOBILE",
-    tagLuck: "// 06 · luck", descLuck: "Pure chaos mode. Pick your number and survive the wheel.",
-    tagTime: "// 09 · idle & facts", descTime: "Watch real-time facts count up second by second in notebook style!",
-    tagEnd: "// 11 · finale", titleEnd: "THE END", descEnd: "The final project conclusion and interactive experience!",
+    tagApoc: "// 09 · survival", descApoc: "Survive endless waves of zombies and stay alive as long as possible.",
+    tagMon: "// 06 · click & collect", descMon: "Click as much money as you can!", btnMob: "📱 MOBILE",
+    tagLuck: "// 07 · luck", descLuck: "Pure chaos mode. Pick your number and survive the wheel.",
+    tagTime: "// 10 · idle & facts", descTime: "Watch real-time facts count up second by second in notebook style!",
+    tagEnd: "// 12 · finale", titleEnd: "THE END", descEnd: "The final project conclusion and interactive experience!",
     btnPlay: "▶ PLAY",
     conTitle: "✉ CONTACT US", conDesc: "Questions, feedback or just want to say hi? Send us a message — we read everything!",
     conLName: "// NAME", conPName: "Your name...", conLEmail: "// EMAIL", conPEmail: "your@email.com",
     conLMsg: "// MESSAGE", conPMsg: "Write your message here...", conBtn: "► SEND MESSAGE",
     conSucc: "✓ MESSAGE RECEIVED!<br><br>We'll reply as soon as possible (check your mail).", conSending: "SENDING...",
     infT1: "// WHAT IS PLIXO-ARCADE?", infP1: "Plixo-Arcade is a collection of small browser games made as a school project. All games are free to play, directly in your browser.",
-    infT2: "// THE GAMES", infP2: "There are currently 11 games available: DVD+, Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker and THE END. All games are playable directly in your browser.",
+    infT2: "// THE GAMES", infP2: "There are currently 12 games available: DVD+, Dino World, Mini Browser Platformer, Mini Spikes Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker and THE END. All games are playable directly in your browser.",
     infT3: "// TECHNOLOGY", infP3: "All games are built with vanilla HTML, CSS, JavaScript and Python. One game is made in Scratch. No frameworks, no libraries — just pure web technology.",
     lbTitle: "LEADERBOARD", lbDesc: "Live leaderboards for all Plixo-Arcade games.", lbSpeler: "// PLAYER", lbBtnNaam: "CHANGE NAME",
     lbMdMeta: "clicks", lbPfMeta: "best time", lbLgMeta: "highest level", lbNotice: "⚠ Scores are saved locally per browser.",
@@ -1020,26 +1184,26 @@ const i18n = {
     cheatRed: "ACCOUNT BANNED! You broke the rules. Your account and scores have been deleted."
   },
   nl: {
-    subtitle: "11 games &nbsp;·&nbsp; speel in de browser &nbsp;·&nbsp; schoolproject <span>_</span>",
+    subtitle: "12 games &nbsp;·&nbsp; speel in de browser &nbsp;·&nbsp; schoolproject <span>_</span>",
     navHome: "▶ HOME", navContact: "✉ CONTACT", navInfo: "ℹ INFO", navLb: "LEADERBOARD",
     tagSim: "// 10 · simulatie & idle", descDvd: "De ultieme DVD stuiter simulator met upgrades, skins en voorspellingen!",
     tagDino: "// 01 · simulatie", descDino: "Zouden de dinosauriërs overleven zonder asteroïde? Ontdek het hier!", btnExt: "⬡ EXTENSIE",
     tagPlat: "// 02 · platformer", descPlat: "Ren, spring en win!",
-    tagSq: "// 03 · sandbox", descSq: "Eenvoud op zijn best. Eén blok, eindeloze creativiteit.",
+    tagSq: "// 04 · sandbox", descSq: "Eenvoud op zijn best. Eén blok, eindeloze creativiteit.",
     tagDod: "// 04 · ontwijken", descDod: "Ontwijk alles wat op je afkomt. Test je reflexen tot het uiterste!",
     tagBug: "// 07 · ontwijken", descBug: "Ontwijk de ballonnen en overleef zo lang mogelijk!",
-    tagApoc: "// 08 · survival", descApoc: "Overleef eindeloze golven zombies en blijf zo lang mogelijk in leven.",
-    tagMon: "// 05 · click & collect", descMon: "Klik zoveel mogelijk geld bij elkaar!", btnMob: "📱 MOBIEL",
+    tagApoc: "// 09 · survival", descApoc: "Overleef eindeloze golven zombies en blijf zo lang mogelijk in leven.",
+    tagMon: "// 06 · click & collect", descMon: "Klik zoveel mogelijk geld bij elkaar!", btnMob: "📱 MOBIEL",
     tagLuck: "// 06 · geluk", descLuck: "Pure chaos. Kies een nummer en overleef het wiel.",
     tagTime: "// 09 · idle & feitjes", descTime: "Kijk hoe real-time feitjes elke seconde oplopen in een notitieboek stijl!",
-    tagEnd: "// 11 · finale", titleEnd: "THE END", descEnd: "De finale projectconclusie en interactieve ervaring!",
+    tagEnd: "// 12 · finale", titleEnd: "THE END", descEnd: "De finale projectconclusie en interactieve ervaring!",
     btnPlay: "▶ SPELEN",
     conTitle: "✉ CONTACTEER ONS", conDesc: "Vragen, feedback of gewoon even hallo zeggen? Stuur ons een bericht!",
     conLName: "// NAAM", conPName: "Jouw naam...", conLEmail: "// E-MAIL", conPEmail: "jouw@email.com",
     conLMsg: "// BERICHT", conPMsg: "Schrijf hier je bericht...", conBtn: "► VERSTUUR BERICHT",
     conSucc: "✓ BERICHT ONTVANGEN!<br><br>We reageren zo snel mogelijk (check je mail).", conSending: "VERZENDEN...",
     infT1: "// WAT IS PLIXO-ARCADE?", infP1: "Plixo-Arcade is een collectie van kleine browsergames, gemaakt voor een schoolproject. Alle spellen zijn gratis te spelen in de browser.",
-    infT2: "// DE SPELLEN", infP2: "Er zijn momenteel 11 games beschikbaar: DVD+, Dino World, Mini Browser Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker en THE END.",
+    infT2: "// DE SPELLEN", infP2: "Er zijn momenteel 12 games beschikbaar: DVD+, Dino World, Mini Browser Platformer, Mini Spikes Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker en THE END.",
     infT3: "// TECHNOLOGIE", infP3: "Alle spellen zijn gebouwd met vanilla HTML, CSS, JavaScript en Python. Eén game is gemaakt in Scratch. Geen frameworks, gewoon pure web technologie.",
     lbTitle: "LEADERBOARD", lbDesc: "Live ranglijsten voor alle Plixo-Arcade games.", lbSpeler: "// SPELER", lbBtnNaam: "NAAM WIJZIGEN",
     lbMdMeta: "clicks", lbPfMeta: "beste tijd", lbLgMeta: "hoogste level", lbNotice: "⚠ Scores worden lokaal opgeslagen per browser.",
@@ -1057,7 +1221,7 @@ const i18n = {
     cheatRed: "ACCOUNT VERBANNEN! Je hebt de regels verbroken. Je account en scores zijn verwijderd."
   },
   fr: {
-    subtitle: "11 jeux &nbsp;·&nbsp; jouez dans le navigateur &nbsp;·&nbsp; projet scolaire <span>_</span>",
+    subtitle: "12 jeux &nbsp;·&nbsp; jouez dans le navigateur &nbsp;·&nbsp; projet scolaire <span>_</span>",
     navHome: "▶ ACCUEIL", navContact: "✉ CONTACT", navInfo: "ℹ INFO", navLb: "CLASSEMENT",
     tagSim: "// 10 · simulation", descDvd: "L'ultime simulateur de rebond de DVD avec améliorations, skins et prédictions!",
     tagDino: "// 01 · simulation", descDino: "Les dinosaures survivraient-ils sans l'astéroïde? Découvrez-le!", btnExt: "⬡ EXTENSION",
@@ -1069,14 +1233,14 @@ const i18n = {
     tagMon: "// 05 · clic & collecte", descMon: "Cliquez et récoltez autant d'argent que possible!", btnMob: "📱 MOBILE",
     tagLuck: "// 06 · chance", descLuck: "Mode chaos pur. Choisissez votre numéro et survivez.",
     tagTime: "// 09 · faits", descTime: "Regardez les faits en temps réel s'accumuler seconde par seconde!",
-    tagEnd: "// 11 · finale", titleEnd: "THE END", descEnd: "La conclusion finale du projet et l'expérience interactive!",
+    tagEnd: "// 12 · finale", titleEnd: "THE END", descEnd: "La conclusion finale du projet et l'expérience interactive!",
     btnPlay: "▶ JOUER",
     conTitle: "✉ NOUS CONTACTER", conDesc: "Questions, retours ou juste un bonjour? Envoyez-nous un message!",
     conLName: "// NOM", conPName: "Votre nom...", conLEmail: "// E-MAIL", conPEmail: "votre@email.com",
     conLMsg: "// MESSAGE", conPMsg: "Écrivez votre message ici...", conBtn: "► ENVOYER",
     conSucc: "✓ MESSAGE REÇU!<br><br>We'll reply as soon as possible.", conSending: "ENVOI...",
     infT1: "// QU'EST-CE QUE PLIXO-ARCADE?", infP1: "Plixo-Arcade est une collection de petits jeux sur navigateur réalisés dans le cadre d'un projet scolaire.",
-    infT2: "// LES JEUX", infP2: "11 jeux sont actuellement disponibles: DVD+, Dino World, Mini Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker et THE END.",
+    infT2: "// LES JEUX", infP2: "12 jeux sont actuellement disponibles: DVD+, Dino World, Mini Browser Platformer, Mini Spikes Platformer, One Square, Dodging Arena, Bug Escape, Money Digger, Lucky Guy, Mini Apocalypse, Time Ticker et THE END.",
     infT3: "// TECHNOLOGIE", infP3: "Tous les jeux sont construits en HTML, CSS, JavaScript et Python.",
     lbTitle: "CLASSEMENT", lbDesc: "Classements en direct pour tous les jeux Plixo-Arcade.", lbSpeler: "// JOUEUR", lbBtnNaam: "CHANGER NOM",
     lbMdMeta: "clics", lbPfMeta: "meilleur temps", lbLgMeta: "niveau max", lbNotice: "⚠ Les scores sont sauvegardés localement.",
@@ -1120,10 +1284,7 @@ function applyTranslations() {
 document.getElementById('lang-select').addEventListener('change', (e) => {
   localStorage.setItem('app_lang', e.target.value);
   applyTranslations();
-  
-  if (document.getElementById('page-leaderboard').classList.contains('active')) {
-      lbOpen();
-  }
+  addPlixoProgress('a5', 1); // Mission: Polyglot (Language Switch)
 });
 
 document.addEventListener('DOMContentLoaded', applyTranslations);
@@ -1169,13 +1330,11 @@ document.addEventListener('DOMContentLoaded', applyTranslations);
          target.style.display = 'block';
          if (btn) btn.classList.add('active');
          
+         if (name === 'contact') addPlixoProgress('a2', 1);
+         if (name === 'info') { addPlixoProgress('a3', 1); addPlixoProgress('dm_6', 1); }
+         
          var footer = document.querySelector('footer');
          if (footer) footer.style.display = (name === 'home') ? '' : 'none';
-
-         var adBalk = document.getElementById('pixel-games-native-ad-balk');
-         if (adBalk) {
-             adBalk.style.display = (name === 'home') ? 'flex' : 'none';
-         }
 
          var snakeContainer = document.getElementById('snake-container');
          var snakeScore = document.getElementById('snake-score');
@@ -1188,8 +1347,6 @@ document.addEventListener('DOMContentLoaded', applyTranslations);
          }
          
          window.scrollTo({ top: 0, behavior: 'smooth' });
-         if (name === 'leaderboard') { if (window.lbOpen) window.lbOpen(); }
-         else { if (window.lbClose) window.lbClose(); }
      } catch(err) {
          console.error('showPage fout:', err);
      }
@@ -1219,87 +1376,6 @@ document.addEventListener('DOMContentLoaded', applyTranslations);
     }
 </script>
 
-<script>
-var LB_KEY='pg_player_name', _mdOff=null, _lgOff=null, _daOff=null, _mdData=null, _lgData=null, _daData=null;
-var FB_CFG={apiKey:'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',authDomain:'money-digger-9b05e.firebaseapp.com',databaseURL:'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app'};
-
-function lbGetName(){return localStorage.getItem(LB_KEY)||'';}
-function lbEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function lbMedal(i){return i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1);}
-function lbMedalCls(i){return i===0?'g':i===1?'s':i===2?'b':'';}
-
-function lbRender(bodyId,footId,rows,me){
-  var body=document.getElementById(bodyId),foot=document.getElementById(footId);
-  if(!body)return;
-  if(!rows||!rows.length){body.innerHTML='<div class="lb-empty">' + window.t('lbEmpty') + '</div>';if(foot)foot.style.display='none';return;}
-  var low=(me||'').toLowerCase(),html='',pos=-1;
-  for(var i=0;i<rows.length;i++){
-    var r=rows[i],isMe=low&&r.name.toLowerCase()===low;
-    if(isMe)pos=i;
-    html+='<div class="lb-row'+(isMe?' me':'')+'"><span class="lb-rank '+lbMedalCls(i)+'">'+lbMedal(i)+'</span><span class="lb-name-c'+(isMe?' me':'')+'">'+lbEsc(r.name)+'</span><span class="lb-score-c">'+r.score+'</span></div>';
-  }
-  body.innerHTML=html;
-  if(foot&&pos>-1){foot.innerHTML='<span>' + window.t('lbRank') + (pos+1) + '</span>';foot.style.display='block';}
-  else if(foot)foot.style.display='none';
-}
-
-function lbOpen(){
-  var me=lbGetName();
-  document.getElementById('lb-bar-name').innerText=me||'—';
-  
-  document.getElementById('lb-md-body').innerHTML = '<div class="lb-loading"><span>' + window.t('lbConn') + '</span></div>';
-  document.getElementById('lb-lg-body').innerHTML = '<div class="lb-loading"><span>' + window.t('lbConn') + '</span></div>';
-  document.getElementById('lb-pf-body').innerHTML = '<div class="lb-loading"><span>' + window.t('lbLoad') + '</span></div>';
-  
-  if(!me)lbShowModal();
-  else {
-    firebase.initializeApp(FB_CFG);
-    var db=firebase.database();
-    
-    db.ref('scores/moneyDigger').orderByChild('score').limitToLast(10).on('value',function(snap){
-      var arr=[];
-      snap.forEach(function(ch){arr.unshift({name:ch.child('name').val(),score:ch.child('score').val()});});
-      _mdData=arr;
-      lbRender('lb-md-body','lb-md-foot',arr,me);
-    });
-    
-    db.ref('scores/luckyGuy').orderByChild('level').limitToLast(10).on('value',function(snap){
-      var arr=[];
-      snap.forEach(function(ch){arr.unshift({name:ch.child('name').val(),score:ch.child('level').val()});});
-      _lgData=arr;
-      lbRender('lb-lg-body','lb-lg-foot',arr,me);
-    });
-    
-    db.ref('scores/dodgingArena').orderByChild('score').limitToLast(10).on('value',function(snap){
-      var arr=[];
-      snap.forEach(function(ch){arr.unshift({name:ch.child('name').val(),score:ch.child('score').val()});});
-      _daData=arr;
-      if (document.getElementById('lb-da-body')) lbRender('lb-da-body','lb-da-foot',arr,me);
-    });
-  }
-}
-
-function lbClose(){
-  if(firebase.apps.length>0){
-    firebase.database().ref('scores/moneyDigger').off();
-    firebase.database().ref('scores/luckyGuy').off();
-    firebase.database().ref('scores/dodgingArena').off();
-  }
-}
-
-function lbShowModal(){document.getElementById('lb-overlay').style.display='flex';}
-function lbHideModal(){document.getElementById('lb-overlay').style.display='none';}
-function lbConfirmName(){
-  var inp=document.getElementById('lb-modal-inp'),name=(inp.value||'').trim().substring(0,18);
-  if(!name){alert(window.t('lbAlert'));return;}
-  localStorage.setItem(LB_KEY,name);
-  lbHideModal();
-  lbOpen();
-}
-
-document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp').addEventListener('keypress',function(e){if(e.key==='Enter')lbConfirmName();});
-</script>
-
 <style id="perfect-math-grid-css">
     .navbar { display: flex !important; justify-content: center !important; flex-wrap: wrap !important; gap: 20px !important; margin: 40px 0 0 0 !important; width: 100% !important; }
     .nav-btn { display: inline-flex !important; align-items: center !important; justify-content: center !important; width: 140px !important; height: 40px !important; padding: 0 !important; box-sizing: border-box !important; margin: 0 !important; }
@@ -1307,7 +1383,6 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
     .game-card { width: 300px !important; height: 320px !important; box-sizing: border-box !important; margin: 0 !important; padding: 0 !important; display: block !important; }
     .card-preview { height: 140px !important; box-sizing: border-box !important; }
     .card-body { height: 180px !important; padding: 20px !important; box-sizing: border-box !important; }
-    .lb-grid { display: grid !important; grid-template-columns: repeat(auto-fit, 260px) !important; justify-content: center !important; gap: 20px !important; }
 </style>
 
 <script>
@@ -1473,7 +1548,16 @@ document.getElementById('lb-modal-inp')&&document.getElementById('lb-modal-inp')
         if (nextX === food.x && nextY === food.y) {
             const el = createBlock(snakeColor, 10);
             tail = {x: nextX, y: nextY, el: el}; snake.unshift(tail);
-            score++; if (scoreElement) scoreElement.innerText = 'SCORE: ' + score; spawnFood();
+            score++; if (scoreElement) scoreElement.innerText = 'SCORE: ' + score; 
+            
+            // MISSIONS: Snake charmer (Tracking the max score reached)
+            setPlixoMaxProgress('dm_10', score, true); // Daily mission: score 5
+            setPlixoMaxProgress('a_snake_bite_2', score, true); // Daily mission: score 10
+            setPlixoMaxProgress('a_snake_bite_3', score, true); // Daily mission: score 20
+            setPlixoMaxProgress('a8', score, false);   // Long-term mission: score 25
+            setPlixoMaxProgress('a_snake_50', score, false); // Achievement: score 50
+            
+            spawnFood();
         } else {
             tail = snake.pop(); tail.x = nextX; tail.y = nextY; snake.unshift(tail);
         }
@@ -1545,17 +1629,15 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Controleer op inkomende cheats
     if (detectie) {
-        localStorage.removeItem('cheat_detectie'); // Meteen opschonen
+        localStorage.removeItem('cheat_detectie'); 
         
         if (!playerName) {
-            // Geen account? Alleen wegsturen.
             alert(window.t ? window.t('cheatNoAccount') : "Je bent teruggestuurd wegens valsspelen!");
         } else {
-            // Checken of het een instant-ban delict is (Hack)
             if (detectie === 'HACK') {
                 strikes = 2; // Instant rood
             } else {
-                strikes++; // Autoclicker & AI is +1 strike per keer
+                strikes++; 
             }
             
             localStorage.setItem('cheat_strikes', strikes.toString());
@@ -1569,7 +1651,6 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
     
-    // UI updaten (Driehoek kleur en hover effecten)
     const triangleFill = document.getElementById('rules-triangle-path');
     const rulesDropdown = document.getElementById('rules-dropdown');
     const rulesContainer = document.getElementById('rules-triangle-container');
@@ -1591,7 +1672,11 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     
     if (rulesContainer && rulesDropdown) {
-        rulesContainer.addEventListener('mouseenter', () => { rulesDropdown.style.display = 'block'; });
+        rulesContainer.addEventListener('mouseenter', () => { 
+            rulesDropdown.style.display = 'block'; 
+            addPlixoProgress('a4', 1); // Mission: Rule Follower
+            addPlixoProgress('dm_6', 1); // Daily: Read a rule
+        });
         rulesContainer.addEventListener('mouseleave', () => { rulesDropdown.style.display = 'none'; });
     }
 });
@@ -1599,102 +1684,100 @@ document.addEventListener("DOMContentLoaded", function() {
 async function banAccount(name) {
     try {
         const db = firebase.database();
-        // De tabelnamen in jouw Firebase
         const tables = [
             'scores', 'luckyGuyScores', 'platformerScores', 
             'platformerSpikeLevelsScores', 'miniApocalypseScores', 
             'bugEscapeScores', 'dodgingArenaScores'
         ];
         
-        // Verwijder scores op basis van speler naam
         for (let table of tables) {
             const snap = await db.ref(table).orderByChild('name').equalTo(name).once('value');
             snap.forEach(child => child.ref.remove());
         }
         
-        // Verwijder naam registratie (zodat de naam weer vrijkomt)
         let devId = localStorage.getItem('pg_device_id');
         if (devId) await db.ref('nameOwners/' + devId).remove();
         
-        // Wis lokale account-data en reset de strafpunten voor een 'frisse start'
         localStorage.removeItem('pg_player_name');
         localStorage.removeItem('pg_device_id');
         localStorage.removeItem('pg_account_code');
-        localStorage.setItem('cheat_strikes', '0'); // Reset driehoek naar groen
+        localStorage.setItem('cheat_strikes', '0');
         
-        // Stuur de speler direct naar het leaderboard voor een nieuw account
-        window.location.href = 'leaderboard.html';
+        window.location.href = 'leaderboard_2.html';
     } catch(e) {
         console.error("Ban Error:", e);
-        // Zelfs bij een error doorsturen en resetten
         localStorage.setItem('cheat_strikes', '0');
-        window.location.href = 'leaderboard.html';
+        window.location.href = 'leaderboard_2.html';
     }
 }
 </script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    // Wacht even tot Firebase is geladen
     setTimeout(() => {
         const db = firebase.database();
         const mainContainer = document.querySelector('main');
         const gameCards = Array.from(mainContainer.querySelectorAll('.game-card'));
 
-        // Stap 1: Geef elke game-card een uniek ID en stuur kliks + spelernaam naar Firebase
         gameCards.forEach(card => {
             const titleEl = card.querySelector('.card-title');
             if (titleEl) {
-                // Maak een veilig ID van de titel (bijv. "Dino World" wordt "dino_world")
                 const gameId = titleEl.innerText.toLowerCase().replace(/[^a-z0-9]/g, '_');
                 card.setAttribute('data-game-id', gameId);
 
                 const playBtn = card.querySelector('.btn-play');
                 if (playBtn) {
                     playBtn.addEventListener('click', () => {
-                        // Haal de gekozen naam van het leaderboard op (of 'Anoniem')
                         const spelerNaam = localStorage.getItem('pg_player_name') || 'Anoniem';
 
-                        // 1. Tel 1 op bij de totale kliks van deze game in Firebase
+                        // Leaderboard Click Analytics
                         db.ref('gameStats/clicks/' + gameId).transaction((currentClicks) => {
                             return (currentClicks || 0) + 1;
                         });
-
-                        // 2. Sla de naam op als "Laatste Speler" in Firebase
                         db.ref('gameStats/lastPlayed/' + gameId).set(spelerNaam);
-
-                        // 3. Sla in Firebase op hoeveel kliks per specifieke speler zijn gemaakt
                         db.ref('gameStats/players/' + gameId + '/' + spelerNaam).transaction((clicks) => {
                             return (clicks || 0) + 1;
                         });
+                        
+                        // PLIXO MISSIONS: Game Hopper Tracking
+                        let today = new Date().toDateString();
+                        let dailyPlayed = JSON.parse(localStorage.getItem('plixo_daily_games_' + today) || '[]');
+                        if(!dailyPlayed.includes(gameId)) {
+                            dailyPlayed.push(gameId);
+                            localStorage.setItem('plixo_daily_games_' + today, JSON.stringify(dailyPlayed));
+                            addPlixoProgress('dm_1', 1);
+                            addPlixoProgress('dm_2', 1);
+                            addPlixoProgress('dm_3', 1);
+                        }
+                        
+                        let allPlayed = JSON.parse(localStorage.getItem('plixo_played_games') || '[]');
+                        if(!allPlayed.includes(gameId)) {
+                            allPlayed.push(gameId);
+                            localStorage.setItem('plixo_played_games', JSON.stringify(allPlayed));
+                            addPlixoProgress('a9', 1); // Game Hopper Achievement
+                        }
                     });
                 }
             }
         });
 
-        // Stap 2: Luister naar de kliks in Firebase om de kaarten live te sorteren
         db.ref('gameStats/clicks').on('value', (snapshot) => {
             const clickData = snapshot.val() || {};
 
-            // Sorteer de kaarten: hoogste aantal kliks eerst
             gameCards.sort((a, b) => {
                 const idA = a.getAttribute('data-game-id');
                 const idB = b.getAttribute('data-game-id');
-                
                 const clicksA = clickData[idA] || 0;
                 const clicksB = clickData[idB] || 0;
-
                 return clicksB - clicksA; 
             });
 
-            // Zorg ervoor dat "THE END" altijd als allerlaatste staat
             gameCards.sort((a, b) => {
                 if (a.getAttribute('data-game-id') === 'the_end') return 1;
                 if (b.getAttribute('data-game-id') === 'the_end') return -1;
                 return 0;
             });
 
-            // Teken de kaarten opnieuw in de juiste volgorde op de pagina
             gameCards.forEach(card => mainContainer.appendChild(card));
         });
     }, 500); 
