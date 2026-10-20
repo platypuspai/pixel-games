@@ -628,3 +628,1001 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
     }
 })();
 </script>
+
+<script>
+/* PLIXO SKIN + MISSIONS BRIDGE FOR MINI APOCALYPSE
+ * Fits the selected 20x28 PLIXO skin to the exact original player costume size.
+ * Collision checks use the original Player costume, preserving the game's
+ * ground contact, jump controls, movement, and hitbox regardless of skin art.
+ * Firebase profile sync is only enabled for an exact 20-digit account code.
+ */
+(function MiniApocalypsePlixoBridge() {
+  'use strict';
+
+  const GAME_ID = 'mini_apocalypse';
+  const FIREBASE_CONFIG = {
+    apiKey: 'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',
+    authDomain: 'money-digger-9b05e.firebaseapp.com',
+    databaseURL: 'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app',
+    projectId: 'money-digger-9b05e',
+    storageBucket: 'money-digger-9b05e.firebasestorage.app',
+    messagingSenderId: '883506536944',
+    appId: '1:883506536944:web:921b342dff76154fcbbd35'
+  };
+
+  const SKIN_SOURCE_WIDTH = 20;
+  const SKIN_SOURCE_HEIGHT = 28;
+  const SKIN_CANVAS_WIDTH = 22;
+  const SKIN_CANVAS_HEIGHT = 33;
+  const SKIN_BITMAP_RESOLUTION = 2;
+  const PROGRESS_SYNC_DELAY = 900;
+  const LOCAL_SAVE_DELAY = 200;
+  const ACTIVE_MINUTE_MS = 60000;
+  const SCORE_EVENT_MATCH_MS = 750;
+
+  const DAY_KEY = () => new Date().toDateString();
+  const safeJson = (key, fallback) => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  };
+  const num = value => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const unique = list => [...new Set((Array.isArray(list) ? list : []).map(String).filter(Boolean))];
+
+  function getAccountCode() {
+    const candidates = [
+      localStorage.getItem('pg_account_code'),
+      localStorage.getItem('pg_player_id'),
+      localStorage.getItem('plixo_sync_code')
+    ];
+    return candidates.map(value => String(value || '').trim()).find(value => /^\d{20}$/.test(value)) || null;
+  }
+
+  function todayDailyKey() {
+    return 'plixo_daily_progress_' + DAY_KEY();
+  }
+
+  let globalProgress = safeJson('plixo_mission_progress', {});
+  let today = DAY_KEY();
+  let dailyProgress = safeJson(todayDailyKey(), {});
+  let dailyGames = unique(safeJson('plixo_daily_games_' + today, []));
+  let lifetimeGames = unique(safeJson('plixo_played_games', []));
+
+  // Snapshot existing progress before this game begins adding progress. It is
+  // used once to migrate older account progress into the per-device counters.
+  const initialGlobalBaseline = { ...globalProgress };
+  const initialDailyBaseline = { ...dailyProgress };
+  const initialDailyGamesBaseline = dailyGames.slice();
+  const initialLifetimeGamesBaseline = lifetimeGames.slice();
+
+  let deviceId = localStorage.getItem('plixo_mini_apocalypse_device_id');
+  if (!deviceId) {
+    deviceId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID().replace(/-/g, '')
+      : (Date.now().toString(36) + Math.random().toString(36).slice(2, 14));
+    try { localStorage.setItem('plixo_mini_apocalypse_device_id', deviceId); } catch (_) {}
+  }
+
+  function getStatsStorageKey() {
+    return 'plixo_mini_apocalypse_stats_v1_' + (getAccountCode() || 'local');
+  }
+
+  function emptyStats() {
+    return {
+      kills: 0,
+      headshots: 0,
+      bestScore: 0,
+      bestRunKills: 0,
+      bossDefeated: false,
+      minutes: 0,
+      dailyDate: DAY_KEY(),
+      dailyKills: 0
+    };
+  }
+
+  let statsStorageKey = getStatsStorageKey();
+  let sessionStats = { ...emptyStats(), ...safeJson(statsStorageKey, {}) };
+  if (sessionStats.dailyDate !== DAY_KEY()) {
+    sessionStats.dailyDate = DAY_KEY();
+    sessionStats.dailyKills = 0;
+  }
+
+  let localSaveTimer = null;
+  let cloudSyncTimer = null;
+  let activeMinuteTimer = null;
+  let cloudReady = false;
+  let accountBootPromise = Promise.resolve();
+  let isPlaying = false;
+  let currentRunKills = 0;
+  let lastPlayBroadcastAt = 0;
+  let pendingScoreEvents = [];
+  let runtimeAttached = false;
+  let scoreVariable = null;
+  let originalScoreProperty = null;
+  let runtimeRef = null;
+  let vmRef = null;
+  let playerOriginalTarget = null;
+  let playerCostume = null;
+  let originalPlayerSkinId = null;
+  let originalPlayerSkinSize = null;
+  let collisionPreserverInstalled = false;
+  let currentCustomSkinId = null;
+  let currentSkinSignature = '';
+  let currentSkinImage = null;
+  let skinImageRequestSignature = '';
+  let skinAnimationTimer = null;
+  let lastEdgeState = false;
+  let lastEdgeTouchAt = 0;
+  let currentFirebaseDb = null;
+  let cloudStatsMigrationBaseline = null;
+
+  function persistStats() {
+    try { localStorage.setItem(statsStorageKey, JSON.stringify(sessionStats)); } catch (_) {}
+  }
+
+  function refreshLocalCounters() {
+    globalProgress = safeJson('plixo_mission_progress', {});
+    dailyProgress = safeJson(todayDailyKey(), {});
+    lifetimeGames = unique(safeJson('plixo_played_games', []));
+    dailyGames = unique(safeJson('plixo_daily_games_' + DAY_KEY(), []));
+  }
+
+  function scheduleLocalSave() {
+    if (localSaveTimer) return;
+    localSaveTimer = setTimeout(() => {
+      localSaveTimer = null;
+      try {
+        localStorage.setItem('plixo_mission_progress', JSON.stringify(globalProgress));
+        localStorage.setItem(todayDailyKey(), JSON.stringify(dailyProgress));
+        localStorage.setItem('plixo_played_games', JSON.stringify(lifetimeGames));
+        localStorage.setItem('plixo_daily_games_' + DAY_KEY(), JSON.stringify(dailyGames));
+        persistStats();
+      } catch (error) {
+        console.warn('Mini Apocalypse local PLIXO progress save failed:', error);
+      }
+    }, LOCAL_SAVE_DELAY);
+  }
+
+  function getFirebaseDatabase() {
+    try {
+      if (!window.firebase || typeof firebase.database !== 'function') return null;
+      if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(FIREBASE_CONFIG);
+      currentFirebaseDb = firebase.database();
+      return currentFirebaseDb;
+    } catch (error) {
+      console.warn('Mini Apocalypse Firebase is unavailable:', error);
+      return null;
+    }
+  }
+
+  function scheduleCloudSync() {
+    if (!getAccountCode() || cloudSyncTimer) return;
+    cloudSyncTimer = setTimeout(() => {
+      cloudSyncTimer = null;
+      syncProgressToFirebase();
+    }, PROGRESS_SYNC_DELAY);
+  }
+
+  function setMaxProgress(id, value) {
+    const amount = Math.max(0, num(value));
+    if (amount <= num(globalProgress[id])) return;
+    globalProgress[id] = amount;
+    scheduleLocalSave();
+    scheduleCloudSync();
+  }
+
+  function addProgress(id, amount = 1, countDaily = false) {
+    amount = num(amount);
+    if (!id || amount <= 0) return;
+    globalProgress[id] = num(globalProgress[id]) + amount;
+    if (countDaily) {
+      const key = 'plixo_daily_progress_' + DAY_KEY();
+      if (DAY_KEY() !== today) {
+        today = DAY_KEY();
+        dailyProgress = safeJson(key, {});
+        dailyGames = unique(safeJson('plixo_daily_games_' + today, []));
+      }
+      dailyProgress[id] = num(dailyProgress[id]) + amount;
+    }
+    scheduleLocalSave();
+    scheduleCloudSync();
+  }
+
+  function mergeLocalList(key, additions) {
+    const merged = unique([...safeJson(key, []), ...additions]);
+    try { localStorage.setItem(key, JSON.stringify(merged)); } catch (_) {}
+    if (key === 'plixo_played_games') lifetimeGames = merged;
+    if (key === 'plixo_daily_games_' + DAY_KEY()) dailyGames = merged;
+    return merged;
+  }
+
+  function markGamePlayed() {
+    const newLifetimeGames = mergeLocalList('plixo_played_games', [GAME_ID]);
+    setMaxProgress('a9', newLifetimeGames.length);
+
+    const currentDay = DAY_KEY();
+    if (today !== currentDay) {
+      today = currentDay;
+      dailyProgress = safeJson(todayDailyKey(), {});
+      dailyGames = unique(safeJson('plixo_daily_games_' + today, []));
+    }
+    const oldDailyGames = unique(safeJson('plixo_daily_games_' + currentDay, []));
+    if (!oldDailyGames.includes(GAME_ID)) {
+      dailyGames = mergeLocalList('plixo_daily_games_' + currentDay, [GAME_ID]);
+      // One unique arcade game contributes once to each of these daily counters.
+      for (const id of ['dm_1', 'dm_2', 'dm_3']) addProgress(id, 1, true);
+    } else {
+      dailyGames = oldDailyGames;
+    }
+    scheduleLocalSave();
+    scheduleCloudSync();
+  }
+
+  function setPlayingState(playing) {
+    isPlaying = !!playing;
+    if (isPlaying) {
+      if (!activeMinuteTimer) {
+        activeMinuteTimer = setInterval(() => {
+          if (!isPlaying || document.visibilityState === 'hidden') return;
+          sessionStats.minutes = num(sessionStats.minutes) + 1;
+          // Arcade Addict tracks whole active minutes, rather than seconds.
+          addProgress('a13', 1, false);
+          persistStats();
+          scheduleCloudSync();
+        }, ACTIVE_MINUTE_MS);
+      }
+    } else if (activeMinuteTimer) {
+      clearInterval(activeMinuteTimer);
+      activeMinuteTimer = null;
+    }
+  }
+
+  function resetCurrentRun() {
+    currentRunKills = 0;
+    pendingScoreEvents = [];
+    sessionStats.bestRunKills = Math.max(num(sessionStats.bestRunKills), currentRunKills);
+    persistStats();
+  }
+
+  function onGameStarted() {
+    const now = Date.now();
+    // startHats may be called separately for each Scratch sprite listening to
+    // the same broadcast. Treat a burst as one game start.
+    if (now - lastPlayBroadcastAt < 900) {
+      setPlayingState(true);
+      return;
+    }
+    lastPlayBroadcastAt = now;
+    resetCurrentRun();
+    setPlayingState(true);
+    markGamePlayed();
+    scheduleCloudSync();
+  }
+
+  function recordZombieKill(scoreDelta) {
+    currentRunKills += 1;
+    sessionStats.kills = num(sessionStats.kills) + 1;
+    sessionStats.dailyKills = sessionStats.dailyDate === DAY_KEY()
+      ? num(sessionStats.dailyKills) + 1
+      : 1;
+    sessionStats.dailyDate = DAY_KEY();
+
+    if (num(scoreDelta) >= 10) {
+      sessionStats.headshots = num(sessionStats.headshots) + 1;
+      addProgress('a93', 1, false);
+    }
+
+    // Long-term total kills and three daily kill thresholds.
+    addProgress('a90', 1, false);
+    for (const id of ['dm_91', 'dm_92', 'dm_93']) addProgress(id, 1, true);
+
+    sessionStats.bestRunKills = Math.max(num(sessionStats.bestRunKills), currentRunKills);
+    setMaxProgress('a_zombies_one_run_150', currentRunKills);
+    persistStats();
+    scheduleCloudSync();
+  }
+
+  function cleanPendingScoreEvents() {
+    const now = Date.now();
+    pendingScoreEvents = pendingScoreEvents.filter(event => now - event.time < 2000 && !event.resolved);
+  }
+
+  function onScoreChanged(oldValue, newValue) {
+    if (!Number.isFinite(newValue)) return;
+    if (newValue <= 0 && oldValue > 0) {
+      resetCurrentRun();
+      return;
+    }
+    if (newValue < oldValue) return;
+    if (newValue === oldValue || newValue <= 0) return;
+
+    const delta = newValue - oldValue;
+    sessionStats.bestScore = Math.max(num(sessionStats.bestScore), newValue);
+    setMaxProgress('a_apoc_131', newValue);
+    recordZombieKill(delta);
+
+    // Associate this score event with the zombie clone which is removed right
+    // after the kill. That lets us distinguish the boss from regular zombies.
+    pendingScoreEvents.push({ time: Date.now(), delta, resolved: false });
+    cleanPendingScoreEvents();
+  }
+
+  function getTargetCostumeName(target) {
+    try {
+      const costume = target.sprite.costumes[target.currentCostume];
+      return String(costume && costume.name || '').toLowerCase();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function connectZombieDisposalHook(runtime) {
+    if (!runtime || runtime.__plixoApocDisposeHook) return;
+    const originalDisposeTarget = runtime.disposeTarget;
+    if (typeof originalDisposeTarget !== 'function') return;
+    runtime.__plixoApocDisposeHook = true;
+    runtime.disposeTarget = function(target, ...args) {
+      try {
+        if (target && target.sprite && String(target.sprite.name || '').toLowerCase() === 'zombie' && !target.isOriginal) {
+          cleanPendingScoreEvents();
+          const now = Date.now();
+          let matched = null;
+          for (let i = pendingScoreEvents.length - 1; i >= 0; i--) {
+            const candidate = pendingScoreEvents[i];
+            if (!candidate.resolved && now - candidate.time <= SCORE_EVENT_MATCH_MS) {
+              matched = candidate;
+              break;
+            }
+          }
+          if (matched) {
+            matched.resolved = true;
+            if (getTargetCostumeName(target).includes('boss')) {
+              sessionStats.bossDefeated = true;
+              setMaxProgress('a94', 1);
+              persistStats();
+              scheduleCloudSync();
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Mini Apocalypse boss tracking warning:', error);
+      }
+      return originalDisposeTarget.call(this, target, ...args);
+    };
+  }
+
+  function installScoreTracker(vm) {
+    const runtime = vm && vm.runtime;
+    if (!runtime) return;
+    const stage = (runtime.targets || []).find(target => target.isStage);
+    if (!stage || !stage.variables) return;
+    const variableEntry = Object.values(stage.variables).find(variable =>
+      String(variable && variable.name || '').trim().toLowerCase() === 'score'
+    );
+    if (!variableEntry || variableEntry.__plixoApocWrapped) return;
+
+    scoreVariable = variableEntry;
+    const descriptor = Object.getOwnPropertyDescriptor(variableEntry, 'value');
+    if (descriptor && descriptor.configurable === false) {
+      console.warn('Mini Apocalypse score variable could not be instrumented.');
+      return;
+    }
+    let rawValue = variableEntry.value;
+    variableEntry.__plixoApocWrapped = true;
+    originalScoreProperty = descriptor || null;
+    try {
+      Object.defineProperty(variableEntry, 'value', {
+        configurable: true,
+        enumerable: descriptor ? descriptor.enumerable : true,
+        get() { return rawValue; },
+        set(nextValue) {
+          const previous = num(rawValue);
+          rawValue = nextValue;
+          const next = num(nextValue);
+          onScoreChanged(previous, next);
+        }
+      });
+    } catch (error) {
+      console.warn('Mini Apocalypse score tracking could not be installed:', error);
+    }
+    connectZombieDisposalHook(runtime);
+  }
+
+  function installBroadcastTracker(vm) {
+    const runtime = vm && vm.runtime;
+    if (!runtime || runtime.__plixoApocBroadcastHook || typeof runtime.startHats !== 'function') return;
+    const originalStartHats = runtime.startHats;
+    runtime.__plixoApocBroadcastHook = true;
+    runtime.startHats = function(opcode, fields, target, ...rest) {
+      try {
+        if (opcode === 'event_whenbroadcastreceived' && fields) {
+          const rawBroadcast = fields.BROADCAST_OPTION;
+          const broadcastName = String(
+            rawBroadcast && typeof rawBroadcast === 'object' ? rawBroadcast.value : rawBroadcast || ''
+          ).trim().toLowerCase();
+          if (broadcastName === 'play') onGameStarted();
+          else if (broadcastName === 'game over') setPlayingState(false);
+        }
+      } catch (error) {
+        console.warn('Mini Apocalypse broadcast tracking warning:', error);
+      }
+      return originalStartHats.call(this, opcode, fields, target, ...rest);
+    };
+  }
+
+  function stagePlayerTouchingEdge() {
+    try {
+      if (!vmRef || !runtimeRef || !isPlaying) return;
+      const target = (runtimeRef.targets || []).find(item =>
+        item.isOriginal && item.sprite && String(item.sprite.name || '').toLowerCase() === 'player'
+      );
+      if (!target || !Number.isFinite(Number(target.x))) return;
+      const touchingEdge = Number(target.x) <= -225 || Number(target.x) >= 225;
+      if (touchingEdge && !lastEdgeState && Date.now() - lastEdgeTouchAt > 700) {
+        addProgress('dm_68', 1, true);
+        lastEdgeTouchAt = Date.now();
+      }
+      lastEdgeState = touchingEdge;
+    } catch (_) {}
+  }
+
+  function startEdgeMonitor() {
+    setInterval(stagePlayerTouchingEdge, 120);
+  }
+
+  function applySkinCanvas(canvas, skinId) {
+    const renderer = vmRef && vmRef.renderer;
+    if (!renderer || !playerOriginalTarget || !playerCostume || typeof renderer.createBitmapSkin !== 'function') return;
+
+    const centerX = Number.isFinite(Number(playerCostume.rotationCenterX))
+      ? Number(playerCostume.rotationCenterX) : 5.379435;
+    const centerY = Number.isFinite(Number(playerCostume.rotationCenterY))
+      ? Number(playerCostume.rotationCenterY) : 8.111915;
+    const newSkinId = renderer.createBitmapSkin(canvas, SKIN_BITMAP_RESOLUTION, [centerX, centerY]);
+
+    // The renderer normally rounds bitmap skins to integer pixels / resolution.
+    // Restore the source costume's exact logical dimensions instead, so the
+    // selected skin does not grow or shrink the player or change the anchor.
+    try {
+      const skin = renderer._allSkins && renderer._allSkins[newSkinId];
+      if (skin && Array.isArray(skin._textureSize) && originalPlayerSkinSize &&
+          originalPlayerSkinSize.length === 2) {
+        skin._textureSize = [
+          originalPlayerSkinSize[0] * SKIN_BITMAP_RESOLUTION,
+          originalPlayerSkinSize[1] * SKIN_BITMAP_RESOLUTION
+        ];
+        if (typeof skin.emitWasAltered === 'function') skin.emitWasAltered();
+      }
+    } catch (error) {
+      console.warn('Mini Apocalypse could not apply exact player skin dimensions:', error);
+    }
+
+    const oldCustomSkinId = currentCustomSkinId;
+    playerCostume.skinId = newSkinId;
+    currentCustomSkinId = newSkinId;
+    currentSkinSignature = skinId;
+
+    // Keep the original Player collision shape via installPlayerCollisionPreserver;
+    // only the visible bitmap changes. Position, scale, costumes, and physics stay intact.
+    for (const target of (runtimeRef.targets || [])) {
+      if (target && target.sprite === playerOriginalTarget.sprite) {
+        try { target.setCostume(target.currentCostume); } catch (_) {}
+      }
+    }
+    try { runtimeRef.requestRedraw(); } catch (_) {}
+
+    if (oldCustomSkinId != null && oldCustomSkinId !== newSkinId) {
+      try { renderer.destroySkin(oldCustomSkinId); } catch (_) {}
+    }
+  }
+
+  function drawRainbowSpiralCanvas() {
+    const frame = document.createElement('canvas');
+    frame.width = SKIN_SOURCE_WIDTH;
+    frame.height = SKIN_SOURCE_HEIGHT;
+    const ctx = frame.getContext('2d');
+    ctx.clearRect(0, 0, frame.width, frame.height);
+    ctx.fillStyle = '#080812';
+    ctx.fillRect(1, 1, 18, 26);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(1, 1, 18, 26); ctx.clip();
+    const seconds = performance.now() / 1000;
+    const phase = seconds * 2.4;
+    ctx.shadowBlur = 3;
+    for (let t = 0; t < Math.PI * 10; t += 0.12) {
+      const radius = 0.25 + t * 0.34;
+      const x = 10 + Math.cos(t + phase) * radius * 0.53;
+      const y = 14 + Math.sin(t + phase) * radius * 0.92;
+      const hue = (t * 42 + seconds * 115) % 360;
+      ctx.fillStyle = `hsl(${hue},100%,62%)`;
+      ctx.shadowColor = `hsl(${hue},100%,62%)`;
+      ctx.fillRect(Math.round(x), Math.round(y), 1.35, 1.35);
+    }
+    ctx.restore();
+    return frame;
+  }
+
+  function wrapSkinCanvas(sourceCanvas, imageDataUrl, selectedSkinId) {
+    const canvas = document.createElement('canvas');
+    canvas.width = SKIN_CANVAS_WIDTH;
+    canvas.height = SKIN_CANVAS_HEIGHT;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (sourceCanvas) {
+      // Do not add extra transparent margins: the 20x28 design already
+      // contains its own intended border. Map it across the player's full
+      // costume canvas, matching the original sprite's feet/ground placement.
+      ctx.drawImage(sourceCanvas, 0, 0, canvas.width, canvas.height);
+      return canvas;
+    }
+    const image = new Image();
+    image.onload = () => {
+      if (skinImageRequestSignature !== selectedSkinId + '|' + imageDataUrl) return;
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = SKIN_CANVAS_WIDTH;
+      finalCanvas.height = SKIN_CANVAS_HEIGHT;
+      const finalCtx = finalCanvas.getContext('2d');
+      finalCtx.imageSmoothingEnabled = false;
+      finalCtx.clearRect(0, 0, finalCanvas.width, finalCanvas.height);
+      // Fit the skin edge-to-edge; its own transparent margin is retained,
+      // while the additional outer margin that stopped ground detection is removed.
+      finalCtx.drawImage(image, 0, 0, finalCanvas.width, finalCanvas.height);
+      applySkinCanvas(finalCanvas, selectedSkinId + '|' + imageDataUrl);
+    };
+    image.onerror = () => console.warn('Mini Apocalypse could not read plixo_skin_image.');
+    image.src = imageDataUrl;
+    return null;
+  }
+
+  function refreshSelectedSkin(force = false) {
+    if (!playerCostume || !vmRef || !playerOriginalTarget) return;
+    const selectedSkinId = localStorage.getItem('plixo_selected_skin') || 'classic';
+    const imageDataUrl = localStorage.getItem('plixo_skin_image') || '';
+    const signature = selectedSkinId + '|' + imageDataUrl;
+    if (!force && (signature === currentSkinSignature || signature === skinImageRequestSignature)) return;
+
+    if (selectedSkinId === 'rainbow_spiral') {
+      skinImageRequestSignature = signature;
+      const initialFrame = drawRainbowSpiralCanvas();
+      applySkinCanvas(wrapSkinCanvas(initialFrame, '', selectedSkinId), signature);
+      if (skinAnimationTimer) clearInterval(skinAnimationTimer);
+      skinAnimationTimer = setInterval(() => {
+        if ((localStorage.getItem('plixo_selected_skin') || 'classic') !== 'rainbow_spiral') {
+          clearInterval(skinAnimationTimer);
+          skinAnimationTimer = null;
+          refreshSelectedSkin(true);
+          return;
+        }
+        const frame = drawRainbowSpiralCanvas();
+        const canvas = wrapSkinCanvas(frame, '', selectedSkinId);
+        applySkinCanvas(canvas, signature + '|' + Math.floor(performance.now() / 80));
+      }, 80);
+      return;
+    }
+
+    if (skinAnimationTimer) {
+      clearInterval(skinAnimationTimer);
+      skinAnimationTimer = null;
+    }
+
+    if (!imageDataUrl || !/^data:image\//.test(imageDataUrl)) {
+      skinImageRequestSignature = signature;
+      if (currentCustomSkinId != null && playerCostume) {
+        const oldCustomSkinId = currentCustomSkinId;
+        playerCostume.skinId = originalPlayerSkinId;
+        currentCustomSkinId = null;
+        currentSkinSignature = signature;
+        for (const target of (runtimeRef.targets || [])) {
+          if (target && target.sprite === playerOriginalTarget.sprite) {
+            try { target.setCostume(target.currentCostume); } catch (_) {}
+          }
+        }
+        try { vmRef.renderer.destroySkin(oldCustomSkinId); } catch (_) {}
+      }
+      return;
+    }
+
+    skinImageRequestSignature = signature;
+    wrapSkinCanvas(null, imageDataUrl, selectedSkinId);
+  }
+
+  function adoptCloudRecord(record) {
+    if (!record || typeof record !== 'object') return;
+    const remoteProgress = record.mission_progress && typeof record.mission_progress === 'object'
+      ? record.mission_progress : {};
+    globalProgress = safeJson('plixo_mission_progress', {});
+    for (const [id, value] of Object.entries(remoteProgress)) {
+      globalProgress[id] = Math.max(num(globalProgress[id]), num(value));
+    }
+    try { localStorage.setItem('plixo_mission_progress', JSON.stringify(globalProgress)); } catch (_) {}
+
+    const nowDay = DAY_KEY();
+    if (record.daily && record.daily.date === nowDay) {
+      const dailyKey = 'plixo_daily_progress_' + nowDay;
+      dailyProgress = safeJson(dailyKey, {});
+      for (const [id, value] of Object.entries(record.daily.progress || {})) {
+        dailyProgress[id] = Math.max(num(dailyProgress[id]), num(value));
+      }
+      try {
+        localStorage.setItem(dailyKey, JSON.stringify(dailyProgress));
+      } catch (_) {}
+    }
+
+    const cloudDailyGames = record.daily_games && record.daily_games.date === nowDay &&
+      Array.isArray(record.daily_games.games) ? record.daily_games.games : [];
+    dailyGames = unique([
+      ...safeJson('plixo_daily_games_' + nowDay, []),
+      ...cloudDailyGames
+    ]);
+    // Daily gamer missions depend on distinct games, not launch-click counts.
+    for (const id of ['dm_1', 'dm_2', 'dm_3']) {
+      dailyProgress[id] = Math.max(num(dailyProgress[id]), dailyGames.length);
+    }
+    try {
+      localStorage.setItem('plixo_daily_progress_' + nowDay, JSON.stringify(dailyProgress));
+      localStorage.setItem('plixo_daily_games_' + nowDay, JSON.stringify(dailyGames));
+    } catch (_) {}
+
+    const remoteGames = Array.isArray(record.played_games) ? record.played_games : [];
+    lifetimeGames = unique([...safeJson('plixo_played_games', []), ...remoteGames]);
+    try { localStorage.setItem('plixo_played_games', JSON.stringify(lifetimeGames)); } catch (_) {}
+
+    const cloudStats = record.mini_apocalypse_stats;
+    if (cloudStats && cloudStats.version === 1 && cloudStats.devices && cloudStats.devices[deviceId]) {
+      const cloudDevice = cloudStats.devices[deviceId];
+      sessionStats.kills = Math.max(num(sessionStats.kills), num(cloudDevice.kills));
+      sessionStats.headshots = Math.max(num(sessionStats.headshots), num(cloudDevice.headshots));
+      sessionStats.bestScore = Math.max(num(sessionStats.bestScore), num(cloudDevice.bestScore));
+      sessionStats.bestRunKills = Math.max(num(sessionStats.bestRunKills), num(cloudDevice.bestRunKills));
+      sessionStats.bossDefeated = !!(sessionStats.bossDefeated || cloudDevice.bossDefeated);
+      sessionStats.minutes = Math.max(num(sessionStats.minutes), num(cloudDevice.minutes));
+      if (cloudDevice.dailyDate === nowDay) {
+        sessionStats.dailyDate = nowDay;
+        sessionStats.dailyKills = Math.max(num(sessionStats.dailyKills), num(cloudDevice.dailyKills));
+      }
+      persistStats();
+    }
+  }
+
+  function mergeProgressTransaction(current, snapshots) {
+    current = current && typeof current === 'object' ? current : {};
+    const progress = current.mission_progress && typeof current.mission_progress === 'object'
+      ? { ...current.mission_progress } : {};
+    const todayNow = DAY_KEY();
+    const localProgress = snapshots.globalProgress;
+    const localDaily = snapshots.dailyProgress;
+    const localGames = snapshots.lifetimeGames;
+    const localDailyGames = snapshots.dailyGames;
+    const localStats = snapshots.sessionStats;
+
+    const aggregateIds = new Set(['a9', 'a13', 'a90', 'a93', 'a94', 'a_apoc_131', 'a_zombies_one_run_150']);
+    for (const [id, value] of Object.entries(localProgress)) {
+      if (!aggregateIds.has(id)) progress[id] = Math.max(num(progress[id]), num(value));
+    }
+
+    const playedGames = unique([...(Array.isArray(current.played_games) ? current.played_games : []), ...localGames]);
+    current.played_games = playedGames;
+    progress.a9 = Math.max(num(progress.a9), num(localProgress.a9), playedGames.length);
+
+    const existingStats = current.mini_apocalypse_stats;
+    let stats;
+    if (!existingStats || existingStats.version !== 1 || !existingStats.devices) {
+      const remoteDaily = current.daily && current.daily.date === todayNow ? current.daily.progress || {} : {};
+      stats = {
+        version: 1,
+        legacyKills: Math.max(num(progress.a90), num(snapshots.initialGlobalBaseline.a90)),
+        legacyHeadshots: Math.max(num(progress.a93), num(snapshots.initialGlobalBaseline.a93)),
+        legacyArcadeMinutes: Math.max(num(progress.a13), num(snapshots.initialGlobalBaseline.a13)),
+        legacyBestScore: Math.max(num(progress.a_apoc_131), num(snapshots.initialGlobalBaseline.a_apoc_131)),
+        legacyBestRunKills: Math.max(num(progress.a_zombies_one_run_150), num(snapshots.initialGlobalBaseline.a_zombies_one_run_150)),
+        legacyBoss: num(progress.a94) > 0 || num(snapshots.initialGlobalBaseline.a94) > 0,
+        legacyDailyDate: todayNow,
+        legacyDailyKills: Math.max(
+          num(remoteDaily.dm_91), num(remoteDaily.dm_92), num(remoteDaily.dm_93),
+          num(snapshots.initialDailyBaseline.dm_91), num(snapshots.initialDailyBaseline.dm_92), num(snapshots.initialDailyBaseline.dm_93)
+        ),
+        devices: {}
+      };
+    } else {
+      stats = {
+        ...existingStats,
+        devices: { ...existingStats.devices },
+        legacyKills: num(existingStats.legacyKills),
+        legacyHeadshots: num(existingStats.legacyHeadshots),
+        legacyArcadeMinutes: num(existingStats.legacyArcadeMinutes),
+        legacyBestScore: num(existingStats.legacyBestScore),
+        legacyBestRunKills: num(existingStats.legacyBestRunKills),
+        legacyBoss: !!existingStats.legacyBoss,
+        legacyDailyKills: num(existingStats.legacyDailyKills)
+      };
+      if (stats.legacyDailyDate !== todayNow) {
+        const remoteDaily = current.daily && current.daily.date === todayNow ? current.daily.progress || {} : {};
+        stats.legacyDailyDate = todayNow;
+        stats.legacyDailyKills = Math.max(num(remoteDaily.dm_91), num(remoteDaily.dm_92), num(remoteDaily.dm_93));
+      }
+    }
+
+    const oldDevice = stats.devices[deviceId] || {};
+    const sameLocalDay = localStats.dailyDate === todayNow;
+    const currentDevice = {
+      kills: Math.max(num(oldDevice.kills), num(localStats.kills)),
+      headshots: Math.max(num(oldDevice.headshots), num(localStats.headshots)),
+      bestScore: Math.max(num(oldDevice.bestScore), num(localStats.bestScore)),
+      bestRunKills: Math.max(num(oldDevice.bestRunKills), num(localStats.bestRunKills)),
+      bossDefeated: !!(oldDevice.bossDefeated || localStats.bossDefeated),
+      minutes: Math.max(num(oldDevice.minutes), num(localStats.minutes)),
+      dailyDate: todayNow,
+      dailyKills: sameLocalDay
+        ? Math.max(oldDevice.dailyDate === todayNow ? num(oldDevice.dailyKills) : 0, num(localStats.dailyKills))
+        : (oldDevice.dailyDate === todayNow ? num(oldDevice.dailyKills) : 0)
+    };
+    stats.devices[deviceId] = currentDevice;
+
+    const devices = Object.values(stats.devices);
+    const deviceKills = devices.reduce((sum, device) => sum + num(device.kills), 0);
+    const deviceHeadshots = devices.reduce((sum, device) => sum + num(device.headshots), 0);
+    const deviceMinutes = devices.reduce((sum, device) => sum + num(device.minutes), 0);
+    const deviceBestScore = devices.reduce((max, device) => Math.max(max, num(device.bestScore)), 0);
+    const deviceBestRun = devices.reduce((max, device) => Math.max(max, num(device.bestRunKills)), 0);
+    const bossDefeated = stats.legacyBoss || devices.some(device => !!device.bossDefeated);
+
+    // Account for progress written by other arcade games since the last sync.
+    stats.legacyKills = Math.max(stats.legacyKills, num(progress.a90) - deviceKills);
+    stats.legacyHeadshots = Math.max(stats.legacyHeadshots, num(progress.a93) - deviceHeadshots);
+    stats.legacyArcadeMinutes = Math.max(stats.legacyArcadeMinutes, num(progress.a13) - deviceMinutes);
+    stats.legacyBestScore = Math.max(stats.legacyBestScore, num(progress.a_apoc_131));
+    stats.legacyBestRunKills = Math.max(stats.legacyBestRunKills, num(progress.a_zombies_one_run_150));
+    stats.legacyBoss = !!(stats.legacyBoss || num(progress.a94) > 0);
+
+    const totalKills = stats.legacyKills + deviceKills;
+    const totalHeadshots = stats.legacyHeadshots + deviceHeadshots;
+    const totalMinutes = stats.legacyArcadeMinutes + deviceMinutes;
+    progress.a90 = totalKills;
+    progress.a93 = totalHeadshots;
+    progress.a13 = totalMinutes;
+    progress.a_apoc_131 = Math.max(num(progress.a_apoc_131), stats.legacyBestScore, deviceBestScore);
+    progress.a_zombies_one_run_150 = Math.max(num(progress.a_zombies_one_run_150), stats.legacyBestRunKills, deviceBestRun);
+    if (bossDefeated) progress.a94 = Math.max(1, num(progress.a94));
+    current.mission_progress = progress;
+    current.mini_apocalypse_stats = stats;
+
+    let remoteDaily = current.daily && typeof current.daily === 'object' ? current.daily : {};
+    const remoteDailyGames = current.daily_games && current.daily_games.date === todayNow &&
+      Array.isArray(current.daily_games.games) ? current.daily_games.games : [];
+    let dailyProgressMerged;
+    let claimedMerged;
+    let dailyGameSet;
+    if (remoteDaily.date === todayNow) {
+      dailyProgressMerged = { ...(remoteDaily.progress || {}) };
+      claimedMerged = { ...(remoteDaily.claimed || {}) };
+    } else {
+      dailyProgressMerged = {};
+      claimedMerged = {};
+    }
+    dailyGameSet = unique([...remoteDailyGames, ...localDailyGames]);
+    for (const [id, value] of Object.entries(localDaily)) {
+      dailyProgressMerged[id] = Math.max(num(dailyProgressMerged[id]), num(value));
+    }
+    for (const id of ['dm_1', 'dm_2', 'dm_3']) {
+      dailyProgressMerged[id] = Math.max(num(dailyProgressMerged[id]), dailyGameSet.length);
+    }
+
+    const thisDeviceDailyKills = currentDevice.dailyDate === todayNow ? num(currentDevice.dailyKills) : 0;
+    const totalDailyKills = stats.legacyDailyDate === todayNow
+      ? num(stats.legacyDailyKills) + devices.reduce((sum, device) => sum + (device.dailyDate === todayNow ? num(device.dailyKills) : 0), 0)
+      : thisDeviceDailyKills;
+    for (const id of ['dm_91', 'dm_92', 'dm_93']) {
+      dailyProgressMerged[id] = Math.max(num(dailyProgressMerged[id]), totalDailyKills);
+    }
+    current.daily = {
+      date: todayNow,
+      progress: dailyProgressMerged,
+      claimed: claimedMerged,
+      bonus: localStorage.getItem('plixo_daily_bonus_date') || (remoteDaily.date === todayNow ? remoteDaily.bonus : '') || ''
+    };
+    // Keep distinct-game IDs separate from daily mission progress, matching skin.html.
+    current.daily_games = { date: todayNow, games: dailyGameSet };
+    return current;
+  }
+
+  function syncProgressToFirebase() {
+    const code = getAccountCode();
+    const db = getFirebaseDatabase();
+    if (!code || !db) return Promise.resolve();
+
+    refreshLocalCounters();
+    if (sessionStats.dailyDate !== DAY_KEY()) {
+      sessionStats.dailyDate = DAY_KEY();
+      sessionStats.dailyKills = 0;
+    }
+    const snapshots = {
+      globalProgress: { ...globalProgress },
+      dailyProgress: { ...dailyProgress },
+      lifetimeGames: lifetimeGames.slice(),
+      dailyGames: dailyGames.slice(),
+      sessionStats: { ...sessionStats },
+      initialGlobalBaseline,
+      initialDailyBaseline
+    };
+    return db.ref('plixo_users/' + code).transaction(current => mergeProgressTransaction(current, snapshots))
+      .then(result => {
+        const record = result && result.snapshot ? result.snapshot.val() : null;
+        if (record) {
+          adoptCloudRecord(record);
+          scheduleLocalSave();
+        }
+      })
+      .catch(error => console.warn('Mini Apocalypse PLIXO Firebase sync failed:', error));
+  }
+
+  function pullFirebaseProgress() {
+    const code = getAccountCode();
+    const db = getFirebaseDatabase();
+    if (!code || !db) {
+      cloudReady = true;
+      return Promise.resolve();
+    }
+    return db.ref('plixo_users/' + code).once('value').then(snapshot => {
+      if (snapshot.exists()) adoptCloudRecord(snapshot.val());
+      cloudReady = true;
+      return syncProgressToFirebase();
+    }).catch(error => {
+      console.warn('Mini Apocalypse could not preload PLIXO progress:', error);
+      cloudReady = true;
+    });
+  }
+
+  function restorePlayerOriginalSkin() {
+    if (!playerCostume || currentCustomSkinId == null) return;
+    const oldCustom = currentCustomSkinId;
+    playerCostume.skinId = originalPlayerSkinId;
+    currentCustomSkinId = null;
+    for (const target of (runtimeRef.targets || [])) {
+      if (target && playerOriginalTarget && target.sprite === playerOriginalTarget.sprite) {
+        try { target.setCostume(target.currentCostume); } catch (_) {}
+      }
+    }
+    try { vmRef.renderer.destroySkin(oldCustom); } catch (_) {}
+  }
+
+  function installPlayerCollisionPreserver(player) {
+    if (collisionPreserverInstalled || !player) return;
+    const prototype = Object.getPrototypeOf(player);
+    if (!prototype || typeof prototype.isTouchingSprite !== 'function') return;
+    const originalIsTouchingSprite = prototype.isTouchingSprite;
+    if (originalIsTouchingSprite.__plixoCollisionPreserver) {
+      collisionPreserverInstalled = true;
+      return;
+    }
+
+    function isPlayerTarget(target) {
+      return !!(playerOriginalTarget && target && target.sprite === playerOriginalTarget.sprite);
+    }
+
+    const wrappedIsTouchingSprite = function(name) {
+      if (!isPlayerTarget(this) || !this.renderer || this.drawableID == null ||
+          originalPlayerSkinId == null || typeof this.renderer.updateDrawableSkinId !== 'function') {
+        return originalIsTouchingSprite.call(this, name);
+      }
+      const currentCostume = this.sprite && this.sprite.costumes && this.sprite.costumes[this.currentCostume];
+      const visibleSkinId = currentCostume && currentCostume.skinId;
+      if (visibleSkinId == null || visibleSkinId === originalPlayerSkinId) {
+        return originalIsTouchingSprite.call(this, name);
+      }
+
+      // Scratch uses the visible costume's alpha pixels for sensing-touching.
+      // Temporarily use the original player skin for this synchronous collision
+      // query, then restore the chosen skin before the frame renders. This keeps
+      // jump/ground checks and zombie collisions identical for sparse skins too.
+      let switched = false;
+      try {
+        this.renderer.updateDrawableSkinId(this.drawableID, originalPlayerSkinId);
+        switched = true;
+        return originalIsTouchingSprite.call(this, name);
+      } finally {
+        if (switched) {
+          try { this.renderer.updateDrawableSkinId(this.drawableID, visibleSkinId); }
+          catch (error) { console.warn('Mini Apocalypse could not restore the visible player skin:', error); }
+        }
+      }
+    };
+    wrappedIsTouchingSprite.__plixoCollisionPreserver = true;
+    prototype.isTouchingSprite = wrappedIsTouchingSprite;
+    collisionPreserverInstalled = true;
+  }
+
+  function attachToScratch() {
+    if (runtimeAttached) return true;
+    const vm = window.vm || (window.scaffolding && window.scaffolding.vm);
+    const runtime = vm && vm.runtime;
+    if (!vm || !runtime || !Array.isArray(runtime.targets) || runtime.targets.length < 2) return false;
+    const player = runtime.targets.find(target => target.isOriginal && target.sprite && String(target.sprite.name || '').toLowerCase() === 'player');
+    const stage = runtime.targets.find(target => target.isStage);
+    if (!player || !player.sprite || !Array.isArray(player.sprite.costumes) || !player.sprite.costumes.length || !stage) return false;
+
+    vmRef = vm;
+    runtimeRef = runtime;
+    playerOriginalTarget = player;
+    playerCostume = player.sprite.costumes[0];
+    originalPlayerSkinId = playerCostume.skinId;
+    try {
+      const size = vm.renderer && typeof vm.renderer.getSkinSize === 'function'
+        ? vm.renderer.getSkinSize(originalPlayerSkinId) : null;
+      if (Array.isArray(size) && size.length === 2 && size.every(value => Number.isFinite(Number(value)))) {
+        originalPlayerSkinSize = [Number(size[0]), Number(size[1])];
+      } else {
+        originalPlayerSkinSize = [10.75889, 16.22387];
+      }
+    } catch (_) {
+      originalPlayerSkinSize = [10.75889, 16.22387];
+    }
+    installPlayerCollisionPreserver(player);
+
+    installScoreTracker(vm);
+    installBroadcastTracker(vm);
+    runtimeAttached = true;
+    refreshSelectedSkin(true);
+    startEdgeMonitor();
+    accountBootPromise = pullFirebaseProgress();
+
+    // If this Scratch export is opened without a leaderboard account, local
+    // mission progress still works. A valid 20-digit code enables cloud sync.
+    if (!getAccountCode()) cloudReady = true;
+    return true;
+  }
+
+  function monitorForScratch() {
+    if (attachToScratch()) return;
+    const timer = setInterval(() => {
+      if (attachToScratch()) clearInterval(timer);
+    }, 250);
+    window.addEventListener('load', () => attachToScratch(), { once: true });
+  }
+
+  window.addEventListener('storage', event => {
+    if (!event.key || event.key === 'plixo_skin_image' || event.key === 'plixo_selected_skin') {
+      refreshSelectedSkin(true);
+    }
+    if (event.key === 'pg_account_code' || event.key === 'pg_player_id' || event.key === 'plixo_sync_code') {
+      statsStorageKey = getStatsStorageKey();
+      sessionStats = { ...emptyStats(), ...safeJson(statsStorageKey, {}) };
+      if (getAccountCode()) pullFirebaseProgress();
+    }
+  });
+  window.addEventListener('pageshow', () => refreshSelectedSkin(true));
+  window.addEventListener('focus', () => refreshSelectedSkin(true));
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshSelectedSkin(true);
+  });
+
+  // Save pending local/cloud progress as the player leaves the game.
+  window.addEventListener('pagehide', () => {
+    if (localSaveTimer) {
+      clearTimeout(localSaveTimer);
+      localSaveTimer = null;
+      try {
+        localStorage.setItem('plixo_mission_progress', JSON.stringify(globalProgress));
+        localStorage.setItem(todayDailyKey(), JSON.stringify(dailyProgress));
+        localStorage.setItem('plixo_played_games', JSON.stringify(lifetimeGames));
+        localStorage.setItem('plixo_daily_games_' + DAY_KEY(), JSON.stringify(dailyGames));
+        persistStats();
+      } catch (_) {}
+    }
+    if (cloudSyncTimer) {
+      clearTimeout(cloudSyncTimer);
+      cloudSyncTimer = null;
+      syncProgressToFirebase();
+    }
+  });
+
+  monitorForScratch();
+})();
+
+</script>
