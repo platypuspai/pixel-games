@@ -608,7 +608,7 @@
     window.recordProfileNavigation = function(event, destination) {
         if (event) event.preventDefault();
         const link = event && event.currentTarget;
-        const targetUrl = link ? link.href : (destination === 'skin' ? 'skin.html' : 'leaderboard_2.html');
+        const targetUrl = link ? link.href : (destination === 'skin' ? 'skin.html' : 'leaderboard.html');
         const pairs = destination === 'skin'
             ? [['dm_4', 1], ['a15', 1]]
             : [['dm_5', 1], ['a6', 1]];
