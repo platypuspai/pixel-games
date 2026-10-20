@@ -1405,5 +1405,371 @@
     }
 })();
 </script>
+
+<script id="plixo-progress-bridge-dvd_plus">
+/* PLIXO progress-only integration for DVD+.
+ * This observes the existing game and syncs only mission/achievement counters.
+ * It does not change skins, visuals, controls, or gameplay rules.
+ */
+(function PlixoDVDPlusProgressBridge() {
+  'use strict';
+  const installedKey = '__plixoProgressBridge_DVDPlus';
+  if (window[installedKey]) return;
+  window[installedKey] = true;
+
+  const GAME_ID = 'dvd_plus';
+  const DAY_KEY = () => new Date().toDateString();
+  const GLOBAL_IDS = ['a9', 'a13', 'a46', 'a47', 'a49', 'a51', 'a52', 'a54', 'a55', 'a_dvd_level200', 'dm_31', 'dm_33', 'dm_34', 'dm_35'];
+  const DAILY_IDS = ['dm_1', 'dm_2', 'dm_3', 'dm_31', 'dm_33', 'dm_34', 'dm_35'];
+  const FIREBASE_CONFIG = {
+    apiKey: 'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',
+    authDomain: 'money-digger-9b05e.firebaseapp.com',
+    databaseURL: 'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app',
+    projectId: 'money-digger-9b05e'
+  };
+
+  const safeJSON = (key, fallback) => {
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+    catch (_) { return fallback; }
+  };
+  const num = value => { const n = Number(value); return Number.isFinite(n) ? n : 0; };
+  const unique = values => [...new Set((Array.isArray(values) ? values : []).map(String).filter(Boolean))];
+  const dailyKey = day => 'plixo_daily_progress_' + day;
+  const mergeProgress = (a, b) => {
+    const out = { ...(a && typeof a === 'object' ? a : {}) };
+    for (const [id, value] of Object.entries(b && typeof b === 'object' ? b : {})) {
+      if (value !== '' && Number.isFinite(Number(value))) out[id] = Math.max(num(out[id]), num(value));
+      else if (out[id] === undefined) out[id] = value;
+    }
+    return out;
+  };
+  function getAccountCode() {
+    const candidates = [localStorage.getItem('pg_account_code'), localStorage.getItem('pg_player_id'), localStorage.getItem('plixo_sync_code')];
+    return candidates.map(value => String(value || '').trim()).find(value => /^\d{20}$/.test(value)) || null;
+  }
+
+  let currentDay = DAY_KEY();
+  let globalProgress = safeJSON('plixo_mission_progress', {});
+  let dailyProgress = safeJSON(dailyKey(currentDay), {});
+  let playedGames = unique(safeJSON('plixo_played_games', []));
+  let dailyGames = unique(safeJSON('plixo_daily_games_' + currentDay, []));
+  let localTimer = null, cloudTimer = null, syncInFlight = null, syncAgain = false;
+  let dbRef = null, sdkPromise = null;
+  let trackingReady = !getAccountCode();
+  let pendingTracking = [];
+  let lastTick = Date.now(), activeMs = 0;
+  let gameMarked = false;
+
+  function ensureDay() {
+    const today = DAY_KEY();
+    if (today === currentDay) return;
+    currentDay = today;
+    dailyProgress = safeJSON(dailyKey(currentDay), {});
+    dailyGames = unique(safeJSON('plixo_daily_games_' + currentDay, []));
+  }
+  function refreshLocal() {
+    ensureDay();
+    globalProgress = mergeProgress(globalProgress, safeJSON('plixo_mission_progress', {}));
+    dailyProgress = mergeProgress(dailyProgress, safeJSON(dailyKey(currentDay), {}));
+    playedGames = unique([...playedGames, ...safeJSON('plixo_played_games', [])]);
+    dailyGames = unique([...dailyGames, ...safeJSON('plixo_daily_games_' + currentDay, [])]);
+  }
+  function saveLocalNow() {
+    refreshLocal();
+    try {
+      localStorage.setItem('plixo_mission_progress', JSON.stringify(globalProgress));
+      localStorage.setItem(dailyKey(currentDay), JSON.stringify(dailyProgress));
+      localStorage.setItem('plixo_played_games', JSON.stringify(playedGames));
+      localStorage.setItem('plixo_daily_games_' + currentDay, JSON.stringify(dailyGames));
+    } catch (error) { console.warn('DVD+: could not save mission progress locally.', error); }
+  }
+  function scheduleLocalSave() {
+    if (localTimer) return;
+    localTimer = setTimeout(() => { localTimer = null; saveLocalNow(); }, 100);
+  }
+  function scheduleCloudSync() {
+    if (!getAccountCode() || cloudTimer) return;
+    cloudTimer = setTimeout(() => {
+      cloudTimer = null;
+      syncProgressToFirebase().catch(error => console.warn('DVD+: mission sync failed.', error));
+    }, 1400);
+  }
+  function queueOrRun(action) {
+    if (trackingReady) action();
+    else pendingTracking.push(action);
+  }
+  function releaseTracking() {
+    if (trackingReady) return;
+    trackingReady = true;
+    const pending = pendingTracking;
+    pendingTracking = [];
+    pending.forEach(action => { try { action(); } catch (error) { console.warn('DVD+: deferred tracking failed.', error); } });
+  }
+  function setGlobalMax(id, value) {
+    queueOrRun(() => {
+      refreshLocal();
+      const n = Math.max(0, num(value));
+      if (n <= num(globalProgress[id])) return;
+      globalProgress[id] = n;
+      scheduleLocalSave(); scheduleCloudSync();
+    });
+  }
+  function incrementGlobal(id, amount = 1) {
+    queueOrRun(() => {
+      refreshLocal();
+      const n = Math.max(0, num(amount));
+      if (!id || n <= 0) return;
+      globalProgress[id] = num(globalProgress[id]) + n;
+      scheduleLocalSave(); scheduleCloudSync();
+    });
+  }
+  function setDailyMax(id, value) {
+    queueOrRun(() => {
+      refreshLocal();
+      const n = Math.max(0, num(value));
+      dailyProgress[id] = Math.max(num(dailyProgress[id]), n);
+      globalProgress[id] = Math.max(num(globalProgress[id]), n);
+      scheduleLocalSave(); scheduleCloudSync();
+    });
+  }
+  function incrementDaily(id, amount = 1) {
+    queueOrRun(() => {
+      refreshLocal();
+      const n = Math.max(0, num(amount));
+      if (!id || n <= 0) return;
+      dailyProgress[id] = num(dailyProgress[id]) + n;
+      globalProgress[id] = Math.max(num(globalProgress[id]), num(dailyProgress[id]));
+      scheduleLocalSave(); scheduleCloudSync();
+    });
+  }
+  function markGamePlayedNow() {
+    refreshLocal();
+    playedGames = unique([...playedGames, GAME_ID]);
+    dailyGames = unique([...dailyGames, GAME_ID]);
+    globalProgress.a9 = Math.max(num(globalProgress.a9), playedGames.length);
+    for (const id of ['dm_1', 'dm_2', 'dm_3']) {
+      dailyProgress[id] = Math.max(num(dailyProgress[id]), dailyGames.length);
+      globalProgress[id] = Math.max(num(globalProgress[id]), dailyGames.length);
+    }
+    scheduleLocalSave(); scheduleCloudSync();
+  }
+  function markGamePlayed() {
+    if (gameMarked) return;
+    gameMarked = true;
+    queueOrRun(markGamePlayedNow);
+  }
+
+  function ensureFirebaseSDK() {
+    if (window.firebase && typeof window.firebase.database === 'function') return Promise.resolve();
+    if (sdkPromise) return sdkPromise;
+    const load = src => new Promise((resolve, reject) => {
+      const existing = [...document.scripts].find(script => script.src === src);
+      if (existing) {
+        if (existing.dataset.plixoLoaded === 'true' || (window.firebase && typeof window.firebase.database === 'function')) return resolve();
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = src; script.async = true;
+      script.onload = () => { script.dataset.plixoLoaded = 'true'; resolve(); };
+      script.onerror = () => reject(new Error('Could not load ' + src));
+      (document.head || document.documentElement).appendChild(script);
+    });
+    sdkPromise = load('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js')
+      .then(() => window.firebase && typeof window.firebase.database === 'function' ? null : load('https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js'))
+      .then(() => { if (!window.firebase || typeof window.firebase.database !== 'function') throw new Error('Firebase database SDK not available.'); });
+    return sdkPromise;
+  }
+  async function getDatabase() {
+    if (dbRef) return dbRef;
+    await ensureFirebaseSDK();
+    const apps = window.firebase.apps || [];
+    if (!apps.some(app => app && app.name === '[DEFAULT]')) window.firebase.initializeApp(FIREBASE_CONFIG);
+    dbRef = window.firebase.database();
+    return dbRef;
+  }
+  async function syncProgressToFirebase() {
+    const code = getAccountCode();
+    if (!code) return;
+    if (syncInFlight) { syncAgain = true; return syncInFlight; }
+    syncInFlight = (async () => {
+      const db = await getDatabase();
+      refreshLocal();
+      const root = db.ref('plixo_users/' + code);
+      const snapshot = await root.once('value');
+      const record = snapshot && snapshot.exists() ? (snapshot.val() || {}) : {};
+      const remoteGlobal = record.mission_progress && typeof record.mission_progress === 'object' ? record.mission_progress : {};
+      const remotePlayed = Array.isArray(record.played_games) ? record.played_games : [];
+      const remoteDailyGames = record.daily_games && record.daily_games.date === currentDay && Array.isArray(record.daily_games.games) ? record.daily_games.games : [];
+      playedGames = unique([...remotePlayed, ...playedGames]);
+      dailyGames = unique([...remoteDailyGames, ...dailyGames]);
+      globalProgress.a9 = Math.max(num(globalProgress.a9), playedGames.length);
+      for (const id of ['dm_1', 'dm_2', 'dm_3']) {
+        dailyProgress[id] = Math.max(num(dailyProgress[id]), dailyGames.length);
+        globalProgress[id] = Math.max(num(globalProgress[id]), dailyGames.length);
+      }
+
+      // Merge only the mission/achievement IDs this game actually tracks.
+      const globalUpdates = {};
+      for (const id of GLOBAL_IDS) {
+        if (!id) continue;
+        const localValue = num(globalProgress[id]);
+        const remoteValue = num(remoteGlobal[id]);
+        if (localValue > 0 || remoteValue > 0 || globalProgress[id] !== undefined || remoteGlobal[id] !== undefined) {
+          const merged = Math.max(localValue, remoteValue);
+          globalProgress[id] = merged;
+          globalUpdates[id] = merged;
+        }
+      }
+      if (Object.keys(globalUpdates).length) await root.child('mission_progress').update(globalUpdates);
+
+      const today = currentDay = DAY_KEY();
+      const localDaily = mergeProgress(safeJSON(dailyKey(today), {}), dailyProgress);
+      dailyProgress = localDaily;
+      const remoteDaily = record.daily && typeof record.daily === 'object' ? record.daily : {};
+      const remoteDailyProgress = remoteDaily.date === today && remoteDaily.progress && typeof remoteDaily.progress === 'object' ? remoteDaily.progress : {};
+      const dailyUpdates = {};
+      for (const id of DAILY_IDS) {
+        if (!id) continue;
+        const merged = Math.max(num(remoteDailyProgress[id]), num(localDaily[id]), num(dailyProgress[id]));
+        if (merged > 0 || remoteDailyProgress[id] !== undefined || localDaily[id] !== undefined || dailyProgress[id] !== undefined) {
+          dailyProgress[id] = merged;
+          globalProgress[id] = Math.max(num(globalProgress[id]), merged);
+          dailyUpdates[id] = merged;
+        }
+      }
+      if (remoteDaily.date === today) {
+        if (Object.keys(dailyUpdates).length) await root.child('daily/progress').update(dailyUpdates);
+      } else {
+        // A new day gets today's local progress/claims; the previous day's daily progress is reset.
+        await root.child('daily').update({
+          date: today,
+          progress: dailyProgress,
+          claimed: safeJSON('plixo_daily_claimed_' + today, {}),
+          bonus: localStorage.getItem('plixo_daily_bonus_date') || ''
+        });
+      }
+      await root.update({
+        played_games: playedGames,
+        daily_games: { date: today, games: dailyGames }
+      });
+      saveLocalNow();
+    })().catch(error => {
+      console.warn('DVD+: Firebase mission sync unavailable; local progress is retained.', error);
+    }).finally(() => {
+      syncInFlight = null;
+      if (syncAgain) { syncAgain = false; scheduleCloudSync(); }
+    });
+    return syncInFlight;
+  }
+
+  function isActuallyPlaying() { return (typeof isPaused === 'undefined' || !isPaused) && typeof dvds !== 'undefined' && Array.isArray(dvds) && dvds.length > 0; }
+  function gameHasStarted() { return typeof dvds !== 'undefined' && Array.isArray(dvds) && dvds.length > 0; }
+  function pollGameProgress() {     const currentLevel = (typeof level !== 'undefined') ? Number(level) : 0;
+    if (Number.isFinite(currentLevel) && currentLevel > 0) setGlobalMax('a_dvd_level200', currentLevel);
+    try {
+      const speed = typeof stats !== 'undefined' ? Number(stats.speedMultiplier) : 1;
+      let speedTier = 0;
+      if (speed >= 3 - 1e-6) speedTier = 3;
+      else if (speed >= 2.5 - 1e-6) speedTier = 2;
+      else if (speed >= 2 - 1e-6) speedTier = 1;
+      if (speedTier) setGlobalMax('a49', speedTier);
+    } catch (_) {}
+    try {
+      const skinIds = [...Object.values(skinsData).flat().map(s => s.id), ...allWorldFlags.map(f => 'flag_' + f.code)];
+      const allSkinsUnlocked = skinIds.length > 0 && skinIds.every(id => Array.isArray(unlockedSkins) && unlockedSkins.includes(id));
+      const upgradeOptions = [...upgradesData, ...predictUpgradesData];
+      const allUpgradeOptionsUnlocked = upgradeOptions.length > 0 && upgradeOptions.every(up => Number(upgradeLevels[up.id] || 0) >= 1);
+      if (allSkinsUnlocked && allUpgradeOptionsUnlocked) setGlobalMax('a55', 1);
+    } catch (_) {}
+ }
+  function installGameHooks() {     let bounceEventsInFrame = 0;
+    let bounceCheckScheduled = false;
+    function noteBounceForCombo() {
+      bounceEventsInFrame++;
+      if (bounceCheckScheduled) return;
+      bounceCheckScheduled = true;
+      setTimeout(() => {
+        if (bounceEventsInFrame >= 2) setGlobalMax('a54', 1);
+        bounceEventsInFrame = 0;
+        bounceCheckScheduled = false;
+      }, 0);
+    }
+    const originalAddProgress = window.addProgress;
+    if (typeof originalAddProgress === 'function' && !originalAddProgress.__plixoProgressWrapped) {
+      const wrappedAddProgress = function(amount) {
+        const bounceCount = Math.max(0, Number(amount) || 0);
+        if (bounceCount) {
+          noteBounceForCombo();
+          incrementGlobal('a46', bounceCount);
+          incrementDaily('dm_31', bounceCount);
+          incrementDaily('dm_33', bounceCount);
+        }
+        return originalAddProgress.apply(this, arguments);
+      };
+      wrappedAddProgress.__plixoProgressWrapped = true;
+      window.addProgress = wrappedAddProgress;
+    }
+    const originalCorner = window.handleCornerHit;
+    if (typeof originalCorner === 'function' && !originalCorner.__plixoProgressWrapped) {
+      const wrappedCorner = function(dvd) {
+        let predictedTarget = false;
+        try { predictedTarget = Array.isArray(predictStates) && predictStates.some(p => p.status === 'active' && p.targetId === dvd.id); } catch (_) {}
+        incrementGlobal('a47', 1);
+        incrementDaily('dm_34', 1);
+        incrementDaily('dm_35', 1);
+        const result = originalCorner.apply(this, arguments);
+        if (predictedTarget) setGlobalMax('a52', 1);
+        return result;
+      };
+      wrappedCorner.__plixoProgressWrapped = true;
+      window.handleCornerHit = wrappedCorner;
+    }
+ }
+
+  try { installGameHooks(); } catch (error) { console.warn('DVD+: could not attach all progress hooks.', error); }
+
+  function tick() {
+    ensureDay();
+    const now = Date.now();
+    const elapsed = Math.max(0, Math.min(5000, now - lastTick));
+    lastTick = now;
+    if (document.visibilityState !== 'hidden' && isActuallyPlaying()) {
+      activeMs += elapsed;
+      while (activeMs >= 60000) { activeMs -= 60000; incrementGlobal('a13', 1); incrementGlobal('a51', 1); }
+    }
+    try { pollGameProgress(); } catch (error) { console.warn('DVD+: progress poll failed.', error); }
+    if (!gameMarked && gameHasStarted()) markGamePlayed();
+  }
+
+  window.addEventListener('storage', event => {
+    const today = DAY_KEY();
+    if ([ 'plixo_mission_progress', 'plixo_played_games', 'plixo_daily_games_' + today, dailyKey(today), 'pg_account_code', 'pg_player_id', 'plixo_sync_code' ].includes(event.key)) {
+      refreshLocal();
+      if (getAccountCode()) scheduleCloudSync();
+    }
+  });
+  window.addEventListener('focus', () => { refreshLocal(); if (getAccountCode()) syncProgressToFirebase().catch(() => {}); });
+  window.addEventListener('pageshow', () => { refreshLocal(); if (getAccountCode()) scheduleCloudSync(); });
+  window.addEventListener('pagehide', () => {
+    if (localTimer) { clearTimeout(localTimer); localTimer = null; saveLocalNow(); }
+    if (cloudTimer) { clearTimeout(cloudTimer); cloudTimer = null; }
+    if (getAccountCode()) syncProgressToFirebase().catch(() => {});
+  });
+  document.addEventListener('visibilitychange', () => { lastTick = Date.now(); if (document.visibilityState !== 'hidden') { refreshLocal(); if (getAccountCode()) scheduleCloudSync(); } });
+
+  if (getAccountCode()) {
+    // Load/merge remote counters before applying new lifetime-counter increments.
+    const releaseTimer = setTimeout(releaseTracking, 6000);
+    syncProgressToFirebase().finally(() => { clearTimeout(releaseTimer); releaseTracking(); });
+  } else {
+    trackingReady = true;
+  }
+  setInterval(tick, 1000);
+  setInterval(() => { if (getAccountCode()) syncProgressToFirebase().catch(() => {}); }, 30000);
+})();
+
+</script>
 </body>
 </html>
