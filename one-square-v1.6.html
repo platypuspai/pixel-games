@@ -341,7 +341,7 @@ function recordOneSquareProgress(ids) {
 
 function syncOneSquareProgressToFirebase(globalProgress, today, dailyProgress) {
   const candidates = [localStorage.getItem("pg_account_code"), localStorage.getItem("pg_player_id"), localStorage.getItem("plixo_sync_code")];
-  const code = candidates.map(value => String(value || "").trim()).find(value => /^\d{20}$/.test(value));
+  const code = candidates.map(value => String(value || "").trim().toUpperCase()).find(value => /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/.test(value));
   if (!code) return;
 
   initFirebase();
@@ -1106,7 +1106,15 @@ function loop(timestamp) {
         completedBreak = true;
       } else {
         const id=world[by][bx];
-        if(id){addToHotbar(id);world[by][bx]=null;completedBreak = true;}
+        if(id){
+          addToHotbar(id);
+          world[by][bx]=null;
+          completedBreak = true;
+          // Per block type: increment all three thresholds. Chicken Jockey is not a world block and is excluded.
+          if (id !== "chicken_jockey" && BLOCK_TYPES.some(bt => bt.id === id)) {
+            recordOneSquareProgress([`dm_os_mine_${id}_3`, `dm_os_mine_${id}_5`, `dm_os_mine_${id}_9`]);
+          }
+        }
       }
       if (completedBreak) recordOneSquareProgress(["dm_53", "dm_54", "a66"]); // permanent DEMOLISHER mission in skin.html
       onWorldChanged();
