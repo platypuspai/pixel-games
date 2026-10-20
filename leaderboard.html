@@ -64,6 +64,10 @@
         .board-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
         .board-title { font-family: 'Press Start 2P', monospace; font-size: 0.45rem; letter-spacing: 0.08em; flex: 1; line-height: 1.6; }
         .board-meta { font-size: 0.62rem; color: var(--text-muted); white-space: nowrap; }
+        .board-mode-switch { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+        .board-mode-btn { background:transparent; color:var(--accent-yellow); border:1px solid var(--border); cursor:pointer; font:700 1rem monospace; line-height:1; padding:3px 7px; }
+        .board-mode-btn:hover { border-color:var(--accent-yellow); color:#fff; }
+        @media(max-width:650px) { .board-mode-btn { padding:3px 5px; } .board-mode-switch { gap:3px; } }
         .board-body { max-height: 380px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
         .board-body::-webkit-scrollbar { width: 4px; }
         .board-body::-webkit-scrollbar-thumb { background: var(--border); }
@@ -71,6 +75,8 @@
         .lb-row { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.1s; }
         .lb-row:hover { background: rgba(255,255,255,0.04); }
         .lb-row.me { background: rgba(255,221,0,0.07); }
+        .lb-pinned-row{display:none;border-top:1px solid rgba(255,221,0,.20);background:rgba(255,221,0,.035)}
+        .lb-pinned-row .lb-row{background:rgba(255,221,0,.07);border-bottom:0}
         .lb-rank { font-family: 'Press Start 2P', monospace; font-size: 0.38rem; color: var(--text-muted); width: 24px; text-align: center; flex-shrink: 0; }
         .lb-rank.g { color: #ffd700; font-size: 0.65rem; }
         .lb-rank.s { color: #c0c0c0; font-size: 0.65rem; }
@@ -89,13 +95,98 @@
         .account-btn { font-family: 'Press Start 2P', monospace; font-size: 0.38rem; padding: 8px 14px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); cursor: pointer; letter-spacing: 0.08em; transition: all 0.15s; white-space: nowrap; }
         .account-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
     </style>
+
+    <!-- PLIXO UNIVERSAL TRACKER (Inclusief setPlixoMaxProgress voor veiligheid) -->
+    <script>
+    function getSyncCode() {
+        const candidates = [localStorage.getItem('pg_account_code'), localStorage.getItem('pg_player_id'), localStorage.getItem('plixo_sync_code')];
+        return candidates.map(value => String(value || '').trim().toUpperCase()).find(value => /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/.test(value)) || null;
+    }
+
+    function _getDb() {
+        if (typeof fbApp !== 'undefined' && fbApp.database) return fbApp.database();
+        if (window.firebase && window.firebase.apps.length > 0) return firebase.database();
+        return null;
+    }
+
+    function _plixoSafeObject(raw) {
+        try { const value = JSON.parse(raw || '{}'); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
+        catch (_) { return {}; }
+    }
+
+    function _syncPlixoProgressCloud(syncCode, missionId, value, mode, isDaily, today) {
+        const db = _getDb();
+        if (!syncCode || !db) return;
+        const userRef = db.ref('plixo_users/' + syncCode);
+        const updateMap = (current) => {
+            const merged = current && typeof current === 'object' && !Array.isArray(current) ? {...current} : {};
+            const old = Number(merged[missionId]) || 0;
+            merged[missionId] = mode === 'add' ? old + value : Math.max(old, value);
+            return merged;
+        };
+        userRef.child('mission_progress').transaction(updateMap).catch(() => {});
+        if (isDaily) {
+            userRef.child('daily').transaction(current => {
+                const record = current && typeof current === 'object' ? {...current} : {};
+                const sameDay = record.date === today;
+                const progress = sameDay && record.progress && typeof record.progress === 'object'
+                    ? {...record.progress} : {};
+                const old = Number(progress[missionId]) || 0;
+                progress[missionId] = mode === 'add' ? old + value : Math.max(old, value);
+                record.date = today;
+                record.progress = progress;
+                if (!sameDay) { record.claimed = {}; record.bonus = ''; }
+                else {
+                    record.claimed = record.claimed && typeof record.claimed === 'object' ? record.claimed : {};
+                    record.bonus = record.bonus || '';
+                }
+                return record;
+            }).catch(() => {});
+        }
+    }
+
+    function addPlixoProgress(missionId, amount = 1) {
+        const delta = Number(amount);
+        if (!missionId || !Number.isFinite(delta) || delta <= 0) return;
+        const globalProg = _plixoSafeObject(localStorage.getItem('plixo_mission_progress'));
+        globalProg[missionId] = (Number(globalProg[missionId]) || 0) + delta;
+        localStorage.setItem('plixo_mission_progress', JSON.stringify(globalProg));
+
+        const today = new Date().toDateString();
+        const dailyKey = 'plixo_daily_progress_' + today;
+        const dailyProg = _plixoSafeObject(localStorage.getItem(dailyKey));
+        dailyProg[missionId] = (Number(dailyProg[missionId]) || 0) + delta;
+        localStorage.setItem(dailyKey, JSON.stringify(dailyProg));
+
+        const syncCode = getSyncCode();
+        if (syncCode) _syncPlixoProgressCloud(syncCode, missionId, delta, 'add', true, today);
+    }
+
+    function setPlixoMaxProgress(missionId, value, isDaily = false) {
+        const maximum = Number(value);
+        if (!missionId || !Number.isFinite(maximum) || maximum < 0) return;
+        const today = new Date().toDateString();
+        const storageKey = isDaily ? 'plixo_daily_progress_' + today : 'plixo_mission_progress';
+        const prog = _plixoSafeObject(localStorage.getItem(storageKey));
+        prog[missionId] = Math.max(Number(prog[missionId]) || 0, maximum);
+        localStorage.setItem(storageKey, JSON.stringify(prog));
+        const syncCode = getSyncCode();
+        if (syncCode) _syncPlixoProgressCloud(syncCode, missionId, maximum, 'max', !!isDaily, today);
+    }
+
+    // a6 (Competitive) & dm_5 (Leaderboard Peek)
+    window.addEventListener('load', () => {
+        addPlixoProgress('a6', 1);
+        addPlixoProgress('dm_5', 1);
+    });
+    </script>
 </head>
 <body>
 
 <div class="stars" id="stars"></div>
 
 <header>
-    <a class="back-link" href="index.html" data-i18n="back">◀ BACK</a>
+    <a class="back-link" href="index_2.html" data-i18n="back">◀ BACK</a>
     <h1 data-i18n="title">🏆 LEADERBOARD</h1>
     <p class="subtitle"><span data-i18n="subText">Live rankings &nbsp;·&nbsp; all Pixel-Games</span></p>
 </header>
@@ -132,8 +223,8 @@
             <p data-i18n="chooseNameDesc">This name is used to identify you across all leaderboards.</p>
             <input id="name-input" type="text" maxlength="18" placeholder="Your player name..." autocomplete="off">
             
-            <!-- Regels Blok -->
-            <div class="rules-box" style="margin-bottom: 18px; background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.3); padding: 12px; border-radius: 4px;">
+            <!-- Regels Blok: Inclusief onmouseenter tracker -->
+            <div class="rules-box" onmouseenter="addPlixoProgress('a4', 1); addPlixoProgress('dm_6', 1);" style="margin-bottom: 18px; background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.3); padding: 12px; border-radius: 4px;">
                 <h4 style="font-family: 'Press Start 2P', monospace; font-size: 0.45rem; color: var(--accent-green); margin-bottom: 8px;" data-i18n="rulesTitle">// ARCADE RULES</h4>
                 <ul style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.5; padding-left: 16px; margin-bottom: 0;">
                     <li style="margin-bottom: 6px;" data-i18n="rule1"><strong>No autoclickers</strong><br><span style="font-size: 0.6rem;">Penalty: Green ➔ Yellow ➔ Red (Ban)</span></li>
@@ -159,8 +250,8 @@
 
         <div class="board" style="border-top: 2px solid var(--accent-green);">
             <div class="board-head">
-                <span class="board-title" style="color:var(--accent-green)">MINI BASIC PLATFORMER</span>
-                <span class="board-meta" data-i18n="metaTime">best time</span>
+                <span class="board-title" style="color:var(--accent-green)">MINI BROWSER PLATFORMER</span>
+                <div class="board-mode-switch"><button class="board-mode-btn" type="button" aria-label="Previous leaderboard mode" onclick="cyclePlatformerBoardMode('pf',-1)">‹</button><span class="board-meta" id="pf-mode-label">BEST TIME</span><button class="board-mode-btn" type="button" aria-label="Next leaderboard mode" onclick="cyclePlatformerBoardMode('pf',1)">›</button></div>
             </div>
             <div class="board-body" id="pf-body"><div class="lb-loading" data-i18n="connecting">Connecting</div></div>
             <div class="board-foot" id="pf-foot"></div>
@@ -169,7 +260,7 @@
         <div class="board" style="border-top: 2px solid var(--accent-purple);">
             <div class="board-head">
                 <span class="board-title" style="color:var(--accent-purple)">MINI SPIKES PLATFORMER</span>
-                <span class="board-meta" data-i18n="metaTime">best time</span>
+                <div class="board-mode-switch"><button class="board-mode-btn" type="button" aria-label="Previous leaderboard mode" onclick="cyclePlatformerBoardMode('pfs',-1)">‹</button><span class="board-meta" id="pfs-mode-label">BEST TIME</span><button class="board-mode-btn" type="button" aria-label="Next leaderboard mode" onclick="cyclePlatformerBoardMode('pfs',1)">›</button></div>
             </div>
             <div class="board-body" id="pfs-body"><div class="lb-loading" data-i18n="connecting">Connecting</div></div>
             <div class="board-foot" id="pfs-foot"></div>
@@ -412,7 +503,7 @@ async function importAccount() {
 
         const cleanName = data.name.trim();
 
-        const [mdSnap, lgSnap, pfSnap, pfsSnap, maSnap, beSnap, daSnap] = await Promise.all([
+        const [mdSnap, lgSnap, pfSnap, pfsSnap, maSnap, beSnap, daSnap, pfRaceSnap, pfsRaceSnap] = await Promise.all([
             db.ref('scores').once('value'),
             db.ref('luckyGuyScores').once('value'),
             db.ref('platformerScores').once('value'),
@@ -430,8 +521,22 @@ async function importAccount() {
             }
         });
 
+        // Keep local Money Digger credits earned before account connection; they will be
+        // migrated once to the imported PLIXO account rather than being discarded.
+        const offlineDiggerImport = {
+            pending: localStorage.getItem('md6_plixo_offline_plix_pending') || '0',
+            totalClicks: localStorage.getItem('md6_plixo_local_total_clicks') || localStorage.getItem('md6_sp_bills') || '0',
+            paidClicks: localStorage.getItem('md6_plixo_local_paid_milestones') || '0',
+            transferId: localStorage.getItem('md6_plixo_offline_transfer_id') || '',
+            spBills: localStorage.getItem('md6_sp_bills') || '0'
+        };
         localStorage.clear();
 
+        localStorage.setItem('md6_plixo_offline_plix_pending', offlineDiggerImport.pending);
+        localStorage.setItem('md6_plixo_local_total_clicks', offlineDiggerImport.totalClicks);
+        localStorage.setItem('md6_plixo_local_paid_milestones', offlineDiggerImport.paidClicks);
+        if (offlineDiggerImport.transferId) localStorage.setItem('md6_plixo_offline_transfer_id', offlineDiggerImport.transferId);
+        localStorage.setItem('md6_sp_bills', offlineDiggerImport.spBills);
         localStorage.setItem(DEV_KEY, data.deviceId);
         localStorage.setItem(LB_KEY, cleanName);
         localStorage.setItem(ACC_KEY, code);
@@ -441,7 +546,12 @@ async function importAccount() {
         localStorage.setItem('md6_n', cleanName);
 
         await db.ref('nameOwners/' + data.deviceId).set({ name: cleanName });
-        await db.ref('accountCodes/' + code).set({ deviceId: data.deviceId, name: cleanName });
+        await db.ref('accountCodes/' + code).transaction(current => ({ ...(current && typeof current === 'object' ? current : {}), deviceId: data.deviceId, name: cleanName, createdAt: (current && Number(current.createdAt)) || Number(data.createdAt) || Date.now() }));
+        const importedCreatedAt = Number((await db.ref('accountCodes/' + code + '/createdAt').once('value')).val()) || Date.now();
+        await db.ref('plixo_users/' + code + '/account_created_at').transaction(current => current || importedCreatedAt);
+        localStorage.setItem('pg_account_created_at', String(importedCreatedAt));
+        localStorage.setItem('plixo_account_created_at', String(importedCreatedAt));
+        localStorage.setItem('plixo_account_created_at_source', 'firebase');
 
         const fixNameInDB = (dbSnap, path) => {
             dbSnap.forEach(child => {
@@ -508,19 +618,35 @@ async function confirmName() {
         if (conflict) { showNameError(tr('nameTaken')); btn.textContent = tr('confirmNameBtn'); btn.disabled = false; return; }
 
         await db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: val });
-        await db.ref('accountCodes/' + MY_ACCOUNT_CODE).set({ deviceId: MY_DEVICE_ID, name: val });
+        const accountRecordResult = await db.ref('accountCodes/' + MY_ACCOUNT_CODE).transaction(current => ({
+            ...(current && typeof current === 'object' ? current : {}),
+            deviceId: MY_DEVICE_ID,
+            name: val,
+            createdAt: (current && Number(current.createdAt)) || Date.now()
+        }));
+        const accountCreatedAt = Number(accountRecordResult.snapshot && accountRecordResult.snapshot.val() && accountRecordResult.snapshot.val().createdAt) || Date.now();
+        await db.ref('plixo_users/' + MY_ACCOUNT_CODE + '/account_created_at').transaction(current => current || accountCreatedAt);
+        localStorage.setItem('pg_account_created_at', String(accountCreatedAt));
+        localStorage.setItem('plixo_account_created_at', String(accountCreatedAt));
+        localStorage.setItem('plixo_account_created_at_source', 'firebase');
+        if (!localStorage.getItem('md6_did')) localStorage.setItem('md6_did', MY_DEVICE_ID);
         localStorage.setItem(LB_KEY, val);
         document.getElementById('bar-name').textContent = val;
+        
+        // PLIXO MISSION: Change Name
+        addPlixoProgress('a7', 1);
 
         if (oldName && oldName.toLowerCase() !== valLow) {
-            const [mdSnap, lgSnap, pfSnap, pfsSnap, maSnap, beSnap, daSnap] = await Promise.all([
+            const [mdSnap, lgSnap, pfSnap, pfsSnap, maSnap, beSnap, daSnap, pfRaceSnap, pfsRaceSnap] = await Promise.all([
                 db.ref('scores').once('value'),
                 db.ref('luckyGuyScores').once('value'),
                 db.ref('platformerScores').once('value'),
                 db.ref('platformerSpikeLevelsScores').once('value'),
                 db.ref('miniApocalypseScores').once('value'),
                 db.ref('bugEscapeScores').once('value'),
-                db.ref('dodgingArenaScores').once('value')
+                db.ref('dodgingArenaScores').once('value'),
+                db.ref('platformerRaceTrophies/mbp').once('value'),
+                db.ref('platformerRaceTrophies/msp').once('value')
             ]);
             
             const lgSave = localStorage.getItem('luckyGuySaveData');
@@ -534,12 +660,17 @@ async function confirmName() {
             maSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('miniApocalypseScores/' + child.key + '/name').set(val).catch(()=>{}); });
             beSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('bugEscapeScores/' + child.key + '/name').set(val).catch(()=>{}); });
             daSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('dodgingArenaScores/' + child.key + '/name').set(val).catch(()=>{}); });
+            pfRaceSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('platformerRaceTrophies/mbp/' + child.key + '/name').set(val).catch(()=>{}); });
+            pfsRaceSnap.forEach(child => { if (child.val()?.name?.toLowerCase() === oldName.toLowerCase()) db.ref('platformerRaceTrophies/msp/' + child.key + '/name').set(val).catch(()=>{}); });
         }
 
         document.getElementById('modal').classList.add('hidden');
         if (window._mdData) render('md-body', 'md-foot', window._mdData, val);
-        if (window._pfData) render('pf-body', 'pf-foot', window._pfData, val);
-        if (window._pfsData) render('pfs-body', 'pfs-foot', window._pfsData, val);
+        if (typeof loadPlatformerBoard === 'function') { loadPlatformerBoard('pf'); loadPlatformerBoard('pfs'); }
+        else {
+            if (window._pfData) render('pf-body', 'pf-foot', window._pfData, val);
+            if (window._pfsData) render('pfs-body', 'pfs-foot', window._pfsData, val);
+        }
         if (window._lgData) render('lg-body', 'lg-foot', window._lgData, val);
         if (window._maData) render('ma-body', 'ma-foot', window._maData, val);
         if (window._beData) render('be-body', 'be-foot', window._beData, val);
@@ -567,7 +698,19 @@ else {
             const ownerOk = ownerSnap.val() && ownerSnap.val().name && ownerSnap.val().name.toLowerCase() === initName.toLowerCase();
             const codeOk  = codeSnap.val() && codeSnap.val().deviceId === MY_DEVICE_ID;
             if (!ownerOk) db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: initName }).catch(()=>{});
-            if (!codeOk)  db.ref('accountCodes/' + MY_ACCOUNT_CODE).set({ deviceId: MY_DEVICE_ID, name: initName }).catch(()=>{});
+            db.ref('accountCodes/' + MY_ACCOUNT_CODE).transaction(current => ({
+                ...(current && typeof current === 'object' ? current : {}),
+                deviceId: MY_DEVICE_ID,
+                name: initName,
+                createdAt: (current && Number(current.createdAt)) || Date.now()
+            })).then(result => {
+                const createdAt = Number(result.snapshot && result.snapshot.val() && result.snapshot.val().createdAt) || Date.now();
+                db.ref('plixo_users/' + MY_ACCOUNT_CODE + '/account_created_at').transaction(current => current || createdAt).catch(()=>{});
+                localStorage.setItem('pg_account_created_at', String(createdAt));
+                localStorage.setItem('plixo_account_created_at', String(createdAt));
+                localStorage.setItem('plixo_account_created_at_source', 'firebase');
+                if (!localStorage.getItem('md6_did')) localStorage.setItem('md6_did', MY_DEVICE_ID);
+            }).catch(()=>{});
         });
     }, 2000);
 }
@@ -580,24 +723,89 @@ function render(bodyId, footId, rows, me) {
     const body = document.getElementById(bodyId);
     const foot = document.getElementById(footId);
     if (!body) return;
-    if (!rows || !rows.length) { body.innerHTML = `<div class="lb-empty">${tr('noScores')}</div>`; if (foot) foot.style.display = 'none'; return; }
-    const low = (me || '').toLowerCase();
-    let html = '', pos = -1;
+
+    // Extra personal row is shown only while the player's real row is outside
+    // the visible area of this independently scrollable ranking list.
+    let pinned = body.nextElementSibling;
+    if (!pinned || !pinned.classList.contains('lb-pinned-row')) {
+        pinned = document.createElement('div');
+        pinned.className = 'lb-pinned-row';
+        body.insertAdjacentElement('afterend', pinned);
+    }
+    if (pinned._rowObserver) {
+        pinned._rowObserver.disconnect();
+        pinned._rowObserver = null;
+    }
+    if (pinned._visibilityHandler) {
+        body.removeEventListener('scroll', pinned._visibilityHandler);
+        pinned._visibilityHandler = null;
+    }
+    pinned.style.display = 'none';
+    pinned.innerHTML = '';
+
+    if (!rows || !rows.length) {
+        body.innerHTML = `<div class="lb-empty">${tr('noScores')}</div>`;
+        if (foot) foot.style.display = 'none';
+        return;
+    }
+
+    const low = String(me || '').trim().toLowerCase();
+    const pos = low ? rows.findIndex(r => String(r.name || '').trim().toLowerCase() === low) : -1;
+
+    const shouldPin = pos >= 10;
+    let html = '';
     for (let i = 0; i < rows.length; i++) {
         const r = rows[i];
-        const isMe = low && r.name.toLowerCase() === low;
-        if (isMe) pos = i;
-        html += `<div class="lb-row${isMe?' me':''}">
+        const isMe = i === pos;
+        html += `<div class="lb-row${isMe?' me lb-row-self':''}">
             <span class="lb-rank ${medalCls(i)}">${medal(i)}</span>
             <span class="lb-name${isMe?' me':''}">${esc(r.name)}</span>
             <span class="lb-score">${esc(r.score)}</span>
         </div>`;
     }
     body.innerHTML = html;
-    if (foot) {
-        if (me && pos >= 0) { foot.innerHTML = `${tr('yourRank')} <span>#${pos+1}</span> · ${esc(rows[pos].score)}`; foot.style.display = ''; } 
-        else if (me) { foot.innerHTML = tr('notInRanking'); foot.style.display = ''; } 
-        else { foot.style.display = 'none'; }
+
+    if (shouldPin) {
+        const r = rows[pos];
+        // Start with the extra row visible, then hide it whenever the real gold row
+        // enters the scroll area's visible region. Show it again when the row leaves.
+        pinned.style.display = 'block';
+        pinned.innerHTML = `<div class="lb-row me"><span class="lb-rank ${medalCls(pos)}">${medal(pos)}</span>
+            <span class="lb-name me">${esc(r.name)}</span>
+            <span class="lb-score">${esc(r.score)}</span></div>`;
+        const selfRow = body.querySelector('.lb-row-self');
+        if (selfRow) {
+            const updatePinnedVisibility = () => {
+                const rowRect = selfRow.getBoundingClientRect();
+                const bodyRect = body.getBoundingClientRect();
+                const isVisible = rowRect.bottom > bodyRect.top && rowRect.top < bodyRect.bottom;
+                pinned.style.display = isVisible ? 'none' : 'block';
+            };
+            if ('IntersectionObserver' in window) {
+                pinned._rowObserver = new IntersectionObserver(entries => {
+                    const entry = entries[entries.length - 1];
+                    if (entry) pinned.style.display = entry.isIntersecting ? 'none' : 'block';
+                }, { root: body, threshold: 0 });
+                pinned._rowObserver.observe(selfRow);
+            } else {
+                pinned._visibilityHandler = updatePinnedVisibility;
+                body.addEventListener('scroll', updatePinnedVisibility, { passive: true });
+                updatePinnedVisibility();
+            }
+        }
+        // The floating row replaces the compact rank footer while it is available.
+        // MONEY DIGGER uses its footer for the total click counter and updates it after render.
+        if (foot && bodyId !== 'md-body') foot.style.display = 'none';
+    } else if (foot) {
+        if (me && pos >= 0) {
+            foot.innerHTML = `${tr('yourRank')} <span>#${pos+1}</span> · ${esc(rows[pos].score)}`;
+            foot.style.display = '';
+        } else if (me) {
+            foot.innerHTML = tr('notInRanking');
+            foot.style.display = '';
+        } else {
+            foot.style.display = 'none';
+        }
     }
 }
 
@@ -633,38 +841,64 @@ let mdOff = null;
     mdOff = () => ref.off('value', onVal);
 })();
 
-// Mini Basic Platformer
+// Mini Browser Platformer + Mini Spikes Platformer: arrow controls switch between best-time and race trophies.
 function ts(ms) { const s = Math.floor(ms/1000), m = Math.floor(s/60), t = Math.floor((ms%1000)/100); return m > 0 ? m+'m '+(s%60)+'.'+t+'s' : s+'.'+t+'s'; }
-let pfOff = null;
-(function loadPF() {
-    const body = document.getElementById('pf-body'); body.innerHTML = `<div class="lb-loading">${tr('connecting')}</div>`;
-    if (pfOff) { pfOff(); pfOff = null; }
-    const ref = fbApp.database().ref('platformerScores');
+const platformerBoardModes = { pf: 'time', pfs: 'time' };
+const platformerBoardOff = { pf: null, pfs: null };
+function cyclePlatformerBoardMode(board, step) {
+    const order = ['time', 'race'];
+    const current = order.indexOf(platformerBoardModes[board] || 'time');
+    platformerBoardModes[board] = order[(current + step + order.length) % order.length];
+    loadPlatformerBoard(board);
+}
+function loadPlatformerBoard(board) {
+    const basic = board === 'pf';
+    const bodyId = basic ? 'pf-body' : 'pfs-body';
+    const footId = basic ? 'pf-foot' : 'pfs-foot';
+    const labelId = basic ? 'pf-mode-label' : 'pfs-mode-label';
+    const gameCode = basic ? 'mbp' : 'msp';
+    const body = document.getElementById(bodyId);
+    const foot = document.getElementById(footId);
+    const mode = platformerBoardModes[board] || 'time';
+    document.getElementById(labelId).textContent = mode === 'time' ? 'BEST TIME' : 'RACE TROPHIES';
+    if (platformerBoardOff[board]) { platformerBoardOff[board](); platformerBoardOff[board] = null; }
+    body.innerHTML = `<div class="lb-loading">${tr('connecting')}</div>`;
+    const path = mode === 'race'
+        ? `platformerRaceTrophies/${gameCode}`
+        : (basic ? 'platformerScores' : 'platformerSpikeLevelsScores');
+    const ref = fbApp.database().ref(path);
     function onVal(snap) {
-        const byName = {}; 
-        snap.forEach(child => { const d = child.val(); if (!d || !d.name || d.time == null) return; if (!byName[d.name] || d.time < byName[d.name]) byName[d.name] = d.time; });
-        const rows = Object.entries(byName).map(([name, time]) => ({ name, score: ts(time), v: time })).sort((a, b) => a.v - b.v);
-        const cleaned = rows.map(r => ({ name: r.name, score: r.score })); window._pfData = cleaned; render('pf-body', 'pf-foot', cleaned, getName());
+        if (mode === 'race') {
+            const rows = [];
+            snap.forEach(child => {
+                const d = child.val();
+                if (!d || !d.name || d.trophies == null) return;
+                const trophies = Math.max(0, Number(d.trophies) || 0);
+                rows.push({ name: d.name, score: trophies + ' 🏆', v: trophies });
+            });
+            rows.sort((a,b) => b.v - a.v || a.name.localeCompare(b.name));
+            const cleaned = rows.map(r => ({ name:r.name, score:r.score }));
+            window[basic ? '_pfRaceData' : '_pfsRaceData'] = cleaned;
+            render(bodyId, footId, cleaned, getName());
+        } else {
+            const byName = {};
+            snap.forEach(child => {
+                const d = child.val();
+                if (!d || !d.name || d.time == null) return;
+                if (byName[d.name] == null || Number(d.time) < byName[d.name]) byName[d.name] = Number(d.time);
+            });
+            const rows = Object.entries(byName).map(([name,time]) => ({ name, score:ts(time), v:time })).sort((a,b) => a.v - b.v);
+            const cleaned = rows.map(r => ({ name:r.name, score:r.score }));
+            window[basic ? '_pfData' : '_pfsData'] = cleaned;
+            render(bodyId, footId, cleaned, getName());
+        }
     }
     ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
-    pfOff = () => ref.off('value', onVal);
-})();
-
-// Mini Spikes Platformer
-let pfsOff = null;
-(function loadPFS() {
-    const body = document.getElementById('pfs-body'); body.innerHTML = `<div class="lb-loading">${tr('connecting')}</div>`;
-    if (pfsOff) { pfsOff(); pfsOff = null; }
-    const ref = fbApp.database().ref('platformerSpikeLevelsScores');
-    function onVal(snap) {
-        const byName = {}; 
-        snap.forEach(child => { const d = child.val(); if (!d || !d.name || d.time == null) return; if (!byName[d.name] || d.time < byName[d.name]) byName[d.name] = d.time; });
-        const rows = Object.entries(byName).map(([name, time]) => ({ name, score: ts(time), v: time })).sort((a, b) => a.v - b.v);
-        const cleaned = rows.map(r => ({ name: r.name, score: r.score })); window._pfsData = cleaned; render('pfs-body', 'pfs-foot', cleaned, getName());
-    }
-    ref.on('value', onVal, () => { body.innerHTML = '<div class="lb-empty">Connection failed.</div>'; });
-    pfsOff = () => ref.off('value', onVal);
-})();
+    platformerBoardOff[board] = () => ref.off('value', onVal);
+}
+window.cyclePlatformerBoardMode = cyclePlatformerBoardMode;
+loadPlatformerBoard('pf');
+loadPlatformerBoard('pfs');
 
 // Lucky Guy
 let lgOff = null;
