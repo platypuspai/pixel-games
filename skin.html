@@ -190,8 +190,13 @@ body:before{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 
 <script>
 const firebaseConfig = {
+  apiKey: "AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU",
+  authDomain: "money-digger-9b05e.firebaseapp.com",
   databaseURL: "https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "money-digger-9b05e"
+  projectId: "money-digger-9b05e",
+  storageBucket: "money-digger-9b05e.firebasestorage.app",
+  messagingSenderId: "883506536944",
+  appId: "1:883506536944:web:921b342dff76154fcbbd35"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -437,6 +442,53 @@ async function reconcileMoneyDiggerLedgerAfterLink(code, hadProfile) {
     }
 }
 
+let adminSkinOverridesRef = null;
+let adminSkinOverridesCallback = null;
+function applyLiveAdminSkinOverrides(value) {
+    const incoming = value && typeof value === 'object' ? value : {};
+    const clean = {};
+    for (const [id, state] of Object.entries(incoming)) {
+        if (SKINS[id] && (state === true || state === false)) clean[id] = state;
+    }
+    clean.classic = true;
+    const oldOverrides = parse('plixo_admin_skin_overrides', {});
+    const oldOwned = parse('plixo_owned_skins', {classic:true});
+    const oldSelected = localStorage.getItem('plixo_selected_skin') || 'classic';
+    const ownedMap = {...oldOwned, classic:true};
+    for (const [id, state] of Object.entries(clean)) {
+        if (id === 'classic') continue;
+        if (state === true) ownedMap[id] = true;
+        else delete ownedMap[id];
+    }
+    if (clean[oldSelected] === false) localStorage.setItem('plixo_selected_skin', 'classic');
+    ownedMap.classic = true;
+    localStorage.setItem('plixo_admin_skin_overrides', JSON.stringify(clean));
+    localStorage.setItem('plixo_owned_skins', JSON.stringify(ownedMap));
+    const changed = JSON.stringify(oldOverrides) !== JSON.stringify(clean)
+        || JSON.stringify(oldOwned) !== JSON.stringify(ownedMap)
+        || oldSelected !== (localStorage.getItem('plixo_selected_skin') || 'classic');
+    if (changed) {
+        refresh();
+        // If the selected skin was just locked, persist the fallback selection while
+        // the Firebase override itself remains authoritative in the cloud.
+        if (oldSelected !== (localStorage.getItem('plixo_selected_skin') || 'classic')) {
+            syncToFirebase().catch(error => console.warn('Could not save skin fallback after admin lock.', error));
+        }
+    }
+}
+function watchAdminSkinOverrides(code) {
+    const path = 'plixo_users/' + code + '/admin_skin_overrides';
+    if (adminSkinOverridesRef && adminSkinOverridesRef.toString() === db.ref(path).toString()) return;
+    if (adminSkinOverridesRef && adminSkinOverridesCallback) {
+        adminSkinOverridesRef.off('value', adminSkinOverridesCallback);
+    }
+    adminSkinOverridesRef = db.ref(path);
+    adminSkinOverridesCallback = snapshot => applyLiveAdminSkinOverrides(snapshot.val() || {});
+    adminSkinOverridesRef.on('value', adminSkinOverridesCallback, error => {
+        console.warn('Could not listen for live admin skin updates.', error);
+    });
+}
+
 function linkFirebase(code) {
     return db.ref('plixo_users/' + code).once('value').then(async (snapshot) => {
         const today = getToday();
@@ -468,7 +520,16 @@ function linkFirebase(code) {
             const localOwned = owned();
             const cloudOwned = data.skins && typeof data.skins === 'object' ? data.skins : {classic:true};
             const mergedOwned = sameAccount ? {...cloudOwned, ...localOwned, classic:true} : {...cloudOwned, classic:true};
+            // Explicit admin overrides are authoritative, including a skin that an admin locks again.
+            const adminSkinOverrides = data.admin_skin_overrides && typeof data.admin_skin_overrides === 'object' ? data.admin_skin_overrides : {};
+            for (const [skinId, isUnlocked] of Object.entries(adminSkinOverrides)) {
+                if (!SKINS[skinId]) continue;
+                if (isUnlocked === true) mergedOwned[skinId] = true;
+                else if (isUnlocked === false) delete mergedOwned[skinId];
+            }
+            mergedOwned.classic = true;
             localStorage.setItem('plixo_owned_skins', JSON.stringify(mergedOwned));
+            localStorage.setItem('plixo_admin_skin_overrides', JSON.stringify(adminSkinOverrides));
 
             const localSelected = selected();
             const cloudSelected = SKINS[data.selected_skin] ? data.selected_skin : 'classic';
@@ -586,6 +647,8 @@ function linkFirebase(code) {
         getDailyMissionsForToday();
         await syncToFirebase();
         refresh();
+        // Keep this page in sync if ADMIN2 changes a skin while it is open.
+        watchAdminSkinOverrides(code);
     }).catch(e => { console.warn('PLIXO account sync failed', e); refresh(); });
 }
 
@@ -610,7 +673,7 @@ function mergeClaimMaps(cloudValue, localValue) {
 }
 function clearAccountLocalState() {
     const exactKeys = [
-        'plixo_plix', 'plixo_owned_skins', 'plixo_selected_skin', 'plixo_mission_progress',
+        'plixo_plix', 'plixo_owned_skins', 'plixo_selected_skin', 'plixo_admin_skin_overrides', 'plixo_mission_progress',
         'plixo_claimed_missions', 'plixo_claimed_achievements', 'plixo_played_games',
         'plixo_active_mission_levels', 'plixo_skin_image', 'plixo_daily_bonus_date',
         'plixo_daily_missions_date', 'plixo_daily_missions_ids', 'plixo_profile_updated_at',
@@ -668,7 +731,22 @@ function syncToFirebase() {
     return db.ref('plixo_users/' + code).transaction(current => {
         const existing = current && typeof current === 'object' ? {...current} : {};
         if ((Number(existing.profile_updated_at) || 0) > profileUpdatedAt) return;
-        return {...existing, ...payload};
+        // Skins are unlocks, so merge them rather than letting an older open tab
+        // overwrite a skin an admin has just granted to this account.
+        const cloudSkins = existing.skins && typeof existing.skins === 'object' ? existing.skins : {};
+        const localSkins = payload.skins && typeof payload.skins === 'object' ? payload.skins : {};
+        const mergedSkins = {...cloudSkins, ...localSkins, classic:true};
+        for (const [skinId, isOwned] of Object.entries(cloudSkins)) {
+            if (isOwned) mergedSkins[skinId] = true;
+        }
+        const adminSkinOverrides = existing.admin_skin_overrides && typeof existing.admin_skin_overrides === 'object' ? existing.admin_skin_overrides : {};
+        for (const [skinId, isUnlocked] of Object.entries(adminSkinOverrides)) {
+            if (!SKINS[skinId]) continue;
+            if (isUnlocked === true) mergedSkins[skinId] = true;
+            else if (isUnlocked === false) delete mergedSkins[skinId];
+        }
+        mergedSkins.classic = true;
+        return {...existing, ...payload, skins: mergedSkins};
     }, undefined, false).catch(e => console.warn('PLIXO sync failed', e));
 }
 
@@ -976,8 +1054,23 @@ function firstUnclaimedLevelIndex(mission, claims) {
 function getToday() { return new Date().toDateString(); }
 function parse(key,fallback){try{const r=localStorage.getItem(key);return r?JSON.parse(r):fallback}catch(e){return fallback}}
 function plix(){const n=parseInt(localStorage.getItem('plixo_plix')||'0',10);return Number.isFinite(n)&&n>0?n:0}
-function owned(){const o=parse('plixo_owned_skins',{classic:true});o.classic=true;return o}
-function selected(){const id=localStorage.getItem('plixo_selected_skin')||'classic';return SKINS[id]?id:'classic'}
+function owned(){
+    const o = parse('plixo_owned_skins', {classic:true});
+    const overrides = parse('plixo_admin_skin_overrides', {});
+    for (const [id, isUnlocked] of Object.entries(overrides)) {
+        if (!SKINS[id]) continue;
+        if (isUnlocked === true) o[id] = true;
+        else if (isUnlocked === false) delete o[id];
+    }
+    o.classic = true;
+    return o;
+}
+function selected(){
+    const id = localStorage.getItem('plixo_selected_skin') || 'classic';
+    const overrides = parse('plixo_admin_skin_overrides', {});
+    const o = owned();
+    return SKINS[id] && o[id] && overrides[id] !== false ? id : 'classic';
+}
 
 function achievementProgress() { return parse('plixo_mission_progress', {}); }
 function missionClaimed() { return parse('plixo_claimed_missions', {}); }
@@ -1269,13 +1362,16 @@ function refresh(){
     renderSkinCanvas(document.getElementById('home-preview'), selected());
     saveSkinImage(selected());
     renderSkins();
+    const dailySorted = sortCompletedFirst(getDailyMissionsForToday(), 'daily');
+    const permanentSorted = sortCompletedFirst(PERMANENT_MISSIONS, 'permanent');
+    const achievementsSorted = sortCompletedFirst(ACHIEVEMENTS, 'achievement');
     const combinedMissions = [
-        ...getDailyMissionsForToday().map(m => ({ ...m, _missionKind: 'daily' })),
+        ...dailySorted.map(m => ({ ...m, _missionKind: 'daily' })),
         { id: '__long_term_heading', sectionTitle: 'LONG-TERM MISSIONS', _missionKind: 'heading' },
-        ...PERMANENT_MISSIONS.map(m => ({ ...m, _missionKind: 'permanent' }))
+        ...permanentSorted.map(m => ({ ...m, _missionKind: 'permanent' }))
     ];
     renderMissions('daily-missions', combinedMissions, achievementProgress(), missionClaimed(), false, false, true);
-    renderMissions('achievements', ACHIEVEMENTS, achievementProgress(), achievementClaimed(), false, true);
+    renderMissions('achievements', achievementsSorted, achievementProgress(), achievementClaimed(), false, true);
     checkDailyBonusUI();
 }
 
@@ -1297,7 +1393,8 @@ function renderSkinCanvas(canvas, id) {
 function renderSkins(){
     const box = document.getElementById('skin-grid');
     const o = owned(), cur = selected();
-    const signature = JSON.stringify({ owned: o, selected: cur, plix: plix(), day: getToday() });
+    const adminOverrides = parse('plixo_admin_skin_overrides', {});
+    const signature = JSON.stringify({ owned: o, overrides: adminOverrides, selected: cur, plix: plix(), day: getToday() });
     if (box.dataset.renderSignature === signature) return;
 
     const fragment = document.createDocumentFragment();
@@ -1325,7 +1422,11 @@ function renderSkins(){
         card.appendChild(cost);
 
         const b = document.createElement('button');
-        if(cur === id) {
+        if (adminOverrides[id] === false) {
+            cost.textContent = 'LOCKED BY ADMIN';
+            cost.style.color = 'var(--red)';
+            b.textContent = 'LOCKED BY ADMIN'; b.disabled = true;
+        } else if(cur === id) {
             b.textContent = 'EQUIPPED'; b.className = 'equipped'; b.disabled = true;
         } else if(o[id]) {
             b.textContent = 'EQUIP';
@@ -1351,7 +1452,7 @@ function renderSkins(){
 }
 function buy(id) {
     const s = SKINS[id], o = owned();
-    if(!s || s.achievementOnly || o[id] || plix() < s.cost) return;
+    if(!s || s.achievementOnly || o[id] || parse('plixo_admin_skin_overrides', {})[id] === false || plix() < s.cost) return;
     localStorage.setItem('plixo_plix', String(plix() - s.cost));
     o[id] = true;
     localStorage.setItem('plixo_owned_skins', JSON.stringify(o));
@@ -1361,6 +1462,35 @@ function buy(id) {
     refresh();
     // Persist the selected skin image after refresh() generates it.
     syncToFirebase();
+}
+
+function sortCompletedFirst(items, kind) {
+    const progress = kind === 'daily' ? dailyProgress() : achievementProgress();
+    const claims = kind === 'daily' ? dailyClaimed() : (kind === 'permanent' ? missionClaimed() : achievementClaimed());
+    const completionScore = (mission) => {
+        const levels = Array.isArray(mission.levels) ? mission.levels : null;
+        if (levels) {
+            const firstUnclaimed = firstUnclaimedLevelIndex(mission, claims);
+            const stored = Number(activeLevels[mission.id]);
+            const idx = Number.isInteger(stored) && stored >= 0 && stored < levels.length ? stored : firstUnclaimed;
+            const level = levels[idx] || levels[firstUnclaimed] || levels[levels.length - 1];
+            if (!level) return 0;
+            const isClaimed = !!claims[level.levelId];
+            const val = Math.max(Number(progress[mission.id]) || 0, Number(progress[level.levelId]) || 0);
+            if (isClaimed) return 2;
+            return val >= Number(level.target || 1) ? 1 : 0;
+        }
+        const trackingId = mission.progressId || mission.id;
+        if (claims[mission.id] || claims[trackingId]) return 2;
+        const target = Math.max(1, Number(mission.target) || 1);
+        const currentValue = kind === 'achievement' && mission.id === 'a9'
+            ? parse('plixo_played_games', []).length
+            : (Number(progress[trackingId]) || 0);
+        return currentValue >= target ? 1 : 0;
+    };
+    return items.map((item, index) => ({ item, index, score: completionScore(item) }))
+        .sort((a, b) => b.score - a.score || a.index - b.index)
+        .map(entry => entry.item);
 }
 
 function renderMissions(containerId, missionArray, progData, claimData, isDaily, isAchievement = false, mixedMissions = false) {
