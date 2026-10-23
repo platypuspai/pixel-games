@@ -2,6 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Mini Spikes Platformer — Spikes Edition</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,6 +40,26 @@ canvas { background: white; display: block; width: 400px; height: 300px; }
     object-fit: contain;
     image-rendering: pixelated;
 }
+
+#race-overlay { position:fixed; inset:0; z-index:5000; display:none; align-items:center; justify-content:center; padding:14px; background:rgba(0,0,0,.80); }
+#race-overlay.visible { display:flex; }
+.race-panel { width:min(430px,96vw); max-height:90vh; overflow:auto; padding:20px; background:#151515; border:2px solid #ffdd00; box-shadow:0 0 28px rgba(255,221,0,.22); color:#fff; text-align:center; }
+#race-overlay-title { font:bold 15px/1.5 monospace; color:#ffdd00; margin-bottom:8px; }
+#race-countdown-number { font:bold 78px/1 monospace; color:#fff; text-shadow:0 0 18px rgba(255,221,0,.35); margin:16px 0; }
+#race-overlay-subtitle { font: bold 10px/1.7 monospace; color:#aaa; margin:8px 0 14px; }
+#race-standings { display:none; margin-top:14px; border:1px solid #353535; }
+.race-standing-row { display:grid; grid-template-columns:64px minmax(0,1fr) 90px; gap:8px; align-items:center; padding:11px 10px; border-bottom:1px solid #333; text-align:left; font: bold 11px/1.4 monospace; }
+.race-standing-row:last-child { border-bottom:0; }
+.race-standing-row.winner { background:rgba(255,221,0,.10); color:#ffdd00; }
+.race-standing-row.own .race-standing-name { color:#9ed1ff; }
+.race-standing-place { color:#aaa; }
+.race-standing-name { overflow-wrap:anywhere; }
+.race-standing-score { text-align:right; color:#aaa; font-size:10px; }
+.race-standing-row.winner .race-standing-score { color:#ffdd00; }
+#race-exit-btn { display:none; margin-top:14px; padding:10px 14px; width:100%; background:#252525; border:1px solid #777; color:#fff; font:bold 10px monospace; cursor:pointer; }
+#race-exit-btn:hover { background:#333; border-color:#ffdd00; color:#ffdd00; }
+@media(max-width:440px) { .race-panel { padding:15px 10px; } .race-standing-row { grid-template-columns:54px minmax(0,1fr) 75px; gap:5px; padding:9px 7px; font-size:10px; } }
+
 </style>
 </head>
 <body>
@@ -50,6 +73,16 @@ canvas { background: white; display: block; width: 400px; height: 300px; }
     <button id="fs-btn" title="Fullscreen">⛶</button>
   </div>
   <canvas id="game" width="400" height="300"></canvas>
+</div>
+
+<div id="race-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-live="polite">
+  <div class="race-panel">
+    <div id="race-overlay-title">RACE STARTS IN</div>
+    <div id="race-countdown-number">3</div>
+    <div id="race-overlay-subtitle">WORLD 1 · 3 PLAYERS</div>
+    <div id="race-standings"></div>
+    <button id="race-exit-btn" type="button">BACK TO ARCADE</button>
+  </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -102,12 +135,27 @@ let raceRoomId = null;
 let raceStartAt = 0;
 let raceReady = GAME_MODE !== "race";
 let raceStartTimer = null;
-let raceFinishTimer = null;
+let raceCountdownInterval = null;
+let raceWorldNumber = 0;
 let raceFinishRecorded = false;
 let raceAwardApplied = false;
 let raceFinalizeBusy = false;
-const RACE_SIZE = 5;
-const RACE_TROPHY_DELTA = [10, 5, 0, -5, -10];
+const RACE_SIZE = 3;
+const RACE_WIN_TROPHIES = 5;
+const RACE_LOSS_TROPHIES = -5;
+let raceServerTimeOffset = 0;
+function raceNow() { return Date.now() + raceServerTimeOffset; }
+async function initializeRaceClock(db) {
+  try {
+    const snap = await db.ref(".info/serverTimeOffset").once("value");
+    raceServerTimeOffset = Number(snap.val()) || 0;
+  } catch (e) {
+    console.warn("Could not sync Firebase server clock; using local time.", e);
+  }
+  db.ref(".info/serverTimeOffset").on("value", snap => {
+    raceServerTimeOffset = Number(snap.val()) || 0;
+  });
+}
 
 function safeAccountCode() {
   const values = [localStorage.getItem("pg_account_code"), localStorage.getItem("pg_player_id"), localStorage.getItem("plixo_sync_code")];
@@ -119,13 +167,18 @@ function raceLeaderboardKey() {
   const name = String(localStorage.getItem("pg_player_name") || localStorage.getItem("pixel_games_username") || "Guest").toLowerCase().replace(/[^a-z0-9_-]/g, "_").slice(0, 28);
   return "guest_" + name + "_" + myPlayerId;
 }
-function countRacePlayers(room) { return Object.keys((room && room.players) || {}).length; }
+function countRacePlayers(room) {
+  return Object.values((room && room.players) || {}).filter(player => player && !player.disconnected).length;
+}
 function makeRoomPlayer(trophies) {
   return {
     id: myPlayerId,
     name: String(localStorage.getItem("pg_player_name") || localStorage.getItem("pixel_games_username") || "Player"),
+    accountKey: raceLeaderboardKey(),
+    deviceId: String(localStorage.getItem("pg_device_id") || localStorage.getItem("md6_did") || ""),
     trophies: Math.max(0, Number(trophies) || 0),
-    joinedAt: Date.now()
+    joinedAt: raceNow(),
+    disconnected: false
   };
 }
 function bindNetworkRoot(db, rootPath) {
@@ -166,112 +219,399 @@ async function loadRaceTrophies(db) {
   } catch (e) { console.warn("Could not load race trophies; using local trophy count.", e); }
   return trophies;
 }
+function clearRaceTimers() {
+  if (raceStartTimer) { clearTimeout(raceStartTimer); raceStartTimer = null; }
+  if (raceCountdownInterval) { clearInterval(raceCountdownInterval); raceCountdownInterval = null; }
+}
+function hideRaceOverlay() {
+  const overlay = document.getElementById("race-overlay");
+  if (overlay) { overlay.classList.remove("visible"); overlay.setAttribute("aria-hidden", "true"); }
+}
+function showRaceCountdown(seconds, worldNumber) {
+  const overlay = document.getElementById("race-overlay");
+  if (!overlay) return;
+  overlay.classList.add("visible");
+  overlay.setAttribute("aria-hidden", "false");
+  document.getElementById("race-overlay-title").textContent = "RACE STARTS IN";
+  const num = document.getElementById("race-countdown-number");
+  num.style.display = "block";
+  num.textContent = String(Math.max(1, Number(seconds) || 1));
+  document.getElementById("race-overlay-subtitle").textContent = "WORLD " + (Number(worldNumber) || "—") + " · 3 PLAYERS";
+  document.getElementById("race-standings").style.display = "none";
+  document.getElementById("race-exit-btn").style.display = "none";
+}
+function raceEscapeHtml(value) {
+  return String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function racePlaceLabel(place) {
+  return place === 1 ? "1ST" : place === 2 ? "2ND" : place === 3 ? "3RD" : "—";
+}
+function showRaceLeaderboard(room, isFinal) {
+  const overlay = document.getElementById("race-overlay");
+  if (!overlay || !room) return;
+  const players = room.players && typeof room.players === "object" ? room.players : {};
+  const finishes = room.finishes && typeof room.finishes === "object" ? room.finishes : {};
+  const results = room.raceResults && room.raceResults.byPlayer ? room.raceResults.byPlayer : {};
+  let rows = [];
+
+  if (isFinal && room.raceResults && room.raceResults.order) {
+    const savedOrder = room.raceResults.order;
+    const orderedIds = Array.isArray(savedOrder)
+      ? savedOrder
+      : Object.entries(savedOrder).sort((a, b) => Number(a[0]) - Number(b[0])).map(entry => entry[1]);
+    rows = orderedIds.map(id => ({
+      id,
+      player: players[id] || {},
+      finish: finishes[id] || null,
+      result: results[id] || { place: 0, trophyDelta: 0, reason: "no_sun_finish" }
+    }));
+  } else {
+    const all = Object.entries(players).map(([id, player]) => ({ id, player: player || {}, finish: finishes[id] || null }));
+    const finished = all.filter(row => row.finish && row.finish.reachedFinalSun !== false).sort((a, b) => {
+      const dt = (Number(a.finish.finishedAt) || Infinity) - (Number(b.finish.finishedAt) || Infinity);
+      return dt || a.id.localeCompare(b.id);
+    });
+    const disconnected = all.filter(row => !row.finish && row.player.disconnected).sort((a, b) => (Number(b.player.disconnectedAt) || 0) - (Number(a.player.disconnectedAt) || 0));
+    const racing = all.filter(row => !row.finish && !row.player.disconnected).sort((a, b) => (Number(a.player.joinedAt) || 0) - (Number(b.player.joinedAt) || 0));
+    rows = [
+      ...finished.map((row, i) => ({ ...row, result: { place: i + 1, trophyDelta: null } })),
+      ...racing.map(row => ({ ...row, result: { place: null, trophyDelta: null } })),
+      ...disconnected.map(row => ({ ...row, result: { place: null, trophyDelta: null } }))
+    ];
+  }
+
+  rows = rows.slice(0, 3);
+  const finishedCount = Object.keys(finishes).filter(id => finishes[id] && finishes[id].reachedFinalSun !== false).length;
+  const doneCount = Object.entries(players).filter(([id, player]) => (finishes[id] && finishes[id].reachedFinalSun !== false) || (player && player.disconnected)).length;
+  let title = "RACE RESULTS";
+  let subtitle = "FINAL STANDINGS";
+  if (!isFinal) {
+    const mine = results[myPlayerId];
+    title = raceFinishRecorded ? "YOU REACHED THE FINAL SUN!" : "RACE STANDINGS";
+    subtitle = "FINISHED: " + finishedCount + "/3 · WAITING FOR " + Math.max(0, 3 - doneCount) + " RACER(S)";
+  } else {
+    const ownResult = results[myPlayerId];
+    if (!room.raceResults.winnerId) {
+      title = "RACE ENDED · NO WINNER";
+      subtitle = "NOBODY REACHED THE FINAL SUN · NO TROPHIES CHANGED";
+    } else if (ownResult && ownResult.place === 1) {
+      title = "YOU WON! +5 TROPHIES";
+      subtitle = "YOU REACHED THE FINAL SUN FIRST";
+    } else if (ownResult && ownResult.place === 2) {
+      title = "YOU FINISHED 2ND";
+      subtitle = "NO TROPHIES GAINED OR LOST";
+    } else if (ownResult && ownResult.place === 3) {
+      title = "YOU FINISHED 3RD · -5 TROPHIES";
+      subtitle = "THE TROPHY BALANCE CANNOT GO BELOW ZERO";
+    }
+  }
+
+  overlay.classList.add("visible");
+  overlay.setAttribute("aria-hidden", "false");
+  document.getElementById("race-overlay-title").textContent = title;
+  document.getElementById("race-countdown-number").style.display = "none";
+  document.getElementById("race-overlay-subtitle").textContent = subtitle;
+  const standings = document.getElementById("race-standings");
+  standings.style.display = "block";
+  document.getElementById("race-exit-btn").style.display = (isFinal || raceFinishRecorded) ? "block" : "none";
+  standings.innerHTML = rows.map((row, index) => {
+    const playerName = raceEscapeHtml(row.player.name || (row.id === myPlayerId ? "You" : "Player"));
+    const own = row.id === myPlayerId;
+    const place = isFinal ? Number(row.result.place) : (row.finish ? Number(row.result.place) : null);
+    const placeText = isFinal ? (!room.raceResults.winnerId ? (row.finish ? "FINISHED" : "DNF") : (place ? racePlaceLabel(place) : "—")) : (row.finish ? racePlaceLabel(place) : (row.player.disconnected ? "LEFT" : "RACING"));
+    const delta = row.result.trophyDelta;
+    const trophies = isFinal ? (Number(delta) > 0 ? "+" + Number(delta) : Number(delta) < 0 ? String(Number(delta)) : "0") : (row.finish ? "FINISHED" : (row.player.disconnected ? "DNF" : "IN RACE"));
+    const nameText = playerName + (own ? " (YOU)" : "");
+    const rowClass = (isFinal && place === 1 ? " winner" : "") + (own ? " own" : "");
+    return '<div class="race-standing-row' + rowClass + '"><span class="race-standing-place">' + raceEscapeHtml(placeText) + '</span><span class="race-standing-name">' + nameText + '</span><span class="race-standing-score">' + raceEscapeHtml(trophies) + '</span></div>';
+  }).join("");
+  if (!isFinal && raceFinishRecorded) {
+    setStatus("FINISH SAVED · WAITING FOR THE OTHER RACERS", "#ffdd00");
+  }
+}
+
 async function joinRaceRoom(db) {
   const roomsRef = db.ref("platformerRaceRooms/" + GAME_CODE);
   const trophies = await loadRaceTrophies(db);
   const me = makeRoomPlayer(trophies);
-  const tolerance = Math.max(25, Math.min(80, Math.floor(trophies * 0.2) + 15));
-  let joined = null;
-  try {
-    const snapshot = await roomsRef.orderByChild("status").equalTo("waiting").once("value");
-    const choices = [];
-    snapshot.forEach(child => {
-      const data = child.val() || {};
-      if (data.status !== "waiting" || Date.now() - (Number(data.createdAt) || 0) > 120000) return;
-      const count = countRacePlayers(data);
-      if (count >= RACE_SIZE) return;
-      const average = Number(data.averageTrophies ?? data.trophyBase) || 0;
-      const distance = Math.abs(trophies - average);
-      if (distance <= tolerance) choices.push({ id: child.key, distance });
-    });
-    choices.sort((a, b) => a.distance - b.distance);
-    for (const choice of choices) {
-      const ref = roomsRef.child(choice.id);
-      const result = await ref.transaction(current => {
-        if (!current || current.status !== "waiting" || Date.now() - (Number(current.createdAt) || 0) > 120000) return;
-        current.players = current.players && typeof current.players === "object" ? current.players : {};
-        if (current.players[myPlayerId]) return current;
-        const entries = Object.values(current.players);
-        if (entries.length >= RACE_SIZE) return;
-        const average = Number(current.averageTrophies ?? current.trophyBase) || 0;
-        if (Math.abs(trophies - average) > tolerance) return;
-        current.players[myPlayerId] = me;
-        const all = Object.values(current.players);
-        current.averageTrophies = all.reduce((sum, p) => sum + (Number(p.trophies) || 0), 0) / all.length;
-        if (all.length === RACE_SIZE) { current.status = "starting"; current.startAt = Date.now() + 5000; }
-        return current;
-      }, undefined, false);
-      const resultData = result.snapshot && result.snapshot.val();
-      if (result.committed && resultData && resultData.players && resultData.players[myPlayerId]) { joined = ref; break; }
+  const newRoomKey = roomsRef.push().key;
+  const myAccountCode = safeAccountCode();
+  let duplicateInRace = false;
+
+  // One root transaction allocates queue slots in FIFO order. Every world has
+  // exactly three seats; when the third slot is filled, that world locks and
+  // starts its synchronized 3-2-1 countdown. World numbers remain monotonic.
+  const result = await roomsRef.transaction(currentRooms => {
+    duplicateInRace = false;
+    const rooms = currentRooms && typeof currentRooms === "object" ? { ...currentRooms } : {};
+    const transactionNow = raceNow();
+    const meta = rooms.__meta && typeof rooms.__meta === "object" ? { ...rooms.__meta } : {};
+    let maxWorldNumber = 0;
+    for (const [id, room] of Object.entries(rooms)) {
+      if (id === "__meta" || !room || typeof room !== "object") continue;
+      maxWorldNumber = Math.max(maxWorldNumber, Number(room.worldNumber) || 0);
     }
-  } catch (e) { console.warn("Race room scan failed; creating a new queue room.", e); }
+    let nextWorldNumber = Math.max(1, Number(meta.nextWorldNumber) || 1, maxWorldNumber + 1);
 
-  if (!joined) {
-    const ref = roomsRef.push();
-    const result = await ref.transaction(current => current || {
-      game: GAME_CODE, status: "waiting", createdAt: Date.now(), trophyBase: trophies,
-      averageTrophies: trophies, startAt: null, players: { [myPlayerId]: me }, finishes: {}, raceResults: null
-    }, undefined, false);
-    joined = ref;
+    // Clean up stale rooms while preserving the world-number counter.
+    for (const [id, rawRoom] of Object.entries(rooms)) {
+      if (id === "__meta") continue;
+      if (!rawRoom || typeof rawRoom !== "object") { delete rooms[id]; continue; }
+      const age = transactionNow - (Number(rawRoom.createdAt) || 0);
+      const finalizedAt = Number(rawRoom.raceResults && rawRoom.raceResults.finalizedAt) || 0;
+      if (rawRoom.status === "finished" && finalizedAt && transactionNow - finalizedAt > 600000) {
+        delete rooms[id];
+        continue;
+      }
+      if (rawRoom.status === "waiting" || rawRoom.status === "starting") {
+        let players = rawRoom.players && typeof rawRoom.players === "object" ? { ...rawRoom.players } : {};
+        // Keep live participants only and cap even legacy/corrupt rooms at three.
+        players = Object.fromEntries(Object.entries(players)
+          .filter(([, player]) => player && !player.disconnected)
+          .sort((a, b) => (Number(a[1].joinedAt) || 0) - (Number(b[1].joinedAt) || 0))
+          .slice(0, RACE_SIZE));
+        if (!Object.keys(players).length) { delete rooms[id]; continue; }
+        const full = Object.keys(players).length === RACE_SIZE;
+        let repaired = { ...rawRoom, players };
+        if (full && rawRoom.status !== "starting") {
+          if (!Number(repaired.worldNumber)) repaired.worldNumber = nextWorldNumber++;
+          repaired.status = "starting";
+          repaired.startAt = transactionNow + 3000;
+          repaired.finishes = {};
+          repaired.raceResults = null;
+        } else if (!full && rawRoom.status === "starting") {
+          repaired.status = "waiting";
+          repaired.startAt = null;
+          repaired.finishes = {};
+          repaired.raceResults = null;
+        } else if (!full && rawRoom.status === "waiting") {
+          repaired.status = "waiting";
+          repaired.startAt = null;
+        }
+        rooms[id] = repaired;
+      } else if (["starting", "running"].includes(rawRoom.status) && age > 120000 && countRacePlayers(rawRoom) === 0) {
+        delete rooms[id];
+      }
+    }
+
+    const isSameHuman = player => {
+      if (!player || player.disconnected) return false;
+      if (myAccountCode && player.accountKey === myAccountCode) return true;
+      return !!me.deviceId && player.deviceId === me.deviceId;
+    };
+    for (const [id, room] of Object.entries(rooms)) {
+      if (id === "__meta" || !room || !["waiting", "starting", "running"].includes(room.status)) continue;
+      if (Object.values(room.players || {}).some(isSameHuman)) {
+        duplicateInRace = true;
+        return;
+      }
+    }
+
+    const candidates = [];
+    for (const [id, room] of Object.entries(rooms)) {
+      if (id === "__meta" || !room || room.status !== "waiting") continue;
+      const activePlayers = Object.entries(room.players || {}).filter(([, player]) => player && !player.disconnected);
+      if (activePlayers.length > 0 && activePlayers.length < RACE_SIZE) {
+        candidates.push({ id, createdAt: Number(room.createdAt) || 0, worldNumber: Number(room.worldNumber) || Number.MAX_SAFE_INTEGER });
+      }
+    }
+    candidates.sort((a, b) => a.createdAt - b.createdAt || a.worldNumber - b.worldNumber || a.id.localeCompare(b.id));
+
+    if (candidates.length) {
+      const chosen = candidates[0];
+      const room = { ...rooms[chosen.id] };
+      const players = room.players && typeof room.players === "object" ? { ...room.players } : {};
+      players[myPlayerId] = { ...me, joinedAt: transactionNow };
+      room.players = players;
+      room.game = GAME_CODE;
+      if (!Number(room.worldNumber)) {
+        room.worldNumber = nextWorldNumber++;
+      }
+      if (countRacePlayers(room) === RACE_SIZE) {
+        room.status = "starting";
+        room.startAt = transactionNow + 3000;
+        room.finishes = {};
+        room.raceResults = null;
+        room.finishedAt = null;
+      }
+      rooms[chosen.id] = room;
+    } else {
+      const worldNumber = nextWorldNumber++;
+      rooms[newRoomKey] = {
+        game: GAME_CODE,
+        worldNumber,
+        status: "waiting",
+        createdAt: transactionNow,
+        startAt: null,
+        players: { [myPlayerId]: { ...me, joinedAt: transactionNow } },
+        finishes: {},
+        raceResults: null
+      };
+    }
+    meta.nextWorldNumber = nextWorldNumber;
+    rooms.__meta = meta;
+    return rooms;
+  }, undefined, false);
+
+  if (duplicateInRace) throw new Error("ALREADY_IN_RACE");
+  const allRooms = result && result.snapshot ? result.snapshot.val() || {} : {};
+  let joinedId = null;
+  for (const [id, room] of Object.entries(allRooms)) {
+    if (id !== "__meta" && room && room.players && room.players[myPlayerId]) { joinedId = id; break; }
   }
+  if (!result || !result.committed || !joinedId) throw new Error("COULD_NOT_RESERVE_RACE_ROOM");
 
-  raceRoomRef = joined;
-  raceRoomId = joined.key;
+  raceRoomRef = roomsRef.child(joinedId);
+  raceRoomId = joinedId;
+  const initialRoom = allRooms[joinedId] || {};
+  raceWorldNumber = Number(initialRoom.worldNumber) || 0;
+  await raceRoomRef.child("players/" + myPlayerId).onDisconnect().update({
+    disconnected: true,
+    disconnectedAt: firebase.database.ServerValue.TIMESTAMP
+  }).catch(e => console.warn("Could not register race disconnect marker.", e));
   bindNetworkRoot(db, "platformerRaceWorlds/" + GAME_CODE + "/" + raceRoomId);
   raceRoomRef.on("value", snap => handleRaceRoomState(snap.val() || {}, db));
-  setStatus("Race lobby: waiting for 5 players…", "#ffdd00");
+  setStatus("RACE QUEUE CONNECTED · WORLD " + (raceWorldNumber || "—") + " · WAITING FOR 3 PLAYERS", "#ffdd00");
+}
+
+function resetUnderfilledStartingRoom() {
+  if (!raceRoomRef) return;
+  clearRaceTimers();
+  hideRaceOverlay();
+  raceRoomRef.transaction(current => {
+    if (!current || current.status !== "starting") return;
+    let players = current.players && typeof current.players === "object" ? { ...current.players } : {};
+    players = Object.fromEntries(Object.entries(players)
+      .filter(([, player]) => player && !player.disconnected)
+      .sort((a, b) => (Number(a[1].joinedAt) || 0) - (Number(b[1].joinedAt) || 0))
+      .slice(0, RACE_SIZE));
+    if (Object.keys(players).length === RACE_SIZE) {
+      current.status = "starting";
+      current.startAt = raceNow() + 3000;
+    } else {
+      current.status = "waiting";
+      current.startAt = null;
+    }
+    current.players = players;
+    current.finishes = {};
+    current.raceResults = null;
+    return current;
+  }, undefined, false).catch(() => {});
+}
+
+function raceDoneCount(room) {
+  const players = room && room.players && typeof room.players === "object" ? room.players : {};
+  const finishes = room && room.finishes && typeof room.finishes === "object" ? room.finishes : {};
+  return Object.entries(players).filter(([id, player]) =>
+    (finishes[id] && finishes[id].reachedFinalSun !== false) || (player && player.disconnected)
+  ).length;
 }
 function handleRaceRoomState(room, db) {
   const count = countRacePlayers(room);
+  raceWorldNumber = Number(room.worldNumber) || raceWorldNumber;
   if (room.status === "waiting") {
+    clearRaceTimers();
     raceReady = false;
-    setStatus("RACE LOBBY " + count + "/5 · NEED " + Math.max(0, 5-count), "#ffdd00");
+    if (!raceFinishRecorded) hideRaceOverlay();
+    setStatus("RACE LOBBY " + count + "/" + RACE_SIZE + " · WORLD " + (raceWorldNumber || "—") + " · WAITING FOR " + Math.max(0, RACE_SIZE - count), "#ffdd00");
+    return;
   }
+
   if (room.status === "starting" && Number(room.startAt)) {
+    if (count !== RACE_SIZE || Object.keys(room.players || {}).length !== RACE_SIZE) {
+      raceReady = false;
+      resetUnderfilledStartingRoom();
+      return;
+    }
     raceReady = false;
     raceStartAt = Number(room.startAt);
-    setStatus("RACE STARTS IN " + Math.max(1, Math.ceil((raceStartAt-Date.now())/1000)) + "…", "#ffdd00");
+    showRaceCountdown(Math.ceil((raceStartAt - raceNow()) / 1000), raceWorldNumber);
+    if (!raceCountdownInterval) {
+      raceCountdownInterval = setInterval(() => {
+        if (!raceStartAt || raceNow() >= raceStartAt) return;
+        showRaceCountdown(Math.ceil((raceStartAt - raceNow()) / 1000), raceWorldNumber);
+      }, 100);
+    }
     if (!raceStartTimer) {
       raceStartTimer = setTimeout(() => {
         raceStartTimer = null;
         raceRoomRef.transaction(current => {
           if (!current || current.status !== "starting") return;
-          if (countRacePlayers(current) !== RACE_SIZE || Number(current.startAt) > Date.now()) return current;
+          if (countRacePlayers(current) !== RACE_SIZE || Object.keys(current.players || {}).length !== RACE_SIZE) return;
+          if (Number(current.startAt) > raceNow()) return;
           current.status = "running";
+          current.startedAt = Number(current.startAt) || raceNow();
           return current;
-        }, undefined, false).catch(() => {});
-      }, Math.max(50, raceStartAt - Date.now()));
+        }, undefined, false).then(result => {
+          const latest = result && result.snapshot ? result.snapshot.val() : null;
+          if (latest && latest.status === "starting" && countRacePlayers(latest) < RACE_SIZE) resetUnderfilledStartingRoom();
+        }).catch(e => console.warn("Could not start race room.", e));
+      }, Math.max(20, raceStartAt - raceNow()));
     }
+    return;
   }
+
   if (room.status === "running") {
-    raceStartAt = Number(room.startAt) || Date.now();
-    if (!raceReady && Date.now() >= raceStartAt) {
+    if (raceStartTimer) { clearTimeout(raceStartTimer); raceStartTimer = null; }
+    if (raceCountdownInterval) { clearInterval(raceCountdownInterval); raceCountdownInterval = null; }
+    raceStartAt = Number(room.startAt) || Number(room.startedAt) || raceNow();
+    if (raceFinishRecorded) {
+      raceReady = false;
+      keys = {};
+      timerRunning = false;
+      showRaceLeaderboard(room, false);
+    } else if (raceNow() >= raceStartAt) {
       raceReady = true;
       keys = {};
+      hideRaceOverlay();
       timerStart = raceStartAt;
-      timerCurrent = Math.max(0, Date.now() - raceStartAt);
+      timerCurrent = Math.max(0, raceNow() - raceStartAt);
       timerRunning = true;
-      setStatus("🏁 RACE LIVE · " + count + " PLAYERS", "#6f6");
-      if (!raceFinishTimer) raceFinishTimer = setTimeout(() => finalizeRace(true), Math.max(1000, raceStartAt + 300000 - Date.now()));
-    } else if (!raceReady) {
-      if (!raceStartTimer) raceStartTimer = setTimeout(() => { raceStartTimer = null; handleRaceRoomState(room, db); }, Math.max(50, raceStartAt - Date.now()));
+      setStatus("🏁 RACE LIVE · 3 PLAYERS · WORLD " + (raceWorldNumber || "—"), "#6f6");
+    } else {
+      raceReady = false;
+      if (!raceStartTimer) {
+        raceStartTimer = setTimeout(() => {
+          raceStartTimer = null;
+          handleRaceRoomState(room, db);
+        }, Math.max(20, raceStartAt - raceNow()));
+      }
     }
-    if (room.finishes && Object.keys(room.finishes).length) finalizeRace(false);
+    if (raceDoneCount(room) >= RACE_SIZE) finalizeRace();
+    return;
   }
+
   if (room.status === "finished" && room.raceResults && room.raceResults.finalized) {
+    clearRaceTimers();
     raceReady = false;
-    if (room.raceResults.byPlayer && room.raceResults.byPlayer[myPlayerId]) applyRaceAward(room, db, room.raceResults.byPlayer[myPlayerId]);
+    keys = {};
+    timerRunning = false;
+    showRaceLeaderboard(room, true);
+    applyRaceAward(room, db);
   }
 }
+
 function recordRaceFinish(timeMs) {
   if (GAME_MODE !== "race" || !raceRoomRef || raceFinishRecorded) return;
   raceFinishRecorded = true;
-  const finishRecord = { finishedAt: Date.now(), time: Math.max(0, Number(timeMs) || 0), playerId: myPlayerId };
-  raceRoomRef.child("finishes/" + myPlayerId).set(finishRecord)
-    .then(() => { setStatus("FINISHED · WAITING FOR RACE RESULTS", "#ffdd00"); finalizeRace(false); })
-    .catch(e => console.warn("Could not submit race finish.", e));
+  raceReady = false;
+  keys = {};
+  timerRunning = false;
+  const finishRecord = {
+    finishedAt: raceNow(),
+    time: Math.max(0, Number(timeMs) || 0),
+    playerId: myPlayerId,
+    reachedFinalSun: true
+  };
+  setStatus("FINAL SUN REACHED · WAITING FOR THE OTHER RACERS…", "#ffdd00");
+  raceRoomRef.child("finishes/" + myPlayerId).set(finishRecord).catch(e => {
+    raceFinishRecorded = false;
+    console.warn("Could not submit race finish.", e);
+    setStatus("COULD NOT SAVE FINISH · CHECK CONNECTION", "#f88");
+  });
 }
-function finalizeRace(force) {
+
+function finalizeRace() {
   if (GAME_MODE !== "race" || !raceRoomRef || raceFinalizeBusy) return;
   raceFinalizeBusy = true;
   raceRoomRef.transaction(current => {
@@ -279,39 +619,97 @@ function finalizeRace(force) {
     const players = Object.entries(current.players || {});
     if (players.length !== RACE_SIZE) return;
     const finishes = current.finishes && typeof current.finishes === "object" ? current.finishes : {};
-    const finished = players.filter(([id]) => finishes[id]).sort((a,b) => (Number(finishes[a[0]].finishedAt)||Infinity) - (Number(finishes[b[0]].finishedAt)||Infinity));
-    const expired = force || Date.now() >= (Number(current.startAt)||Date.now()) + 300000;
-    if (finished.length < players.length && !expired) return;
-    const finishedIds = new Set(finished.map(([id]) => id));
-    const notFinished = players.filter(([id]) => !finishedIds.has(id)).sort((a,b) => (Number(a[1].joinedAt)||0) - (Number(b[1].joinedAt)||0));
-    const ranking = [...finished, ...notFinished];
+    const allDone = players.every(([id, player]) =>
+      (finishes[id] && finishes[id].reachedFinalSun !== false) || (player && player.disconnected)
+    );
+    if (!allDone) return;
+
+    const finished = players.filter(([id]) => finishes[id] && finishes[id].reachedFinalSun !== false).sort((a, b) => {
+      const delta = (Number(finishes[a[0]].finishedAt) || Infinity) - (Number(finishes[b[0]].finishedAt) || Infinity);
+      return delta || a[0].localeCompare(b[0]);
+    });
+    // Racers who left before touching the last sun are ranked after every
+    // finisher. A player who stayed longer is placed ahead of an earlier leaver.
+    const didNotFinish = players.filter(([id]) => !(finishes[id] && finishes[id].reachedFinalSun !== false)).sort((a, b) => {
+      const leftA = Number(a[1] && (a[1].disconnectedAt || a[1].joinedAt)) || 0;
+      const leftB = Number(b[1] && (b[1].disconnectedAt || b[1].joinedAt)) || 0;
+      return leftB - leftA || a[0].localeCompare(b[0]);
+    });
+    const ordered = [...finished, ...didNotFinish];
+    const winnerId = finished.length ? finished[0][0] : null;
     const byPlayer = {};
-    ranking.forEach(([id], index) => { byPlayer[id] = { place: index + 1, trophyDelta: RACE_TROPHY_DELTA[index] || 0, finishTime: finishes[id] ? Number(finishes[id].time)||0 : null }; });
-    current.raceResults = { finalized: true, finalizedAt: Date.now(), byPlayer };
+    ordered.forEach(([id, player], index) => {
+      const place = index + 1;
+      let trophyDelta = 0;
+      if (winnerId) {
+        if (place === 1) trophyDelta = RACE_WIN_TROPHIES;
+        else if (place === RACE_SIZE) trophyDelta = RACE_LOSS_TROPHIES;
+      }
+      byPlayer[id] = {
+        place,
+        trophyDelta,
+        finishTime: finishes[id] ? Number(finishes[id].time) || 0 : null,
+        reason: !winnerId ? "no_sun_finish" : (place === 1 ? "last_sun" : (finishes[id] ? "finished_race" : "did_not_finish"))
+      };
+    });
+    current.raceResults = {
+      finalized: true,
+      finalizedAt: raceNow(),
+      winnerId,
+      order: ordered.map(([id]) => id),
+      byPlayer
+    };
     current.status = "finished";
+    current.finishedAt = raceNow();
     return current;
-  }, undefined, false).catch(() => {}).finally(() => { raceFinalizeBusy = false; });
+  }, undefined, false).then(result => {
+    const settledRoom = result && result.snapshot ? result.snapshot.val() : null;
+    if (settledRoom && settledRoom.status === "finished" && settledRoom.raceResults && settledRoom.raceResults.finalized) {
+      showRaceLeaderboard(settledRoom, true);
+      applyRaceAward(settledRoom, window._pfDb);
+    }
+  }).catch(e => console.warn("Could not finalize race.", e)).finally(() => { raceFinalizeBusy = false; });
 }
-function applyRaceAward(room, db, result) {
-  if (raceAwardApplied || !room || !raceRoomId) return;
+
+function applyRaceAward(room, db) {
+  if (raceAwardApplied || !db || !room || !raceRoomId || !room.raceResults || !room.raceResults.byPlayer) return;
   raceAwardApplied = true;
-  const key = raceLeaderboardKey();
-  const name = String(localStorage.getItem("pg_player_name") || localStorage.getItem("pixel_games_username") || "Player");
-  const trophiesPath = "platformerRaceTrophies/" + GAME_CODE + "/" + key;
-  db.ref(trophiesPath).transaction(current => {
-    const entry = current && typeof current === "object" ? { ...current } : {};
-    if (entry.lastRaceId === raceRoomId) return entry;
-    entry.name = name;
-    entry.trophies = Math.max(0, (Number(entry.trophies) || 0) + (Number(result.trophyDelta) || 0));
-    entry.lastRaceId = raceRoomId;
-    entry.updatedAt = Date.now();
-    return entry;
-  }, undefined, false).then(snapshot => {
-    const entry = snapshot.snapshot && snapshot.snapshot.val() || {};
-    localStorage.setItem("plixo_race_trophies_" + GAME_CODE, String(Math.max(0, Number(entry.trophies) || 0)));
-    const delta = Number(result.trophyDelta) || 0;
-    setStatus("RACE OVER · PLACE " + result.place + "/5 · " + (delta > 0 ? "+" : "") + delta + " TROPHIES", delta >= 0 ? "#6f6" : "#f88");
-  }).catch(e => console.warn("Could not save race trophy award.", e));
+  const results = room.raceResults.byPlayer;
+  const participants = room.players || {};
+  const awards = Object.entries(results).map(([playerId, result]) => {
+    const player = participants[playerId] || {};
+    const key = player.accountKey || (playerId === myPlayerId ? raceLeaderboardKey() : "guest_" + String(player.name || "player").toLowerCase().replace(/[^a-z0-9_-]/g, "_").slice(0, 28) + "_" + playerId);
+    const playerName = String(player.name || (playerId === myPlayerId ? localStorage.getItem("pg_player_name") || localStorage.getItem("pixel_games_username") || "Player" : "Player"));
+    const trophiesPath = "platformerRaceTrophies/" + GAME_CODE + "/" + key;
+    return db.ref(trophiesPath).transaction(current => {
+      const entry = current && typeof current === "object" ? { ...current } : {};
+      if (entry.lastRaceId === raceRoomId) return entry;
+      entry.name = playerName;
+      entry.trophies = Math.max(0, (Number(entry.trophies) || 0) + (Number(result.trophyDelta) || 0));
+      entry.lastRaceId = raceRoomId;
+      entry.lastRacePlace = Number(result.place) || 0;
+      entry.lastRaceAt = raceNow();
+      entry.updatedAt = raceNow();
+      return entry;
+    }, undefined, false).then(snapshot => {
+      const entry = snapshot.snapshot && snapshot.snapshot.val() || {};
+      if (playerId === myPlayerId) localStorage.setItem("plixo_race_trophies_" + GAME_CODE, String(Math.max(0, Number(entry.trophies) || 0)));
+      return { playerId, result, entry };
+    });
+  });
+  Promise.all(awards).then(() => {
+    const ownResult = results[myPlayerId];
+    if (!ownResult) return;
+    const delta = Number(ownResult.trophyDelta) || 0;
+    const message = !room.raceResults.winnerId
+      ? "RACE OVER · NO ONE REACHED THE FINAL SUN · NO TROPHIES CHANGED"
+      : (ownResult.place === 1 ? "RACE WON · +5 TROPHIES" : ownResult.place === 2 ? "RACE SECOND · NO TROPHY CHANGE" : "RACE THIRD · -5 TROPHIES (MINIMUM 0)");
+    setStatus(message, ownResult.place === 1 ? "#6f6" : ownResult.place === 2 ? "#ffdd00" : "#f88");
+    showRaceLeaderboard(room, true);
+  }).catch(e => {
+    raceAwardApplied = false;
+    console.warn("Could not save race trophy awards; room updates will retry.", e);
+  });
 }
 
 function initFirebase() {
@@ -330,7 +728,11 @@ function initFirebase() {
     }
     if (GAME_MODE === "race") {
       raceReady = false;
-      joinRaceRoom(db).catch(e => { console.warn("Could not join race queue.", e); setStatus("Race unavailable · try Multiplayer", "#f88"); });
+      initializeRaceClock(db).then(() => joinRaceRoom(db)).catch(e => {
+        console.warn("Could not join race queue.", e);
+        if (e && e.message === "ALREADY_IN_RACE") setStatus("THIS ACCOUNT IS ALREADY IN A RACE", "#f88");
+        else setStatus("RACE CONNECTION FAILED · CHECK CONNECTION AND TRY AGAIN", "#f88");
+      });
     }
   } catch(e) {
     setStatus("offline", "#888");
@@ -781,7 +1183,7 @@ function nextLevel() {
   
   if(currentLevel === 0) {
     if(timerRunning) {
-      timerCurrent = Date.now() - timerStart;
+      timerCurrent = (GAME_MODE === "race" ? raceNow() : Date.now()) - timerStart;
       timerRunning = false;
       if (GAME_MODE === "race") recordRaceFinish(timerCurrent);
       
@@ -877,7 +1279,7 @@ function loop(timestamp) {
   broadcastPosition();
   if(frameCount % 30 === 0) cleanupRemotePlayers();
 
-  if(timerRunning) timerCurrent = Date.now() - timerStart;
+  if(timerRunning) timerCurrent = (GAME_MODE === "race" ? raceNow() : Date.now()) - timerStart;
 
   ctx.clearRect(0,0,WIDTH,HEIGHT);
 
@@ -948,10 +1350,12 @@ const fsBtn = document.getElementById("fs-btn");
 document.getElementById("home-btn").addEventListener("click", () => {
   window.location.href = "index.html";
 });
+document.getElementById("race-exit-btn").addEventListener("click", () => { window.location.href = "index.html"; });
 
 document.getElementById("restart-btn").addEventListener("click", () => {
+  if (GAME_MODE === "race" && (!raceReady || raceFinishRecorded)) return;
   currentLevel = 0;
-  if (GAME_MODE === "race" && raceReady) { timerStart = raceStartAt; timerCurrent = Math.max(0, Date.now() - raceStartAt); timerRunning = true; }
+  if (GAME_MODE === "race" && raceReady) { timerStart = raceStartAt; timerCurrent = Math.max(0, raceNow() - raceStartAt); timerRunning = true; }
   else { timerRunning = false; timerCurrent = 0; }
   if (typeof totalDeaths !== "undefined") totalDeaths++;
   loadLevel();
