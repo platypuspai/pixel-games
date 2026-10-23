@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Venster Automatisering</title>
+</head>
+<body>
+    <h1>Automatische Vensters</h1>
+    <p>Klik op de knop om de vensters te openen. Pas de pop-up blocker aan als er niets gebeurt.</p>
+    
+    <button onclick="startVensters()">Start Vensters</button>
+    
+    <script>
+        // ==========================================
+        // PAS HIER DE INSTELLINGEN AAN:
+        // ==========================================
+        const aantalVensters = 50;   // Hoeveel vensters wil je tegelijk openen?
+        const aantalSeconden = 30;   // Na hoeveel seconden moeten ze weer sluiten?
+        // ==========================================
+
+        let geopendeVensters = [];
+
+        function startVensters() {
+            // 1. Open het ingestelde aantal vensters tegelijk
+            for (let i = 0; i < aantalVensters; i++) {
+                // Door 'width' en 'height' toe te voegen, dwingen we Chrome om een nieuw venster te openen i.p.v. een tabblad.
+                // 'top' en 'left' zorgen dat ze een klein beetje verspringen zodat je ze allemaal ziet.
+                let nieuwVenster = window.open('about:blank', '_blank', `width=800,height=600,top=${i * 20},left=${i * 20}`);
+                
+                if (nieuwVenster) {
+                    geopendeVensters.push(nieuwVenster);
+                } else {
+                    console.log("Pop-up geblokkeerd! Sta pop-ups toe in de browser.");
+                }
+            }
+
+            // 2. Sluit alle vensters na de ingestelde tijd
+            setTimeout(() => {
+                geopendeVensters.forEach(venster => {
+                    if (venster && !venster.closed) {
+                        venster.close();
+                    }
+                });
+                geopendeVensters = []; // Maak de lijst weer leeg
+            }, aantalSeconden * 1000); // * 1000 zet seconden om in milliseconden
+        }
+    </script>
+</body>
+</html>
