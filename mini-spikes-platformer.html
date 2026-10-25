@@ -5,6 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<meta name="plixo-build" content="triple-race-20261023-v3">
 <title>Mini Spikes Platformer — Spikes Edition</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -136,13 +137,20 @@ let raceStartAt = 0;
 let raceReady = GAME_MODE !== "race";
 let raceStartTimer = null;
 let raceCountdownInterval = null;
+let raceInactivityInterval = null;
 let raceWorldNumber = 0;
 let raceFinishRecorded = false;
+let raceForfeited = false;
+let raceForfeitCleanupDone = false;
+let raceGameplayStarted = false;
 let raceAwardApplied = false;
 let raceFinalizeBusy = false;
+let raceInactivityCheckBusy = false;
+let lastRaceActivityWriteAt = 0;
 const RACE_SIZE = 3;
 const RACE_WIN_TROPHIES = 5;
 const RACE_LOSS_TROPHIES = -5;
+const RACE_INACTIVE_MS = 30000;
 let raceServerTimeOffset = 0;
 function raceNow() { return Date.now() + raceServerTimeOffset; }
 async function initializeRaceClock(db) {
@@ -178,6 +186,7 @@ function makeRoomPlayer(trophies) {
     deviceId: String(localStorage.getItem("pg_device_id") || localStorage.getItem("md6_did") || ""),
     trophies: Math.max(0, Number(trophies) || 0),
     joinedAt: raceNow(),
+    lastMoveAt: raceNow(),
     disconnected: false
   };
 }
@@ -222,6 +231,177 @@ async function loadRaceTrophies(db) {
 function clearRaceTimers() {
   if (raceStartTimer) { clearTimeout(raceStartTimer); raceStartTimer = null; }
   if (raceCountdownInterval) { clearInterval(raceCountdownInterval); raceCountdownInterval = null; }
+  if (raceInactivityInterval) { clearInterval(raceInactivityInterval); raceInactivityInterval = null; }
+}
+
+// Real movement is written to the race room at a modest rate. Other racers can
+// therefore detect an idle player without treating ordinary heartbeat writes
+// or an open-but-abandoned tab as activity.
+function noteRaceMovement() {
+  if (GAME_MODE !== "race" || !raceRoomRef || !raceReady || raceFinishRecorded || raceForfeited) return;
+  const now = raceNow();
+  if (now < raceStartAt || now - lastRaceActivityWriteAt < 750) return;
+  lastRaceActivityWriteAt = now;
+  raceRoomRef.child("players/" + myPlayerId).transaction(player => {
+    // A late client must never recreate a player who has already left or been
+    // marked inactive by another racer.
+    if (!player || player.disconnected) return;
+    return { ...player, lastMoveAt: now };
+  }, undefined, false).catch(() => {});
+}
+
+function ensureRaceInactivityMonitor(db) {
+  if (GAME_MODE !== "race" || raceInactivityInterval) return;
+  raceInactivityInterval = setInterval(() => { markInactiveRacePlayers(db); }, 1000);
+}
+
+// If a racer has not changed position for 30 seconds, mark them as a quitter.
+// This runs as a room transaction so that concurrent clients cannot rank or
+// penalize the same racer more than once.
+async function markInactiveRacePlayers(db) {
+  if (GAME_MODE !== "race" || !raceRoomRef || raceInactivityCheckBusy) return;
+  raceInactivityCheckBusy = true;
+  try {
+    const transaction = await raceRoomRef.transaction(current => {
+      if (!current || current.status !== "running" || (current.raceResults && current.raceResults.finalized)) return;
+      const players = current.players && typeof current.players === "object" ? { ...current.players } : {};
+      const finishes = current.finishes && typeof current.finishes === "object" ? { ...current.finishes } : {};
+      const now = raceNow();
+      let changed = false;
+      for (const [id, originalPlayer] of Object.entries(players)) {
+        const player = originalPlayer && typeof originalPlayer === "object" ? originalPlayer : null;
+        if (!player || player.disconnected) continue;
+        const existingFinish = finishes[id];
+        if (existingFinish && existingFinish.reachedFinalSun === true) continue;
+        if (existingFinish && existingFinish.reachedFinalSun === false) {
+          players[id] = {
+            ...player,
+            disconnected: true,
+            disconnectedAt: Number(player.disconnectedAt || existingFinish.finishedAt) || now,
+            quitReason: player.quitReason || existingFinish.reason || "left_game"
+          };
+          changed = true;
+          continue;
+        }
+        const lastMoveAt = Number(player.lastMoveAt) || Number(current.startedAt) || Number(current.startAt) || Number(player.joinedAt) || now;
+        if (now - lastMoveAt >= RACE_INACTIVE_MS) {
+          const quitAt = lastMoveAt + RACE_INACTIVE_MS;
+          players[id] = { ...player, disconnected: true, disconnectedAt: quitAt, quitReason: "inactive_30_seconds" };
+          finishes[id] = {
+            playerId: id,
+            reachedFinalSun: false,
+            finishedAt: quitAt,
+            time: null,
+            reason: "inactive_30_seconds"
+          };
+          changed = true;
+        }
+      }
+      if (!changed) return;
+      current.players = players;
+      current.finishes = finishes;
+      return current;
+    }, undefined, false);
+    const currentRoom = transaction && transaction.snapshot ? transaction.snapshot.val() : null;
+    if (currentRoom && currentRoom.status === "running" && raceDoneCount(currentRoom) >= RACE_SIZE) finalizeRace();
+  } catch (error) {
+    console.warn("Could not check idle racers.", error);
+  } finally {
+    raceInactivityCheckBusy = false;
+  }
+}
+
+function hideForfeitedPlayerAvatar() {
+  if (raceForfeitCleanupDone) return;
+  raceForfeitCleanupDone = true;
+  if (myFbRef) myFbRef.remove().catch(() => {});
+  if (fbSkinsRef) fbSkinsRef.child(myPlayerId).remove().catch(() => {});
+}
+
+async function leaveRaceAndNavigate(destination = "index.html?build=linked-race-20261025-v1") {
+  if (GAME_MODE !== "race" || !raceRoomRef || !raceRoomId) {
+    window.location.href = destination;
+    return;
+  }
+  const currentRoomRef = raceRoomRef;
+  const playerRef = currentRoomRef.child("players/" + myPlayerId);
+  const hadFinished = raceFinishRecorded;
+  raceReady = false;
+  keys = {};
+  timerRunning = false;
+  if (!hadFinished) {
+    raceForfeited = true;
+    hideForfeitedPlayerAvatar();
+  } else {
+    hideForfeitedPlayerAvatar();
+  }
+
+  let sawPreStartRoom = false;
+  try {
+    const roomSnapshot = await currentRoomRef.once("value");
+    const observed = roomSnapshot.val() || {};
+    sawPreStartRoom = observed.status === "waiting" || observed.status === "starting";
+    // Before a race starts, remove the seat cleanly so onDisconnect cannot
+    // recreate the removed participant. During a live race, leave the fallback
+    // registered until the explicit DNF transaction has safely committed.
+    if (sawPreStartRoom) await playerRef.onDisconnect().cancel();
+
+    const result = await currentRoomRef.transaction(current => {
+      if (!current || !current.players || !current.players[myPlayerId]) return;
+      const players = { ...current.players };
+      const player = { ...(players[myPlayerId] || {}) };
+      const now = raceNow();
+      const finishes = current.finishes && typeof current.finishes === "object" ? { ...current.finishes } : {};
+      const ownExistingFinish = finishes[myPlayerId];
+      const alreadyFinished = !!(ownExistingFinish && ownExistingFinish.reachedFinalSun === true);
+      // Do not shift the original leave time if this player has already been
+      // ruled inactive or has deliberately left.
+      if (player.disconnected || (ownExistingFinish && ownExistingFinish.reachedFinalSun === false)) return current;
+      if (current.status === "running" && !alreadyFinished) {
+        player.disconnected = true;
+        player.disconnectedAt = now;
+        player.quitReason = "left_game";
+        players[myPlayerId] = player;
+        finishes[myPlayerId] = { playerId: myPlayerId, reachedFinalSun: false, finishedAt: now, time: null, reason: "left_game" };
+        current.players = players;
+        current.finishes = finishes;
+        return current;
+      }
+      if (current.status === "waiting" || current.status === "starting") {
+        delete players[myPlayerId];
+        const remainingCount = Object.values(players).filter(p => p && !p.disconnected).length;
+        current.players = players;
+        current.status = "waiting";
+        current.startAt = null;
+        current.finishes = {};
+        current.raceResults = null;
+        if (remainingCount === 0) return null;
+        return current;
+      }
+      // Leaving after finishing never removes or changes the earned finish.
+      player.disconnected = true;
+      player.disconnectedAt = now;
+      player.quitReason = alreadyFinished ? "left_after_finish" : (player.quitReason || "left_game");
+      players[myPlayerId] = player;
+      current.players = players;
+      return current;
+    }, undefined, false);
+
+    // The transaction may be a no-op when another client already marked this
+    // player as DNF. Cancel the disconnect write anyway so it cannot overwrite
+    // the original leave/inactivity timestamp when this tab navigates away.
+    if (result) await playerRef.onDisconnect().cancel().catch(() => {});
+  } catch (error) {
+    console.warn("Could not fully record race exit; keeping Firebase onDisconnect as fallback.", error);
+    if (sawPreStartRoom) {
+      await playerRef.onDisconnect().update({
+        disconnected: true,
+        disconnectedAt: firebase.database.ServerValue.TIMESTAMP,
+        quitReason: "left_before_start"
+      }).catch(() => {});
+    }
+  }
+  window.location.href = destination;
 }
 function hideRaceOverlay() {
   const overlay = document.getElementById("race-overlay");
@@ -267,28 +447,33 @@ function showRaceLeaderboard(room, isFinal) {
     }));
   } else {
     const all = Object.entries(players).map(([id, player]) => ({ id, player: player || {}, finish: finishes[id] || null }));
-    const finished = all.filter(row => row.finish && row.finish.reachedFinalSun !== false).sort((a, b) => {
+    const finished = all.filter(row => row.finish && row.finish.reachedFinalSun === true).sort((a, b) => {
       const dt = (Number(a.finish.finishedAt) || Infinity) - (Number(b.finish.finishedAt) || Infinity);
       return dt || a.id.localeCompare(b.id);
     });
-    const disconnected = all.filter(row => !row.finish && row.player.disconnected).sort((a, b) => (Number(b.player.disconnectedAt) || 0) - (Number(a.player.disconnectedAt) || 0));
-    const racing = all.filter(row => !row.finish && !row.player.disconnected).sort((a, b) => (Number(a.player.joinedAt) || 0) - (Number(b.player.joinedAt) || 0));
+    const quitters = all.filter(row => row.player.disconnected || (row.finish && row.finish.reachedFinalSun === false)).sort((a, b) => {
+      const whenA = Number(a.player.disconnectedAt || (a.finish && a.finish.finishedAt)) || 0;
+      const whenB = Number(b.player.disconnectedAt || (b.finish && b.finish.finishedAt)) || 0;
+      return whenB - whenA || a.id.localeCompare(b.id);
+    });
+    const racing = all.filter(row => !(row.finish && row.finish.reachedFinalSun === true) && !row.player.disconnected && !(row.finish && row.finish.reachedFinalSun === false)).sort((a, b) => (Number(a.player.joinedAt) || 0) - (Number(b.player.joinedAt) || 0));
     rows = [
-      ...finished.map((row, i) => ({ ...row, result: { place: i + 1, trophyDelta: null } })),
-      ...racing.map(row => ({ ...row, result: { place: null, trophyDelta: null } })),
-      ...disconnected.map(row => ({ ...row, result: { place: null, trophyDelta: null } }))
+      ...finished.map((row, i) => ({ ...row, result: { place: i + 1, trophyDelta: null }, liveState: "FINISHED" })),
+      ...racing.map(row => ({ ...row, result: { place: null, trophyDelta: null }, liveState: "RACING" })),
+      ...quitters.map((row, i) => ({ ...row, result: { place: finished.length + racing.length + i + 1, trophyDelta: null }, liveState: "LEFT" }))
     ];
   }
 
   rows = rows.slice(0, 3);
-  const finishedCount = Object.keys(finishes).filter(id => finishes[id] && finishes[id].reachedFinalSun !== false).length;
+  const finishedCount = Object.keys(finishes).filter(id => finishes[id] && finishes[id].reachedFinalSun === true).length;
   const doneCount = Object.entries(players).filter(([id, player]) => (finishes[id] && finishes[id].reachedFinalSun !== false) || (player && player.disconnected)).length;
   let title = "RACE RESULTS";
   let subtitle = "FINAL STANDINGS";
   if (!isFinal) {
-    const mine = results[myPlayerId];
-    title = raceFinishRecorded ? "YOU REACHED THE FINAL SUN!" : "RACE STANDINGS";
-    subtitle = "FINISHED: " + finishedCount + "/3 · WAITING FOR " + Math.max(0, 3 - doneCount) + " RACER(S)";
+    title = raceForfeited ? "RACE FORFEIT · LAST PLACE" : (raceFinishRecorded ? "YOU REACHED THE FINAL SUN!" : "RACE STANDINGS");
+    subtitle = raceForfeited
+      ? "YOU LEFT OR DID NOT MOVE FOR 30 SECONDS · DNF"
+      : ("FINISHED: " + finishedCount + "/3 · WAITING FOR " + Math.max(0, 3 - doneCount) + " RACER(S) · IDLE 30S = DNF");
   } else {
     const ownResult = results[myPlayerId];
     if (!room.raceResults.winnerId) {
@@ -313,14 +498,17 @@ function showRaceLeaderboard(room, isFinal) {
   document.getElementById("race-overlay-subtitle").textContent = subtitle;
   const standings = document.getElementById("race-standings");
   standings.style.display = "block";
-  document.getElementById("race-exit-btn").style.display = (isFinal || raceFinishRecorded) ? "block" : "none";
+  document.getElementById("race-exit-btn").style.display = (isFinal || raceFinishRecorded || raceForfeited) ? "block" : "none";
   standings.innerHTML = rows.map((row, index) => {
     const playerName = raceEscapeHtml(row.player.name || (row.id === myPlayerId ? "You" : "Player"));
     const own = row.id === myPlayerId;
-    const place = isFinal ? Number(row.result.place) : (row.finish ? Number(row.result.place) : null);
-    const placeText = isFinal ? (!room.raceResults.winnerId ? (row.finish ? "FINISHED" : "DNF") : (place ? racePlaceLabel(place) : "—")) : (row.finish ? racePlaceLabel(place) : (row.player.disconnected ? "LEFT" : "RACING"));
+    const place = isFinal ? Number(row.result.place) : (row.finish && row.finish.reachedFinalSun === true ? Number(row.result.place) : Number(row.result.place) || null);
+    const isQuit = !!(row.player.disconnected || (row.finish && row.finish.reachedFinalSun === false));
+    const placeText = isFinal
+      ? (!room.raceResults.winnerId ? (row.finish && row.finish.reachedFinalSun === true ? "FINISHED" : "DNF") : (place ? racePlaceLabel(place) : "—"))
+      : (row.finish && row.finish.reachedFinalSun === true ? racePlaceLabel(place) : (isQuit ? (place ? racePlaceLabel(place) + " · LEFT" : "LEFT") : "RACING"));
     const delta = row.result.trophyDelta;
-    const trophies = isFinal ? (Number(delta) > 0 ? "+" + Number(delta) : Number(delta) < 0 ? String(Number(delta)) : "0") : (row.finish ? "FINISHED" : (row.player.disconnected ? "DNF" : "IN RACE"));
+    const trophies = isFinal ? (Number(delta) > 0 ? "+" + Number(delta) : Number(delta) < 0 ? String(Number(delta)) : "0") : (row.finish && row.finish.reachedFinalSun === true ? "FINISHED" : (isQuit ? "DNF" : "IN RACE"));
     const nameText = playerName + (own ? " (YOU)" : "");
     const rowClass = (isFinal && place === 1 ? " winner" : "") + (own ? " own" : "");
     return '<div class="race-standing-row' + rowClass + '"><span class="race-standing-place">' + raceEscapeHtml(placeText) + '</span><span class="race-standing-name">' + nameText + '</span><span class="race-standing-score">' + raceEscapeHtml(trophies) + '</span></div>';
@@ -471,12 +659,13 @@ async function joinRaceRoom(db) {
   }).catch(e => console.warn("Could not register race disconnect marker.", e));
   bindNetworkRoot(db, "platformerRaceWorlds/" + GAME_CODE + "/" + raceRoomId);
   raceRoomRef.on("value", snap => handleRaceRoomState(snap.val() || {}, db));
-  setStatus("RACE QUEUE CONNECTED · WORLD " + (raceWorldNumber || "—") + " · WAITING FOR 3 PLAYERS", "#ffdd00");
+  setStatus("RACE QUEUE V3 CONNECTED · WORLD " + (raceWorldNumber || "—") + " · WAITING FOR 3 PLAYERS", "#ffdd00");
 }
 
 function resetUnderfilledStartingRoom() {
   if (!raceRoomRef) return;
   clearRaceTimers();
+  raceGameplayStarted = false;
   hideRaceOverlay();
   raceRoomRef.transaction(current => {
     if (!current || current.status !== "starting") return;
@@ -513,7 +702,7 @@ function handleRaceRoomState(room, db) {
     clearRaceTimers();
     raceReady = false;
     if (!raceFinishRecorded) hideRaceOverlay();
-    setStatus("RACE LOBBY " + count + "/" + RACE_SIZE + " · WORLD " + (raceWorldNumber || "—") + " · WAITING FOR " + Math.max(0, RACE_SIZE - count), "#ffdd00");
+    setStatus("RACE LOBBY V3 " + count + "/" + RACE_SIZE + " · WORLD " + (raceWorldNumber || "—") + " · NEED " + Math.max(0, RACE_SIZE - count), "#ffdd00");
     return;
   }
 
@@ -541,6 +730,13 @@ function handleRaceRoomState(room, db) {
           if (Number(current.startAt) > raceNow()) return;
           current.status = "running";
           current.startedAt = Number(current.startAt) || raceNow();
+          const startedAt = current.startedAt;
+          const players = current.players && typeof current.players === "object" ? { ...current.players } : {};
+          for (const [id, player] of Object.entries(players)) {
+            if (!player) continue;
+            players[id] = { ...player, lastMoveAt: startedAt, disconnected: false, quitReason: null };
+          }
+          current.players = players;
           return current;
         }, undefined, false).then(result => {
           const latest = result && result.snapshot ? result.snapshot.val() : null;
@@ -555,19 +751,40 @@ function handleRaceRoomState(room, db) {
     if (raceStartTimer) { clearTimeout(raceStartTimer); raceStartTimer = null; }
     if (raceCountdownInterval) { clearInterval(raceCountdownInterval); raceCountdownInterval = null; }
     raceStartAt = Number(room.startAt) || Number(room.startedAt) || raceNow();
+    ensureRaceInactivityMonitor(db);
+
+    const myRoomPlayer = room.players && room.players[myPlayerId];
+    const myFinish = room.finishes && room.finishes[myPlayerId];
+    if (myRoomPlayer && myRoomPlayer.disconnected && !(myFinish && myFinish.reachedFinalSun === true)) {
+      raceForfeited = true;
+      hideForfeitedPlayerAvatar();
+    }
     if (raceFinishRecorded) {
       raceReady = false;
       keys = {};
       timerRunning = false;
       showRaceLeaderboard(room, false);
-    } else if (raceNow() >= raceStartAt) {
-      raceReady = true;
+    } else if (raceForfeited) {
+      raceReady = false;
       keys = {};
-      hideRaceOverlay();
-      timerStart = raceStartAt;
-      timerCurrent = Math.max(0, raceNow() - raceStartAt);
-      timerRunning = true;
-      setStatus("🏁 RACE LIVE · 3 PLAYERS · WORLD " + (raceWorldNumber || "—"), "#6f6");
+      timerRunning = false;
+      showRaceLeaderboard(room, false);
+      setStatus("RACE FORFEIT · LAST PLACE · -5 TROPHIES IF LAST", "#f88");
+    } else if (raceNow() >= raceStartAt) {
+      if (!raceGameplayStarted) {
+        raceGameplayStarted = true;
+        keys = {};
+        hideRaceOverlay();
+        timerStart = raceStartAt;
+        timerCurrent = Math.max(0, raceNow() - raceStartAt);
+        timerRunning = true;
+        lastRaceActivityWriteAt = 0;
+        setStatus("🏁 RACE V3 LIVE · 3 PLAYERS · WORLD " + (raceWorldNumber || "—") + " · IDLE 30S = DNF", "#6f6");
+      } else {
+        timerCurrent = Math.max(0, raceNow() - raceStartAt);
+        timerRunning = true;
+      }
+      raceReady = true;
     } else {
       raceReady = false;
       if (!raceStartTimer) {
@@ -584,6 +801,7 @@ function handleRaceRoomState(room, db) {
   if (room.status === "finished" && room.raceResults && room.raceResults.finalized) {
     clearRaceTimers();
     raceReady = false;
+    raceGameplayStarted = false;
     keys = {};
     timerRunning = false;
     showRaceLeaderboard(room, true);
@@ -804,9 +1022,10 @@ function setStatus(msg, color="#6f6") {
 
 let lastSentX = -1, lastSentY = -1, fbThrottle = 0;
 function broadcastPosition() {
-  if(!myFbRef) return;
+  if(!myFbRef || (GAME_MODE === "race" && raceForfeited)) return;
   fbThrottle++;
   const moved = Math.round(dino.x) !== lastSentX || Math.round(dino.y) !== lastSentY;
+  if (moved) noteRaceMovement();
   if(!moved && fbThrottle < 20) return;
   fbThrottle = 0;
   lastSentX = Math.round(dino.x);
@@ -1348,9 +1567,11 @@ function loop(timestamp) {
 const fsBtn = document.getElementById("fs-btn");
 
 document.getElementById("home-btn").addEventListener("click", () => {
-  window.location.href = "index.html";
+  leaveRaceAndNavigate("index.html?build=linked-race-20261025-v1");
 });
-document.getElementById("race-exit-btn").addEventListener("click", () => { window.location.href = "index.html"; });
+document.getElementById("race-exit-btn").addEventListener("click", () => {
+  leaveRaceAndNavigate("index.html?build=linked-race-20261025-v1");
+});
 
 document.getElementById("restart-btn").addEventListener("click", () => {
   if (GAME_MODE === "race" && (!raceReady || raceFinishRecorded)) return;
@@ -1362,7 +1583,7 @@ document.getElementById("restart-btn").addEventListener("click", () => {
 });
 
 document.getElementById("lb-btn").addEventListener("click", () => {
-  window.location.href = "leaderboard.html";
+  leaveRaceAndNavigate("leaderboard.html?build=linked-race-20261025-v1");
 });
 
 document.getElementById("reset-btn").addEventListener("click", () => {

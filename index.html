@@ -5,7 +5,11 @@
     <meta name="description" content="Speel de leukste gratis pixel games direct in je browser op Plixo-Arcade. Ontdek onze retro arcade en pixel art spellen!" />
     <link rel="icon" type="image/png" href="favicon.png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="plixo-build" content="triple-race-20261024-v4"> 
     <title>Plixo-Arcade</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -743,8 +747,8 @@
         <button class="nav-btn active" onclick="showPage('home', this)" data-i18n="navHome">▶ HOME</button>
         <button class="nav-btn" onclick="showPage('contact', this)" data-i18n="navContact">✉ CONTACT</button>
         <button class="nav-btn" onclick="showPage('info', this)" data-i18n="navInfo">ℹ INFO</button>
-        <a id="nav-leaderboard" class="nav-btn" href="leaderboard.html" style="color:var(--accent-blue);border-color:var(--accent-blue);box-shadow:0 0 12px rgba(68,136,255,.16);" data-i18n="navLb" onclick="return recordProfileNavigation(event, 'leaderboard')">LEADERBOARD</a>
-        <a id="nav-skin" class="nav-btn" href="skin.html" style="color:var(--accent-yellow); border-color:var(--accent-yellow);" data-i18n="navSkin" onclick="return recordProfileNavigation(event, 'skin')">SKIN</a>
+        <a id="nav-leaderboard" class="nav-btn" href="leaderboard.html?build=linked-normal-game-20261025-v2" style="color:var(--accent-blue);border-color:var(--accent-blue);box-shadow:0 0 12px rgba(68,136,255,.16);" data-i18n="navLb" onclick="return recordProfileNavigation(event, 'leaderboard')">LEADERBOARD</a>
+        <a id="nav-skin" class="nav-btn" href="skin.html?build=linked-normal-game-20261025-v2" style="color:var(--accent-yellow); border-color:var(--accent-yellow);" data-i18n="navSkin" onclick="return recordProfileNavigation(event, 'skin')">SKIN</a>
     </nav>
 </header>
 
@@ -813,7 +817,7 @@
             <h2 class="card-title">Mini Browser Platformer</h2>
             <p class="card-desc" data-i18n="descPlat">Jump, run and win!</p>
             <div class="card-actions">
-                <a class="btn btn-play" href="mini-browser-platformer-modes.html" style="background:#ff2222;" data-i18n="btnPlay">▶ PLAY</a>
+                <a class="btn btn-play" href="mini-browser-platformer-modes.html?build=linked-normal-game-20261025-v2" style="background:#ff2222;" data-i18n="btnPlay">▶ PLAY</a>
                 <a class="btn btn-ext" href="#" target="_blank" style="color:#ff2222; border-color:#ff2222;" data-i18n="btnExt">⬡ EXTENSION</a>
             </div>
         </div>
@@ -835,7 +839,7 @@
             <h2 class="card-title">Mini Spikes Platformer</h2>
             <p class="card-desc" data-i18n="descSpikes">Avoid the spikes and race other players.</p>
             <div class="card-actions">
-                <a class="btn btn-play" href="mini-spikes-platformer-modes.html" style="background:#ff44aa;" data-i18n="btnPlay">▶ PLAY</a>
+                <a class="btn btn-play" href="mini-spikes-platformer-modes.html?build=linked-normal-game-20261025-v2" style="background:#ff44aa;" data-i18n="btnPlay">▶ PLAY</a>
                 <a class="btn btn-ext" href="#" target="_blank" style="color:#ff44aa; border-color:#ff44aa;" data-i18n="btnExt">⬡ EXTENSION</a>
             </div>
         </div>
