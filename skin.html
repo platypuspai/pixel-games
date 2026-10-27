@@ -489,6 +489,69 @@ function watchAdminSkinOverrides(code) {
     });
 }
 
+let adminAchievementOverridesRef = null;
+let adminAchievementOverridesCallback = null;
+function suppressRevokedAchievementSkins(achievementOverrides) {
+    // If an achievement is explicitly revoked, its reward skin is no longer owned,
+    // unless an administrator separately granted that skin directly afterwards.
+    const skinOverrides = parse('plixo_admin_skin_overrides', {});
+    const ownedMap = parse('plixo_owned_skins', {classic:true});
+    const oldOwned = JSON.stringify(ownedMap);
+    const selectedBefore = localStorage.getItem('plixo_selected_skin') || 'classic';
+    for (const achievement of ACHIEVEMENTS) {
+        if (!achievement.unlockSkin || achievementOverrides[achievement.id] !== false) continue;
+        if (skinOverrides[achievement.unlockSkin] === true) continue;
+        delete ownedMap[achievement.unlockSkin];
+    }
+    ownedMap.classic = true;
+    localStorage.setItem('plixo_owned_skins', JSON.stringify(ownedMap));
+    if (!ownedMap[selectedBefore]) localStorage.setItem('plixo_selected_skin', 'classic');
+    return oldOwned !== JSON.stringify(ownedMap) || selectedBefore !== (localStorage.getItem('plixo_selected_skin') || 'classic');
+}
+function applyLiveAdminAchievementOverrides(value) {
+    const incoming = value && typeof value === 'object' ? value : {};
+    const clean = {};
+    for (const [id, state] of Object.entries(incoming)) {
+        if (ACHIEVEMENTS.some(achievement => achievement.id === id) && (state === true || state === false)) clean[id] = state;
+    }
+    const oldOverrides = parse('plixo_admin_achievement_overrides', {});
+    const claims = parse('plixo_claimed_achievements', {});
+    for (const [id, state] of Object.entries(clean)) {
+        if (state === true) claims[id] = true;
+        else delete claims[id];
+    }
+    localStorage.setItem('plixo_admin_achievement_overrides', JSON.stringify(clean));
+    localStorage.setItem('plixo_claimed_achievements', JSON.stringify(claims));
+    const skinChanged = suppressRevokedAchievementSkins(clean);
+    if (JSON.stringify(oldOverrides) !== JSON.stringify(clean) || skinChanged) refresh();
+}
+function watchAdminAchievementOverrides(code) {
+    const path = 'plixo_users/' + code + '/admin_achievement_overrides';
+    if (adminAchievementOverridesRef && adminAchievementOverridesRef.toString() === db.ref(path).toString()) return;
+    if (adminAchievementOverridesRef && adminAchievementOverridesCallback) adminAchievementOverridesRef.off('value', adminAchievementOverridesCallback);
+    adminAchievementOverridesRef = db.ref(path);
+    adminAchievementOverridesCallback = snapshot => applyLiveAdminAchievementOverrides(snapshot.val() || {});
+    adminAchievementOverridesRef.on('value', adminAchievementOverridesCallback, error => console.warn('Could not listen for live admin achievement updates.', error));
+}
+
+let adminPlixRef = null;
+let adminPlixCallback = null;
+function watchAdminPlix(code) {
+    const path = 'plixo_users/' + code + '/plix';
+    if (adminPlixRef && adminPlixRef.toString() === db.ref(path).toString()) return;
+    if (adminPlixRef && adminPlixCallback) adminPlixRef.off('value', adminPlixCallback);
+    adminPlixRef = db.ref(path);
+    adminPlixCallback = snapshot => {
+        if (!snapshot.exists()) return;
+        const next = String(Math.max(0, Math.floor(Number(snapshot.val()) || 0)));
+        if (localStorage.getItem('plixo_plix') !== next) {
+            localStorage.setItem('plixo_plix', next);
+            refresh();
+        }
+    };
+    adminPlixRef.on('value', adminPlixCallback, error => console.warn('Could not listen for live PLIX balance updates.', error));
+}
+
 function linkFirebase(code) {
     return db.ref('plixo_users/' + code).once('value').then(async (snapshot) => {
         const today = getToday();
@@ -548,8 +611,17 @@ function linkFirebase(code) {
 
             const mergedAchievementClaims = sameAccount
                 ? mergeClaimMaps(data.claimed_achievements, parse('plixo_claimed_achievements', {}))
-                : (data.claimed_achievements && typeof data.claimed_achievements === 'object' ? data.claimed_achievements : {});
+                : (data.claimed_achievements && typeof data.claimed_achievements === 'object' ? {...data.claimed_achievements} : {});
+            const cloudAchievementOverrides = data.admin_achievement_overrides && typeof data.admin_achievement_overrides === 'object' ? data.admin_achievement_overrides : {};
+            const localAchievementOverrides = sameAccount ? parse('plixo_admin_achievement_overrides', {}) : {};
+            const mergedAchievementOverrides = {...localAchievementOverrides, ...cloudAchievementOverrides};
+            for (const [achievementId, state] of Object.entries(mergedAchievementOverrides)) {
+                if (state === true) mergedAchievementClaims[achievementId] = true;
+                else if (state === false) delete mergedAchievementClaims[achievementId];
+            }
+            localStorage.setItem('plixo_admin_achievement_overrides', JSON.stringify(mergedAchievementOverrides));
             localStorage.setItem('plixo_claimed_achievements', JSON.stringify(mergedAchievementClaims));
+            suppressRevokedAchievementSkins(mergedAchievementOverrides);
 
             const cloudLevels = data.active_mission_levels && typeof data.active_mission_levels === 'object' ? data.active_mission_levels : {};
             const localLevels = sameAccount ? parse('plixo_active_mission_levels', {}) : {};
@@ -647,8 +719,10 @@ function linkFirebase(code) {
         getDailyMissionsForToday();
         await syncToFirebase();
         refresh();
-        // Keep this page in sync if ADMIN2 changes a skin while it is open.
+        // Keep this page in sync if ADMIN2 changes a skin, achievement, or PLIX while it is open.
         watchAdminSkinOverrides(code);
+        watchAdminAchievementOverrides(code);
+        watchAdminPlix(code);
     }).catch(e => { console.warn('PLIXO account sync failed', e); refresh(); });
 }
 
@@ -673,7 +747,7 @@ function mergeClaimMaps(cloudValue, localValue) {
 }
 function clearAccountLocalState() {
     const exactKeys = [
-        'plixo_plix', 'plixo_owned_skins', 'plixo_selected_skin', 'plixo_admin_skin_overrides', 'plixo_mission_progress',
+        'plixo_plix', 'plixo_owned_skins', 'plixo_selected_skin', 'plixo_admin_skin_overrides', 'plixo_admin_achievement_overrides', 'plixo_mission_progress',
         'plixo_claimed_missions', 'plixo_claimed_achievements', 'plixo_played_games',
         'plixo_active_mission_levels', 'plixo_skin_image', 'plixo_daily_bonus_date',
         'plixo_daily_missions_date', 'plixo_daily_missions_ids', 'plixo_profile_updated_at',
@@ -708,6 +782,7 @@ function syncToFirebase() {
         mission_progress: achievementProgress(),
         claimed_missions: missionClaimed(),
         claimed_achievements: achievementClaimed(),
+        admin_achievement_overrides: parse('plixo_admin_achievement_overrides', {}),
         active_mission_levels: parse('plixo_active_mission_levels', {}),
         skin_image: localStorage.getItem('plixo_skin_image') || '',
         played_games: [...new Set(parse('plixo_played_games', []))],
@@ -746,7 +821,24 @@ function syncToFirebase() {
             else if (isUnlocked === false) delete mergedSkins[skinId];
         }
         mergedSkins.classic = true;
-        return {...existing, ...payload, skins: mergedSkins};
+
+        const cloudAchievementOverrides = existing.admin_achievement_overrides && typeof existing.admin_achievement_overrides === 'object' ? existing.admin_achievement_overrides : {};
+        const mergedAchievementOverrides = {...(payload.admin_achievement_overrides || {}), ...cloudAchievementOverrides};
+        const mergedAchievementClaims = {
+            ...(existing.claimed_achievements && typeof existing.claimed_achievements === 'object' ? existing.claimed_achievements : {}),
+            ...(payload.claimed_achievements && typeof payload.claimed_achievements === 'object' ? payload.claimed_achievements : {})
+        };
+        for (const [achievementId, state] of Object.entries(mergedAchievementOverrides)) {
+            if (state === true) mergedAchievementClaims[achievementId] = true;
+            else if (state === false) delete mergedAchievementClaims[achievementId];
+        }
+        for (const achievement of ACHIEVEMENTS) {
+            if (!achievement.unlockSkin || mergedAchievementOverrides[achievement.id] !== false) continue;
+            if (adminSkinOverrides[achievement.unlockSkin] === true) continue;
+            delete mergedSkins[achievement.unlockSkin];
+        }
+        mergedSkins.classic = true;
+        return {...existing, ...payload, skins: mergedSkins, claimed_achievements: mergedAchievementClaims, admin_achievement_overrides: mergedAchievementOverrides};
     }, undefined, false).catch(e => console.warn('PLIXO sync failed', e));
 }
 
@@ -790,14 +882,34 @@ function setPlixoMaxProgress(missionId, value) {
     }
 }
 
-function isEventActive(evt) {
-    const d = new Date();
-    const m = d.getMonth(); 
-    const day = d.getDate();
-    if (evt === 'halloween') return (m === 9 && day >= 30) || (m === 10 && day === 1);
-    if (evt === 'sint') return (m === 11 && day >= 4 && day <= 6);
-    if (evt === 'kerst') return (m === 11 && day >= 24 && day <= 26);
-    if (evt === 'nieuwjaar') return (m === 11 && day === 31) || (m === 0 && day <= 2);
+function isEventActive(evt, now = new Date()) {
+    // Event skins are purchasable for the event itself plus seven calendar days
+    // before and after. Owned event skins remain owned and visible forever.
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const y = now.getFullYear();
+    const candidates = [y - 1, y, y + 1];
+    const inRange = (start, end) => {
+        const startTime = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+        const endTime = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+        return dayStart >= startTime && dayStart <= endTime;
+    };
+    for (const year of candidates) {
+        let start, end;
+        if (evt === 'halloween') {
+            // Main date: 31 October; availability: 24 October – 7 November.
+            start = new Date(year, 9, 24); end = new Date(year, 10, 7);
+        } else if (evt === 'sint') {
+            // Main date: 5 December; availability: 28 November – 12 December.
+            start = new Date(year, 10, 28); end = new Date(year, 11, 12);
+        } else if (evt === 'kerst') {
+            // Existing event: 24–26 December; include one week before/after.
+            start = new Date(year, 11, 17); end = new Date(year + 1, 0, 2);
+        } else if (evt === 'nieuwjaar') {
+            // Existing event: 31 December – 2 January; include one week before/after.
+            start = new Date(year, 11, 24); end = new Date(year + 1, 0, 9);
+        } else return false;
+        if (inRange(start, end)) return true;
+    }
     return false;
 }
 
@@ -1017,7 +1129,7 @@ const ACHIEVEMENTS = [
  {id:'a_completed_spikes', title:'COMPLETED — MINI SPIKES PLATFORMER', desc:'Finish all levels in Mini Spikes Platformer.', target:1, reward:300},
  {id:'a39', title:'RAGE QUIT', desc:'Die 100 times in the same level in Mini Spikes Platformer.', target:100, reward:200},
  {id:'a41', title:'MASTER RUN', desc:'Beat the whole Mini Browser Platformer without dying once.', target:1, reward:500},
- {id:'a55', title:'DVD COMPLETED', desc:'Unlock every possible option and skin in DVD+.', target:1, reward:3500},
+ {id:'a55', title:'DVD COMPLETED', desc:'Unlock every possible option and skin in DVD+.', target:1, reward:7500},
  {id:'a94', title:'TANK DEFEATED', desc:'Kill the giant Boss Zombie.', target:1, reward:700},
  {id:'a97', title:'THE END COMPLETED', desc:'Finish THE END.', target:1, reward:500},
  {id:'a16', title:'FIRST PURCHASE', desc:'Buy your first skin.', target:1, reward:100},
@@ -1074,7 +1186,12 @@ function selected(){
 
 function achievementProgress() { return parse('plixo_mission_progress', {}); }
 function missionClaimed() { return parse('plixo_claimed_missions', {}); }
-function achievementClaimed() { return parse('plixo_claimed_achievements', {}); }
+function achievementClaimed() {
+    const claims = parse('plixo_claimed_achievements', {});
+    const overrides = parse('plixo_admin_achievement_overrides', {});
+    for (const [id, state] of Object.entries(overrides)) { if (state === true) claims[id] = true; else if (state === false) delete claims[id]; }
+    return claims;
+}
 function dailyProgress() { return parse('plixo_daily_progress_' + getToday(), {}); }
 function dailyClaimed() { return parse('plixo_daily_claimed_' + getToday(), {}); }
 function normalizeTimestamp(value) {
@@ -1422,11 +1539,10 @@ function renderSkins(){
         card.appendChild(cost);
 
         const b = document.createElement('button');
-        if (adminOverrides[id] === false) {
-            cost.textContent = 'LOCKED BY ADMIN';
-            cost.style.color = 'var(--red)';
-            b.textContent = 'LOCKED BY ADMIN'; b.disabled = true;
-        } else if(cur === id) {
+        // Admin-revoked skins look like ordinary skins the player has not unlocked yet.
+        // No 'locked by admin' wording is shown; the override still prevents a purchase
+        // from silently undoing an explicit admin lock.
+        if(cur === id && o[id]) {
             b.textContent = 'EQUIPPED'; b.className = 'equipped'; b.disabled = true;
         } else if(o[id]) {
             b.textContent = 'EQUIP';
@@ -1441,7 +1557,7 @@ function renderSkins(){
             b.textContent = 'LOCKED'; b.disabled = true;
         } else {
             b.textContent = plix() >= s.cost ? 'BUY' : 'NEED PLIX';
-            b.className = 'buy'; b.disabled = plix() < s.cost;
+            b.className = 'buy'; b.disabled = plix() < s.cost || adminOverrides[id] === false;
             b.onclick = () => buy(id);
         }
         card.appendChild(b);
@@ -1468,6 +1584,11 @@ function sortCompletedFirst(items, kind) {
     const progress = kind === 'daily' ? dailyProgress() : achievementProgress();
     const claims = kind === 'daily' ? dailyClaimed() : (kind === 'permanent' ? missionClaimed() : achievementClaimed());
     const completionScore = (mission) => {
+        if (kind === 'achievement') {
+            const adminState = parse('plixo_admin_achievement_overrides', {})[mission.id];
+            if (adminState === false) return 0;
+            if (adminState === true) return 2;
+        }
         const levels = Array.isArray(mission.levels) ? mission.levels : null;
         if (levels) {
             const firstUnclaimed = firstUnclaimedLevelIndex(mission, claims);
@@ -1500,7 +1621,8 @@ function renderMissions(containerId, missionArray, progData, claimData, isDaily,
     const mixedPermanentClaims = mixedMissions ? missionClaimed() : null;
     const signature = JSON.stringify({
         missionArray, progData, claimData, mixedDailyProg, mixedDailyClaims,
-        mixedPermanentClaims, activeLevels, isDaily, isAchievement, mixedMissions
+        mixedPermanentClaims, activeLevels, isDaily, isAchievement, mixedMissions,
+        adminAchievementOverrides: parse('plixo_admin_achievement_overrides', {})
     });
     if (box.dataset.renderSignature === signature) return;
 
@@ -1534,13 +1656,17 @@ function renderMissions(containerId, missionArray, progData, claimData, isDaily,
             target: level.target, reward: level.reward
         } : m;
         const trackingId = isMulti ? m.id : (currentM.progressId || currentM.id);
+        const adminAchievementState = itemIsAchievement ? parse('plixo_admin_achievement_overrides', {})[currentM.id] : undefined;
+        const achievementRevoked = itemIsAchievement && adminAchievementState === false;
         let progVal = Number(itemProgData[trackingId] || 0);
         // Some older game bridges reported a level-specific key instead of the base mission id.
         if (isMulti && Number(itemProgData[currentM.id] || 0) > progVal) {
             progVal = Number(itemProgData[currentM.id] || 0);
         }
         if (currentM.id === 'a9' && itemIsAchievement) progVal = parse('plixo_played_games', []).length;
-        const was = !!itemClaimData[currentM.id];
+        // An achievement explicitly revoked by an admin should look like a fresh, unearned one.
+        if (achievementRevoked) progVal = 0;
+        const was = adminAchievementState === true ? true : (adminAchievementState === false ? false : !!itemClaimData[currentM.id]);
         const prog = was ? currentM.target : Math.min(currentM.target, progVal);
         const done = prog >= currentM.target;
         const card = document.createElement('div');
@@ -1564,15 +1690,17 @@ function renderMissions(containerId, missionArray, progData, claimData, isDaily,
         const left = document.createElement('div');
         const h = document.createElement('h3'); h.textContent = currentM.title; left.appendChild(h);
         const p = document.createElement('p'); p.textContent = currentM.desc + ' ' + prog + '/' + currentM.target; left.appendChild(p);
-        const bar = document.createElement('div'); bar.className = 'bar';
-        const fill = document.createElement('span');
-        const barPercent = (was || prog >= currentM.target)
-            ? 100
-            : (currentM.target > 0 ? Math.min(100, prog / currentM.target * 100) : 0);
-        fill.style.width = barPercent + '%';
-        fill.style.backgroundColor = '#ff4444';
-        if (barPercent > 0) fill.style.minWidth = '2px';
-        bar.appendChild(fill); left.appendChild(bar);
+        if (!achievementRevoked) {
+            const bar = document.createElement('div'); bar.className = 'bar';
+            const fill = document.createElement('span');
+            const barPercent = (was || prog >= currentM.target)
+                ? 100
+                : (currentM.target > 0 ? Math.min(100, prog / currentM.target * 100) : 0);
+            fill.style.width = barPercent + '%';
+            fill.style.backgroundColor = '#ff4444';
+            if (barPercent > 0) fill.style.minWidth = '2px';
+            bar.appendChild(fill); left.appendChild(bar);
+        }
         const right = document.createElement('div');
         let rewardText = currentM.rewardLabel || m.rewardLabel;
         const rewardValue = Number(currentM.reward || 0);
@@ -1582,8 +1710,9 @@ function renderMissions(containerId, missionArray, progData, claimData, isDaily,
         }
         right.innerHTML = `<div class="reward">${rewardText}</div>`;
         const btn = document.createElement('button');
+        // The card is presented exactly like an ordinary unclaimed achievement.
         btn.textContent = was ? 'CLAIMED' : 'CLAIM';
-        btn.disabled = !done || was;
+        btn.disabled = !done || was || achievementRevoked;
         btn.onclick = () => claim(currentM, itemClaimData, itemIsDaily, itemIsAchievement, m);
         right.appendChild(btn);
         inner.append(left, right); card.appendChild(inner); fragment.appendChild(card);
@@ -1593,6 +1722,7 @@ function renderMissions(containerId, missionArray, progData, claimData, isDaily,
 }
 function claim(m, claimData, isDaily, isAchievement, parentMission = null) {
     if (claimData[m.id]) return;
+    if (isAchievement && parse('plixo_admin_achievement_overrides', {})[m.id] === false) return;
     claimData[m.id] = true;
     if (isDaily) {
         localStorage.setItem('plixo_daily_claimed_' + getToday(), JSON.stringify(claimData));
@@ -1654,7 +1784,7 @@ document.querySelectorAll('.nav button').forEach(b => b.addEventListener('click'
 window.addEventListener('storage', (e) => {
     if (!e.key || e.key === 'plixo_skin_image' || e.key === 'plixo_account_first_seen_at' || e.key === 'plixo_account_created_at_source') return;
     const explicitKeys = new Set([
-        'plixo_plix', 'plixo_owned_skins', 'plixo_selected_skin',
+        'plixo_plix', 'plixo_owned_skins', 'plixo_selected_skin', 'plixo_admin_achievement_overrides',
         'plixo_mission_progress', 'plixo_claimed_missions', 'plixo_claimed_achievements',
         'plixo_played_games', 'plixo_active_mission_levels', 'plixo_daily_bonus_date', 'plixo_daily_missions_date',
         'plixo_daily_missions_ids', 'plixo_account_created_at', 'plixo_sync_code',
