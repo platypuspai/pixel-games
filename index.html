@@ -460,6 +460,28 @@
         .animate-bob { animation: bobUp 2s ease-in-out infinite; }
         .animate-spin { animation: spin 4s linear infinite; transform-origin: center; }
         .animate-pulse { animation: pulse 2s ease-in-out infinite; }
+
+        /* Mini Spikes Platformer: simple block-and-spikes preview, matching MBP. */
+        .msp-preview-scene { width: 80px; height: 80px; image-rendering: pixelated; }
+        .msp-preview-player { animation: mspSimpleJump 2.4s ease-in-out infinite; }
+        .msp-preview-hazards { animation: mspSimpleHazards 3.6s linear infinite; }
+        @keyframes mspSimpleJump {
+            /* Quick take-off: clear the spike before it reaches the block. */
+            0% { transform: translate(0, 0); }
+            2% { transform: translate(0, -1px); }
+            7% { transform: translate(0, -5px); }
+            36% { transform: translate(0, -5px); }
+            43% { transform: translate(2px, -5px); }
+            51% { transform: translate(5px, 0); }
+            72%, 100% { transform: translate(7px, 0); }
+        }
+        @keyframes mspSimpleHazards {
+            from { transform: translateX(0); }
+            to { transform: translateX(-80px); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .msp-preview-player, .msp-preview-hazards { animation-duration: 8s; }
+        }
     </style>
 
     <!-- PLIXO UNIVERSAL TRACKER (Inclusief setPlixoMaxProgress voor Snake) -->
@@ -827,11 +849,23 @@
     <div class="game-card" style="--card-accent: #ff44aa;">
         <div class="card-corner tl"></div><div class="card-corner br"></div>
         <div class="card-preview" style="--preview-bg: #1b0714;">
-            <svg width="80" height="80" viewBox="0 0 16 16" style="image-rendering:pixelated;">
-                <rect x="0" y="14" width="16" height="2" fill="#ff44aa" opacity="0.4"/>
-                <path d="M2 14 L4 8 L6 14 M7 14 L9 8 L11 14 M12 14 L14 8 L16 14" fill="#ff44aa" opacity="0.8"/>
-                <rect x="4" y="3" width="4" height="4" fill="#ff44aa"/>
-                <rect x="4" y="3" width="4" height="1" fill="#ffaadd" opacity="0.8"/>
+            <svg class="msp-preview-scene" viewBox="0 0 16 16" role="img" aria-label="Animated Mini Spikes Platformer preview" style="image-rendering:pixelated;">
+                <!-- Same minimal pixel-block style as Mini Browser Platformer, with spikes instead of platforms. -->
+                <rect x="0" y="14" width="16" height="1" fill="#ff44aa" opacity=".45"/>
+                <rect x="0" y="15" width="16" height="1" fill="#ff44aa" opacity=".12"/>
+                <g class="msp-preview-hazards" fill="#ff44aa">
+                    <path d="M10 14 L12 11 L14 14 Z"/>
+                    <path d="M14 14 L16 11 L18 14 Z"/>
+                    <path d="M18 14 L20 11 L22 14 Z"/>
+                    <path d="M22 14 L24 11 L26 14 Z"/>
+                    <path d="M26 14 L28 11 L30 14 Z"/>
+                </g>
+                <g class="msp-preview-player">
+                    <rect x="4" y="10" width="6" height="6" fill="#ff44aa" opacity=".15"/>
+                    <rect x="5" y="10" width="4" height="4" fill="#ff44aa"/>
+                    <rect x="5" y="10" width="4" height="1" fill="#ffaadd" opacity=".75"/>
+                    <rect x="5" y="10" width="1" height="4" fill="#ffaadd" opacity=".5"/>
+                </g>
             </svg>
         </div>
         <div class="card-body">
