@@ -801,6 +801,177 @@ let remotePlayers={};
 let remoteSkinImages={};
 let fbListeners=[];
 
+let oneSquareBlockGrantRef=null;
+let oneSquareBlockGrantCallback=null;
+let oneSquareBlockGrantAccountCode=null;
+const oneSquareBlockGrantsInFlight = new Set();
+const oneSquareGrantSessionToken = myPlayerId + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+
+function getOneSquareAccountCode() {
+  const candidates = [localStorage.getItem("pg_account_code"), localStorage.getItem("pg_player_id"), localStorage.getItem("plixo_sync_code")];
+  return candidates.map(value => String(value || "").trim().toUpperCase()).find(value => /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/.test(value)) || null;
+}
+function oneSquareGrantReceipts(code) {
+  try {
+    const raw = JSON.parse(localStorage.getItem("onesquare_block_grant_receipts_" + code) || "{}");
+    return raw && typeof raw === "object" ? raw : {};
+  } catch (_) { return {}; }
+}
+function saveOneSquareGrantReceipt(code, grantId, mode) {
+  const receipts = oneSquareGrantReceipts(code);
+  const existing = receipts[grantId] && typeof receipts[grantId] === "object" ? receipts[grantId] : {};
+  existing[mode] = true;
+  existing[mode + "_received_at"] = Date.now();
+  existing.player_id = myPlayerId;
+  receipts[grantId] = existing;
+  const entries = Object.entries(receipts).sort((a, b) => {
+    const aTime = Math.max(Number(a[1]?.singleplayer_received_at) || 0, Number(a[1]?.multiplayer_received_at) || 0, Number(a[1]?.received_at) || 0);
+    const bTime = Math.max(Number(b[1]?.singleplayer_received_at) || 0, Number(b[1]?.multiplayer_received_at) || 0, Number(b[1]?.received_at) || 0);
+    return bTime - aTime;
+  }).slice(0, 400);
+  try { localStorage.setItem("onesquare_block_grant_receipts_" + code, JSON.stringify(Object.fromEntries(entries))); } catch (_) {}
+}
+function getOneSquareModeHotbar(mode) {
+  if (mode === "singleplayer") return isMultiplayer ? loadSPHotbar() : hotbar;
+  return isMultiplayer ? hotbar : loadMPHotbar();
+}
+function saveOneSquareModeHotbar(mode, items) {
+  if (mode === "singleplayer") {
+    if (!isMultiplayer) { hotbar = items; saveSPHotbar(); }
+    else localStorage.setItem("onesquare_sp_hotbar_" + myPlayerId, JSON.stringify(items));
+    return;
+  }
+  if (isMultiplayer) { hotbar = items; saveMPHotbar(); }
+  else localStorage.setItem("onesquare_mp_hotbar_" + myPlayerId, JSON.stringify(items));
+}
+function addBlocksToOneSquareHotbar(items, blockId, quantity) {
+  const copy = items.map(slot => slot ? { ...slot } : null);
+  if (!copy.some(slot => slot && slot.id === blockId) && !copy.some(slot => !slot)) return null;
+  for (let i = 0; i < quantity; i++) {
+    const existing = copy.find(slot => slot && slot.id === blockId);
+    if (existing) existing.count = (Number(existing.count) || 0) + 1;
+    else {
+      const emptyIndex = copy.findIndex(slot => !slot);
+      if (emptyIndex < 0) return null;
+      copy[emptyIndex] = { id: blockId, count: 1 };
+    }
+  }
+  return copy;
+}
+async function markOneSquareGrantClaimed(code, grantId) {
+  const ref = db.ref("onesquare/blockGrants/" + code + "/" + grantId);
+  return ref.transaction(current => {
+    if (!current || current.status === "claimed") return;
+    return { ...current, status: "claimed", claimed_at: Date.now(), claimed_by: myPlayerId };
+  }, undefined, false);
+}
+async function releaseOneSquareGrantClaim(code, grantId, token) {
+  const ref = db.ref("onesquare/blockGrants/" + code + "/" + grantId);
+  await ref.transaction(current => {
+    if (!current || current.status !== "processing" || current.processing_by !== token) return;
+    return { ...current, status: "pending", processing_by: null, processing_at: null };
+  }, undefined, false);
+}
+async function processOneSquareBlockGrant(code, grantId, grant) {
+  const block = BLOCK_TYPES.find(item => item.id === String(grant.block_id || ""));
+  const quantity = Math.floor(Number(grant.quantity) || 0);
+  if (!block || quantity < 1 || quantity > 9999) return;
+
+  let receipts = oneSquareGrantReceipts(code);
+  let receipt = receipts[grantId] && typeof receipts[grantId] === "object" ? receipts[grantId] : {};
+  // Compatibility with an older receipt format: never issue a gift twice if it was already recorded.
+  if (receipt.received_at && receipt.singleplayer === undefined && receipt.multiplayer === undefined) {
+    await markOneSquareGrantClaimed(code, grantId).catch(error => console.warn("Could not confirm an already-received One Square grant:", error));
+    return;
+  }
+  if (receipt.singleplayer && receipt.multiplayer) {
+    await markOneSquareGrantClaimed(code, grantId).catch(error => console.warn("Could not finalize a completed One Square grant:", error));
+    return;
+  }
+  if (grant.status === "claimed") return;
+  const initialStatus = String(grant.status || "pending");
+  if (initialStatus === "processing" && Date.now() - (Number(grant.processing_at) || 0) < 60000) return;
+  if (initialStatus !== "pending" && initialStatus !== "processing") return;
+
+  const claimToken = oneSquareGrantSessionToken + '-' + grantId;
+  const grantRef = db.ref("onesquare/blockGrants/" + code + "/" + grantId);
+  const claimResult = await grantRef.transaction(current => {
+    if (!current || current.status === "claimed") return;
+    const status = String(current.status || "pending");
+    const processingAge = Date.now() - (Number(current.processing_at) || 0);
+    if (status === "processing" && processingAge < 60000) return;
+    if (status !== "pending" && status !== "processing") return;
+    return { ...current, status: "processing", processing_by: claimToken, processing_at: Date.now() };
+  }, undefined, false);
+  const claimed = claimResult && claimResult.snapshot ? claimResult.snapshot.val() : null;
+  if (!claimResult || !claimResult.committed || !claimed || claimed.processing_by !== claimToken) return;
+
+  if (getOneSquareAccountCode() !== code) {
+    await releaseOneSquareGrantClaim(code, grantId, claimToken).catch(() => {});
+    return;
+  }
+
+  let deliveredAny = false;
+  for (const mode of ["singleplayer", "multiplayer"]) {
+    receipts = oneSquareGrantReceipts(code);
+    receipt = receipts[grantId] && typeof receipts[grantId] === "object" ? receipts[grantId] : {};
+    if (receipt[mode]) continue;
+    const currentItems = getOneSquareModeHotbar(mode);
+    const updatedItems = addBlocksToOneSquareHotbar(currentItems, block.id, quantity);
+    if (!updatedItems) continue; // This mode's hotbar is full; leave the gift pending for a retry.
+    saveOneSquareModeHotbar(mode, updatedItems);
+    saveOneSquareGrantReceipt(code, grantId, mode);
+    deliveredAny = true;
+  }
+
+  receipts = oneSquareGrantReceipts(code);
+  receipt = receipts[grantId] && typeof receipts[grantId] === "object" ? receipts[grantId] : {};
+  if (receipt.singleplayer && receipt.multiplayer) {
+    await markOneSquareGrantClaimed(code, grantId).catch(error => console.warn("Could not finalize One Square block grant; local receipts prevent duplicate delivery:", error));
+  } else {
+    await releaseOneSquareGrantClaim(code, grantId, claimToken).catch(error => console.warn("Could not release a partially delivered One Square grant:", error));
+  }
+
+  if (deliveredAny) {
+    const message = "🎁 +" + quantity + " " + block.name + " received";
+    setStatus(message, "#ff8");
+    if (!isMultiplayer) setTimeout(() => { if (!isMultiplayer && statusEl.textContent === message) setStatus(""); }, 4500);
+  }
+}
+async function processOneSquareBlockGrants(code, grants) {
+  if (getOneSquareAccountCode() !== code || !grants || typeof grants !== "object") return;
+  for (const [grantId, rawGrant] of Object.entries(grants)) {
+    if (!rawGrant || typeof rawGrant !== "object" || oneSquareBlockGrantsInFlight.has(grantId)) continue;
+    if (rawGrant.status === "claimed" && !oneSquareGrantReceipts(code)[grantId]) continue;
+    oneSquareBlockGrantsInFlight.add(grantId);
+    try { await processOneSquareBlockGrant(code, grantId, rawGrant); }
+    catch (error) { console.warn("Could not receive One Square block grant:", error); }
+    finally { oneSquareBlockGrantsInFlight.delete(grantId); }
+  }
+}
+function setupOneSquareBlockGrantListener() {
+  if (!fbInited || !db) return;
+  const code = getOneSquareAccountCode();
+  if (!code) {
+    if (oneSquareBlockGrantRef && oneSquareBlockGrantCallback) oneSquareBlockGrantRef.off("value", oneSquareBlockGrantCallback);
+    oneSquareBlockGrantRef = null;
+    oneSquareBlockGrantCallback = null;
+    oneSquareBlockGrantAccountCode = null;
+    return;
+  }
+  if (code === oneSquareBlockGrantAccountCode && oneSquareBlockGrantRef) {
+    oneSquareBlockGrantRef.once("value").then(snapshot => processOneSquareBlockGrants(code, snapshot.val() || {})).catch(error => console.warn("Could not retry One Square block grants:", error));
+    return;
+  }
+  if (oneSquareBlockGrantRef && oneSquareBlockGrantCallback) oneSquareBlockGrantRef.off("value", oneSquareBlockGrantCallback);
+  oneSquareBlockGrantAccountCode = code;
+  oneSquareBlockGrantRef = db.ref("onesquare/blockGrants/" + code);
+  oneSquareBlockGrantCallback = snapshot => {
+    processOneSquareBlockGrants(code, snapshot.val() || {}).catch(error => console.warn("One Square block grant sync failed:", error));
+  };
+  oneSquareBlockGrantRef.on("value", oneSquareBlockGrantCallback, error => console.warn("Could not listen for One Square block grants:", error));
+}
+
 function setRemoteSkinImage(playerId, dataUrl) {
   if (typeof dataUrl !== "string" || !/^data:image\//.test(dataUrl)) {
     delete remoteSkinImages[playerId];
@@ -829,11 +1000,15 @@ function setStatus(msg,color="#5a5"){
 }
 
 function initFirebase() {
-  if(fbInited) return;
+  if(fbInited) {
+    setupOneSquareBlockGrantListener();
+    return;
+  }
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
     db=firebase.database();
     fbInited=true;
+    setupOneSquareBlockGrantListener();
   } catch(e) { console.warn("Firebase init failed",e); }
 }
 
@@ -1344,6 +1519,7 @@ async function loginWithPlixo(code) {
   const profileSnap = await db.ref("plixo_users/" + normalizedCode).once("value");
   applyPlixoProfile(profileSnap.val() || {});
   attachPlixoProfileListener();
+  setupOneSquareBlockGrantListener();
   loginError.textContent = "";
   loginPanel.classList.add("hidden");
   if (!gameStarted) {
@@ -1381,6 +1557,21 @@ if (changeAccountButton) {
     accountCodeInput.focus();
   });
 }
+
+window.addEventListener("storage", event => {
+  if (["pg_account_code", "pg_player_id", "plixo_sync_code", "onesquare_plixo_account_code_v1"].includes(event.key)) {
+    if (getOneSquareAccountCode()) {
+      if (fbInited) setupOneSquareBlockGrantListener();
+      else initFirebase();
+    }
+  }
+});
+window.addEventListener("focus", () => {
+  if (getOneSquareAccountCode()) {
+    if (fbInited) setupOneSquareBlockGrantListener();
+    else initFirebase();
+  }
+});
 
 (async function restorePlixoAccount() {
   const savedCode = String(localStorage.getItem(ACCOUNT_STORAGE_KEY) || "").trim().toUpperCase();
