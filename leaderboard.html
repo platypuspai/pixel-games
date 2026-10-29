@@ -546,12 +546,27 @@ async function importAccount() {
         localStorage.setItem('md6_n', cleanName);
 
         await db.ref('nameOwners/' + data.deviceId).set({ name: cleanName });
-        await db.ref('accountCodes/' + code).transaction(current => ({ ...(current && typeof current === 'object' ? current : {}), deviceId: data.deviceId, name: cleanName, createdAt: (current && Number(current.createdAt)) || Number(data.createdAt) || Date.now() }));
-        const importedCreatedAt = Number((await db.ref('accountCodes/' + code + '/createdAt').once('value')).val()) || Date.now();
-        await db.ref('plixo_users/' + code + '/account_created_at').transaction(current => current || importedCreatedAt);
-        localStorage.setItem('pg_account_created_at', String(importedCreatedAt));
-        localStorage.setItem('plixo_account_created_at', String(importedCreatedAt));
-        localStorage.setItem('plixo_account_created_at_source', 'firebase');
+        await db.ref('accountCodes/' + code).transaction(current => {
+            const record = current && typeof current === 'object' ? { ...current } : {};
+            const hasExistingAccount = !!(current && typeof current === 'object' && (current.deviceId || current.name));
+            const knownDate = Number(record.createdAt) || Number(data.createdAt) || 0;
+            record.deviceId = data.deviceId;
+            record.name = cleanName;
+            // Do not label an old account as newly created just because its historic date is missing.
+            if (knownDate) record.createdAt = knownDate;
+            else if (!hasExistingAccount) record.createdAt = Date.now();
+            return record;
+        });
+        const accountDateSnap = await db.ref('accountCodes/' + code + '/createdAt').once('value');
+        const profileDateSnap = await db.ref('plixo_users/' + code + '/account_created_at').once('value');
+        const importedCreatedAt = Number(accountDateSnap.val()) || Number(profileDateSnap.val()) || 0;
+        if (importedCreatedAt) {
+            await db.ref('plixo_users/' + code + '/account_created_at').transaction(current => current || importedCreatedAt);
+            localStorage.setItem('pg_account_created_at', String(importedCreatedAt));
+            localStorage.setItem('plixo_account_created_at', String(importedCreatedAt));
+            localStorage.setItem('plixo_account_created_at_source', 'firebase');
+        }
+        await upsertAccountCreationIndex(code, { ...data, name: cleanName, createdAt: importedCreatedAt || data.createdAt || null });
 
         const fixNameInDB = (dbSnap, path) => {
             dbSnap.forEach(child => {
@@ -618,17 +633,26 @@ async function confirmName() {
         if (conflict) { showNameError(tr('nameTaken')); btn.textContent = tr('confirmNameBtn'); btn.disabled = false; return; }
 
         await db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: val });
-        const accountRecordResult = await db.ref('accountCodes/' + MY_ACCOUNT_CODE).transaction(current => ({
-            ...(current && typeof current === 'object' ? current : {}),
-            deviceId: MY_DEVICE_ID,
-            name: val,
-            createdAt: (current && Number(current.createdAt)) || Date.now()
-        }));
-        const accountCreatedAt = Number(accountRecordResult.snapshot && accountRecordResult.snapshot.val() && accountRecordResult.snapshot.val().createdAt) || Date.now();
-        await db.ref('plixo_users/' + MY_ACCOUNT_CODE + '/account_created_at').transaction(current => current || accountCreatedAt);
-        localStorage.setItem('pg_account_created_at', String(accountCreatedAt));
-        localStorage.setItem('plixo_account_created_at', String(accountCreatedAt));
-        localStorage.setItem('plixo_account_created_at_source', 'firebase');
+        const localCreatedAt = normalizeCreationTimestamp(localStorage.getItem('pg_account_created_at')) || normalizeCreationTimestamp(localStorage.getItem('plixo_account_created_at')) || 0;
+        const accountRecordResult = await db.ref('accountCodes/' + MY_ACCOUNT_CODE).transaction(current => {
+            const record = current && typeof current === 'object' ? { ...current } : {};
+            const hasExistingAccount = !!(current && typeof current === 'object' && (current.deviceId || current.name));
+            const knownDate = Number(record.createdAt) || localCreatedAt;
+            record.deviceId = MY_DEVICE_ID;
+            record.name = val;
+            if (knownDate) record.createdAt = knownDate;
+            else if (!hasExistingAccount) record.createdAt = Date.now();
+            return record;
+        });
+        const savedAccountRecord = accountRecordResult.snapshot && accountRecordResult.snapshot.val() || {};
+        const accountCreatedAt = normalizeCreationTimestamp(savedAccountRecord.createdAt) || localCreatedAt || 0;
+        if (accountCreatedAt) {
+            await db.ref('plixo_users/' + MY_ACCOUNT_CODE + '/account_created_at').transaction(current => current || accountCreatedAt);
+            localStorage.setItem('pg_account_created_at', String(accountCreatedAt));
+            localStorage.setItem('plixo_account_created_at', String(accountCreatedAt));
+            localStorage.setItem('plixo_account_created_at_source', 'firebase');
+        }
+        await upsertAccountCreationIndex(MY_ACCOUNT_CODE, { ...savedAccountRecord, name: val, createdAt: accountCreatedAt || null });
         if (!localStorage.getItem('md6_did')) localStorage.setItem('md6_did', MY_DEVICE_ID);
         localStorage.setItem(LB_KEY, val);
         document.getElementById('bar-name').textContent = val;
@@ -698,17 +722,26 @@ else {
             const ownerOk = ownerSnap.val() && ownerSnap.val().name && ownerSnap.val().name.toLowerCase() === initName.toLowerCase();
             const codeOk  = codeSnap.val() && codeSnap.val().deviceId === MY_DEVICE_ID;
             if (!ownerOk) db.ref('nameOwners/' + MY_DEVICE_ID).set({ name: initName }).catch(()=>{});
-            db.ref('accountCodes/' + MY_ACCOUNT_CODE).transaction(current => ({
-                ...(current && typeof current === 'object' ? current : {}),
-                deviceId: MY_DEVICE_ID,
-                name: initName,
-                createdAt: (current && Number(current.createdAt)) || Date.now()
-            })).then(result => {
-                const createdAt = Number(result.snapshot && result.snapshot.val() && result.snapshot.val().createdAt) || Date.now();
-                db.ref('plixo_users/' + MY_ACCOUNT_CODE + '/account_created_at').transaction(current => current || createdAt).catch(()=>{});
-                localStorage.setItem('pg_account_created_at', String(createdAt));
-                localStorage.setItem('plixo_account_created_at', String(createdAt));
-                localStorage.setItem('plixo_account_created_at_source', 'firebase');
+            const localCreatedAt = normalizeCreationTimestamp(localStorage.getItem('pg_account_created_at')) || normalizeCreationTimestamp(localStorage.getItem('plixo_account_created_at')) || 0;
+            db.ref('accountCodes/' + MY_ACCOUNT_CODE).transaction(current => {
+                const record = current && typeof current === 'object' ? { ...current } : {};
+                const hasExistingAccount = !!(current && typeof current === 'object' && (current.deviceId || current.name));
+                const knownDate = Number(record.createdAt) || localCreatedAt;
+                record.deviceId = MY_DEVICE_ID;
+                record.name = initName;
+                if (knownDate) record.createdAt = knownDate;
+                else if (!hasExistingAccount) record.createdAt = Date.now();
+                return record;
+            }).then(async result => {
+                const savedRecord = result.snapshot && result.snapshot.val() || {};
+                const createdAt = normalizeCreationTimestamp(savedRecord.createdAt) || localCreatedAt || 0;
+                if (createdAt) {
+                    await db.ref('plixo_users/' + MY_ACCOUNT_CODE + '/account_created_at').transaction(current => current || createdAt);
+                    localStorage.setItem('pg_account_created_at', String(createdAt));
+                    localStorage.setItem('plixo_account_created_at', String(createdAt));
+                    localStorage.setItem('plixo_account_created_at_source', 'firebase');
+                }
+                await upsertAccountCreationIndex(MY_ACCOUNT_CODE, { ...savedRecord, name: initName, createdAt: createdAt || null });
                 if (!localStorage.getItem('md6_did')) localStorage.setItem('md6_did', MY_DEVICE_ID);
             }).catch(()=>{});
         });
@@ -821,6 +854,137 @@ const FB_CFG = {
 
 let fbApp;
 try { fbApp = firebase.app('lb'); } catch(e) { fbApp = firebase.initializeApp(FB_CFG, 'lb'); }
+
+// Creation-date index for Firebase Console. Its keys use an inverted timestamp,
+// so ascending key order means newest account first.
+const ACCOUNT_CREATION_INDEX_MAX = 9999999999999;
+function normalizeCreationTimestamp(value) {
+    let timestamp = Number(value);
+    if (!Number.isFinite(timestamp) || timestamp <= 0) return null;
+    // Accept either Unix seconds or JavaScript milliseconds from older records.
+    if (timestamp < 100000000000) timestamp *= 1000;
+    return Math.floor(timestamp);
+}
+function creationSortKey(code, timestamp) {
+    const inverse = Math.max(0, ACCOUNT_CREATION_INDEX_MAX - normalizeCreationTimestamp(timestamp));
+    return String(Math.floor(inverse)).padStart(13, '0') + '_' + String(code).toUpperCase();
+}
+function accountCodeLooksValid(code) {
+    return /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/.test(String(code || '').toUpperCase());
+}
+async function upsertAccountCreationIndex(code, accountRecord) {
+    const db = fbApp.database();
+    code = String(code || '').toUpperCase();
+    if (!accountCodeLooksValid(code)) return;
+    const record = accountRecord && typeof accountRecord === 'object' ? accountRecord : {};
+    const timestamp = normalizeCreationTimestamp(record.createdAt) || normalizeCreationTimestamp(record.account_created_at)
+        || (code === String(MY_ACCOUNT_CODE || '').toUpperCase() ? (normalizeCreationTimestamp(localStorage.getItem('pg_account_created_at')) || normalizeCreationTimestamp(localStorage.getItem('plixo_account_created_at'))) : null);
+    const playerName = String(record.name || record.player_name || 'Unknown name');
+    const mapRef = db.ref('accountCreationIndexByCode/' + code);
+    const unknownRef = db.ref('accountCreationUnknown/' + code);
+    if (!timestamp) {
+        const unknown = { accountCode: code, playerName, status: 'No historic creation timestamp recorded; exact date unknown' };
+        const unknownSnap = await unknownRef.once('value');
+        if (JSON.stringify(unknownSnap.val() || {}) !== JSON.stringify(unknown)) await unknownRef.set(unknown);
+        return;
+    }
+    const sortKey = creationSortKey(code, timestamp);
+    const entry = { accountCode: code, playerName, createdAt: timestamp, createdAtISO: new Date(timestamp).toISOString() };
+    const [mapSnap, entrySnap, unknownSnap] = await Promise.all([
+        mapRef.once('value'), db.ref('accountCreationIndex/' + sortKey).once('value'), unknownRef.once('value')
+    ]);
+    const previousKey = mapSnap.val() && mapSnap.val().sortKey;
+    const previousEntry = entrySnap.val();
+    const writes = [];
+    if (previousKey && previousKey !== sortKey) writes.push(db.ref('accountCreationIndex/' + previousKey).remove());
+    if (!previousEntry || previousEntry.accountCode !== entry.accountCode || previousEntry.playerName !== entry.playerName || Number(previousEntry.createdAt) !== entry.createdAt) {
+        writes.push(db.ref('accountCreationIndex/' + sortKey).set(entry));
+    }
+    const currentMap = mapSnap.val();
+    if (!currentMap || currentMap.sortKey !== sortKey || currentMap.playerName !== playerName) {
+        writes.push(mapRef.set({ sortKey, createdAt: timestamp, playerName }));
+    }
+    if (unknownSnap.exists()) writes.push(unknownRef.remove());
+    await Promise.all(writes);
+}
+async function rebuildAccountCreationIndex() {
+    const db = fbApp.database();
+    const [accountsSnap, indexSnap, mapSnap, unknownSnap] = await Promise.all([
+        db.ref('accountCodes').once('value'),
+        db.ref('accountCreationIndex').once('value'),
+        db.ref('accountCreationIndexByCode').once('value'),
+        db.ref('accountCreationUnknown').once('value')
+    ]);
+    const accounts = accountsSnap.val() || {};
+    const index = indexSnap.val() || {};
+    const maps = mapSnap.val() || {};
+    const unknowns = unknownSnap.val() || {};
+    const pending = [];
+
+    // Some older versions stored the date only on plixo_users/{code}/account_created_at.
+    // Look up those dates once before marking accounts as historically unknown.
+    const legacyDateCodes = Object.entries(accounts)
+        .filter(([rawCode, rawRecord]) => accountCodeLooksValid(rawCode)
+            && !(rawRecord && normalizeCreationTimestamp(rawRecord.createdAt))
+            && !unknowns[String(rawCode).toUpperCase()])
+        .map(([rawCode]) => String(rawCode).toUpperCase());
+    for (let i = 0; i < legacyDateCodes.length; i += 25) {
+        const batch = legacyDateCodes.slice(i, i + 25);
+        const dates = await Promise.all(batch.map(async code => {
+            try {
+                const snap = await db.ref('plixo_users/' + code + '/account_created_at').once('value');
+                return [code, normalizeCreationTimestamp(snap.val())];
+            } catch (_) { return [code, null]; }
+        }));
+        for (const [code, timestamp] of dates) {
+            if (!timestamp) continue;
+            const oldRecord = accounts[code] && typeof accounts[code] === 'object' ? accounts[code] : {};
+            accounts[code] = { ...oldRecord, createdAt: timestamp };
+            pending.push(() => db.ref('accountCodes/' + code).transaction(current => {
+                if (!current || typeof current !== 'object') return current;
+                if (normalizeCreationTimestamp(current.createdAt)) return current;
+                return { ...current, createdAt: timestamp };
+            }));
+        }
+    }
+
+    for (const [rawCode, rawRecord] of Object.entries(accounts)) {
+        const code = String(rawCode).toUpperCase();
+        if (!accountCodeLooksValid(code)) continue;
+        const record = rawRecord && typeof rawRecord === 'object' ? rawRecord : {};
+        let timestamp = normalizeCreationTimestamp(record.createdAt);
+        if (!timestamp && code === String(MY_ACCOUNT_CODE || '').toUpperCase()) {
+            timestamp = normalizeCreationTimestamp(localStorage.getItem('pg_account_created_at')) || normalizeCreationTimestamp(localStorage.getItem('plixo_account_created_at'));
+        }
+        const name = String(record.name || 'Unknown name');
+        if (!timestamp) {
+            const existingMap = maps[code];
+            // Preserve a previously indexed verified date; never replace missing history with today's date.
+            if (existingMap && existingMap.sortKey && index[existingMap.sortKey]) continue;
+            const unknown = { accountCode: code, playerName: name, status: 'No historic creation timestamp recorded; exact date unknown' };
+            if (JSON.stringify(unknowns[code] || {}) !== JSON.stringify(unknown)) pending.push(() => db.ref('accountCreationUnknown/' + code).set(unknown));
+            continue;
+        }
+        const key = creationSortKey(code, timestamp);
+        const entry = { accountCode: code, playerName: name, createdAt: timestamp, createdAtISO: new Date(timestamp).toISOString() };
+        const oldMap = maps[code];
+        if (oldMap && oldMap.sortKey && oldMap.sortKey !== key) pending.push(() => db.ref('accountCreationIndex/' + oldMap.sortKey).remove());
+        const existingEntry = index[key];
+        if (!existingEntry || existingEntry.accountCode !== code || existingEntry.playerName !== name || Number(existingEntry.createdAt) !== timestamp) {
+            pending.push(() => db.ref('accountCreationIndex/' + key).set(entry));
+        }
+        if (!oldMap || oldMap.sortKey !== key || oldMap.playerName !== name) {
+            pending.push(() => db.ref('accountCreationIndexByCode/' + code).set({ sortKey: key, createdAt: timestamp, playerName: name }));
+        }
+        if (unknowns[code]) pending.push(() => db.ref('accountCreationUnknown/' + code).remove());
+    }
+    // Pace writes in small batches in case the project already has many accounts.
+    for (let i = 0; i < pending.length; i += 30) {
+        await Promise.all(pending.slice(i, i + 30).map(write => write()));
+    }
+}
+setTimeout(() => rebuildAccountCreationIndex().catch(error => console.warn('Could not index account creation dates.', error)), 1200);
+
 function formatNum(n) { return Number(n).toLocaleString('en-US'); }
 
 // Money Digger
