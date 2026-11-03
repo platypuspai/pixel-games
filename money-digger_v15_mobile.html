@@ -141,26 +141,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
 #menu-home{position:absolute;top:16px;left:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 10px;color:rgba(255,255,255,.5);font-size:.6rem;cursor:pointer;pointer-events:all;font-family:'DM Sans',sans-serif}
 #menu-home:hover{color:#fff;border-color:rgba(255,255,255,.3)}
 
-/* PLIXO account creation / login gate — no generated player-name fallback */
-#plixo-account-gate{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.94);backdrop-filter:blur(10px);font-family:'DM Sans',sans-serif;color:#f4f4f5;}
-#plixo-account-gate[hidden],#plixo-account-success[hidden],#plixo-account-options[hidden]{display:none!important;}
-#plixo-account-card{width:min(560px,100%);max-height:94vh;overflow:auto;padding:24px;background:#151515;border:1px solid rgba(255,255,255,.14);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.65);}
-#plixo-account-card h2{font-size:1.35rem;line-height:1.25;color:#4ade80;margin-bottom:8px;}
-#plixo-account-card>p{font-size:.82rem;line-height:1.55;color:rgba(255,255,255,.62);margin-bottom:18px;}
-#plixo-account-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.plixo-account-option{min-width:0;padding:14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.1);border-radius:12px;display:flex;flex-direction:column;gap:9px;}
-.plixo-account-option h3{font-size:.72rem;letter-spacing:.7px;color:#e5e7eb;}
-.plixo-account-option p{font-size:.68rem;line-height:1.45;color:rgba(255,255,255,.42);min-height:2.8em;}
-.plixo-account-option input{width:100%;min-width:0;padding:11px 10px;border-radius:7px;border:1px solid #444;background:#090909;color:#fff;font: .85rem 'DM Sans',sans-serif;outline:none;}
-.plixo-account-option input:focus{border-color:#4ade80;}
-.plixo-account-option button,#plixo-account-success button{width:100%;padding:11px 10px;border:1px solid #22c55e;border-radius:7px;background:#166534;color:#fff;font:700 .74rem 'DM Sans',sans-serif;cursor:pointer;}
-.plixo-account-option button:disabled,#plixo-account-success button:disabled{opacity:.55;cursor:wait;}
-#plixo-account-status{min-height:1.4em;margin-top:14px!important;margin-bottom:0!important;font-size:.72rem!important;color:#fca5a5!important;line-height:1.5;}
-#plixo-account-success{margin-top:14px;padding:14px;border:1px solid rgba(74,222,128,.35);background:rgba(34,197,94,.07);border-radius:10px;}
-#plixo-account-success p{font-size:.76rem;line-height:1.5;color:#bbf7d0;margin-bottom:10px;}
-#plixo-account-created-code{display:block;overflow-wrap:anywhere;word-break:break-all;padding:12px;margin-bottom:10px;background:#080808;border:1px dashed rgba(74,222,128,.5);border-radius:7px;color:#86efac;font:700 .9rem 'DM Mono',monospace;letter-spacing:1.2px;text-align:center;}
-#plixo-account-success .secondary{margin-top:8px;background:#202020;border-color:#555;color:#eee;}
-@media(max-width:560px){#plixo-account-card{padding:18px;max-height:96vh;}#plixo-account-card h2{font-size:1.12rem;}#plixo-account-options{grid-template-columns:1fr;gap:9px;}.plixo-account-option p{min-height:0;}}
+
 
 </style>
 </head>
@@ -183,34 +164,6 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:'DM Sans',sans-seri
     </div>
   </div>
   <div id="menu-footer">MONEY DIGGER · v15</div>
-</div>
-
-<div id="plixo-account-gate" role="dialog" aria-modal="true" aria-labelledby="plixo-account-title">
-  <div id="plixo-account-card">
-    <h2 id="plixo-account-title">PLIXO ACCOUNT</h2>
-    <p>Create your own PLIXO account with a player name, or connect an account you already have. Money Digger will not invent a player name for you.</p>
-    <div id="plixo-account-options">
-      <section class="plixo-account-option">
-        <h3>CREATE A NEW ACCOUNT</h3>
-        <p>Choose a unique player name. A new 20-character account code will be created and saved.</p>
-        <input id="plixo-new-account-name" type="text" maxlength="18" autocomplete="nickname" placeholder="Choose your player name">
-        <button type="button" id="plixo-create-account-button">CREATE ACCOUNT</button>
-      </section>
-      <section class="plixo-account-option">
-        <h3>CONNECT AN EXISTING ACCOUNT</h3>
-        <p>Use the 20-character account code shown on your PLIXO leaderboard page.</p>
-        <input id="plixo-existing-account-code" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="20-CHARACTER ACCOUNT CODE">
-        <button type="button" id="plixo-connect-account-button">CONNECT ACCOUNT</button>
-      </section>
-    </div>
-    <div id="plixo-account-success" hidden>
-      <p><strong>Account created successfully.</strong> Save this account code somewhere safe. You need it to connect on another device.</p>
-      <code id="plixo-account-created-code"></code>
-      <button type="button" id="plixo-copy-account-code-button">COPY ACCOUNT CODE</button>
-      <button type="button" class="secondary" id="plixo-continue-account-button">CONTINUE TO MONEY DIGGER</button>
-    </div>
-    <p id="plixo-account-status" role="status" aria-live="polite">Checking for a saved PLIXO account…</p>
-  </div>
 </div>
 
 <canvas id="c"></canvas>
@@ -279,8 +232,11 @@ const PLIXO_MISSION_IDS_TO_SYNC = [
 const PLIXO_DAILY_MISSION_IDS = ["dm_1", "dm_2", "dm_3", "dm_11", "dm_12", "dm_13"];
 let plixoMissionCloudTimer = null;
 let plixoArcadeMinuteTimer = null;
+let plixoAccountReady = false;
+let plixoAccountBootstrapPromise = null;
 
 function getPlixoAccountCodeForSync() {
+  if (!plixoAccountReady) return null;
   const candidates = [
     safeGetLS("pg_account_code", ""),
     safeGetLS("pg_player_id", ""),
@@ -665,18 +621,14 @@ let totalBills   = 0;
 let displayBills = 0;
 let cloudT       = 0;
 
-let deviceId = safeGetLS('md6_did', '') || safeGetLS('pg_device_id', '');
-let myName = safeGetLS('pg_player_name','') || safeGetLS('md6_n','');
-// Names and device IDs are loaded only after a real PLIXO account is verified.
+let deviceId = '';
+let myName = '';
+// The account is optional; startup silently selects a verified leaderboard account or a local Guest identity.
 
 // ═══════════════════════════════════════════════════════════════
-// REQUIRED PLIXO ACCOUNT — no automatic Speler#### names
-// Accounts use the same accountCodes / nameOwners structure as the leaderboard.
+// AUTOMATIC PLIXO ACCOUNT DETECTION — no prompt or manual code entry.
+// The leaderboard stores the account code in shared localStorage before opening games.
 // ═══════════════════════════════════════════════════════════════
-let plixoAccountReady = false;
-let plixoAccountBusy = false;
-let plixoCreatedAccountCode = '';
-
 function plixoAccountDb() {
   const db = ensureMoneyDiggerFirebaseApp();
   if (!db) throw new Error('Firebase is unavailable. Check your connection and try again.');
@@ -686,21 +638,25 @@ function plixoCleanPlayerName(value) { return String(value || '').trim().replace
 function plixoGenerateDeviceId() {
   return 'lb-' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
 }
-function plixoGenerateAccountCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({length:20}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-}
 function plixoNormalizeAccountDate(value) {
   let n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return 0;
   if (n < 100000000000) n *= 1000;
   return Math.floor(n);
 }
-function plixoSetAccountStatus(message, good = false) {
-  const el = document.getElementById('plixo-account-status');
-  if (!el) return;
-  el.textContent = message || '';
-  el.style.color = good ? '#86efac' : '#fca5a5';
+function plixoSetGuestIdentity() {
+  // Guests receive a separate local device ID; no account code or account record is created.
+  const previousNames = [safeGetLS('pg_player_name', ''), safeGetLS('md6_n', '')].map(plixoCleanPlayerName);
+  const usableName = previousNames.find(name => name && !/^speler\d{4}$/i.test(name)) || 'Guest';
+  let guestId = String(safeGetLS('md6_guest_did', '') || '').trim();
+  if (!/^guest-[a-z0-9-]+$/i.test(guestId)) {
+    guestId = 'guest-' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    safeSetLS('md6_guest_did', guestId);
+  }
+  deviceId = guestId;
+  myName = usableName;
+  plixoAccountReady = false;
+  safeSetLS('md6_guest_mode', '1');
 }
 function plixoStoreAccountLocally(code, record) {
   const accountCode = String(code || '').trim().toUpperCase();
@@ -711,6 +667,7 @@ function plixoStoreAccountLocally(code, record) {
 
   deviceId = id;
   myName = name;
+  plixoAccountReady = true;
   safeSetLS('pg_account_code', accountCode);
   safeSetLS('plixo_sync_code', accountCode);
   safeSetLS('pg_device_id', id);
@@ -718,6 +675,7 @@ function plixoStoreAccountLocally(code, record) {
   safeSetLS('pg_player_name', name);
   safeSetLS('md6_n', name);
   safeSetLS('plixo_bound_account_code', accountCode);
+  safeSetLS('md6_guest_mode', '0');
 
   const createdAt = plixoNormalizeAccountDate(saved.createdAt) || plixoNormalizeAccountDate(saved.account_created_at);
   if (createdAt) {
@@ -725,7 +683,6 @@ function plixoStoreAccountLocally(code, record) {
     safeSetLS('plixo_account_created_at', String(createdAt));
     safeSetLS('plixo_account_created_at_source', 'firebase');
   }
-  plixoAccountReady = true;
 }
 async function plixoUpdateAccountCreationIndex(code, name, createdAt) {
   const db = plixoAccountDb();
@@ -786,151 +743,60 @@ async function plixoEnsureCloudProfile(code, record) {
     safeSetLS('plixo_account_created_at_source', 'firebase');
   }
   try { await plixoUpdateAccountCreationIndex(code, record.name, createdAt); }
-  catch (indexError) { console.warn('Account created; creation-date index could not be updated:', indexError); }
+  catch (indexError) { console.warn('Account connection succeeded; creation-date index could not be updated:', indexError); }
 }
-async function plixoFinishAccountConnection(code, record, closeGate = true) {
+async function plixoFinishAccountConnection(code, record) {
   const account = {...record};
   const createdAt = plixoNormalizeAccountDate(account.createdAt) || plixoNormalizeAccountDate(account.account_created_at);
   if (createdAt) account.createdAt = createdAt;
   plixoStoreAccountLocally(code, account);
   await plixoAccountDb().ref('nameOwners/' + account.deviceId).set({ name: account.name, ...(createdAt ? {createdAt} : {}) });
   await plixoEnsureCloudProfile(String(code).toUpperCase(), account);
-  if (closeGate) {
-    const gate = document.getElementById('plixo-account-gate');
-    if (gate) gate.hidden = true;
-  }
   updateScoreboard();
 }
-function plixoSetAccountButtonsBusy(busy) {
-  ['plixo-create-account-button','plixo-connect-account-button'].forEach(id => {
-    const button = document.getElementById(id);
-    if (button) button.disabled = !!busy;
-  });
-}
-async function plixoCreateNewAccount() {
-  if (plixoAccountBusy) return;
-  const nameInput = document.getElementById('plixo-new-account-name');
-  const name = plixoCleanPlayerName(nameInput && nameInput.value);
-  if (!name) { plixoSetAccountStatus('Enter a player name first.'); if (nameInput) nameInput.focus(); return; }
-  if (name.length > 18) { plixoSetAccountStatus('Your player name may contain up to 18 characters.'); return; }
-
-  plixoAccountBusy = true;
-  plixoSetAccountButtonsBusy(true);
-  plixoSetAccountStatus('Creating your PLIXO account…', true);
-  try {
-    const db = plixoAccountDb();
-    const ownersSnap = await db.ref('nameOwners').once('value');
-    const owners = ownersSnap.val() || {};
-    const nameTaken = Object.values(owners).some(owner => owner && owner.name && String(owner.name).trim().toLowerCase() === name.toLowerCase());
-    if (nameTaken) throw new Error('That player name is already taken. Choose another name.');
-
-    const newDeviceId = plixoGenerateDeviceId();
-    let reservedCode = '';
-    const createdAt = Date.now();
-    for (let attempt = 0; attempt < 15 && !reservedCode; attempt++) {
-      const candidate = plixoGenerateAccountCode();
-      const result = await db.ref('accountCodes/' + candidate).transaction(current => {
-        if (current) return;
-        return { deviceId: newDeviceId, name, createdAt };
-      }, undefined, false);
-      const saved = result && result.snapshot && result.snapshot.val();
-      if (result && result.committed && saved && saved.deviceId === newDeviceId) reservedCode = candidate;
-    }
-    if (!reservedCode) throw new Error('Could not create an account code. Please try again.');
-
-    await db.ref('nameOwners/' + newDeviceId).set({ name, createdAt });
-    await db.ref('plixo_users/' + reservedCode).transaction(current => {
-      const user = current && typeof current === 'object' ? {...current} : {};
-      user.player_name = name;
-      user.account_created_at = Number(user.account_created_at) || createdAt;
-      if (user.plix === undefined || user.plix === null) user.plix = 0;
-      return user;
-    });
-    await plixoFinishAccountConnection(reservedCode, { deviceId: newDeviceId, name, createdAt }, false);
-
-    plixoCreatedAccountCode = reservedCode;
-    document.getElementById('plixo-account-options').hidden = true;
-    document.getElementById('plixo-account-created-code').textContent = reservedCode;
-    document.getElementById('plixo-account-success').hidden = false;
-    plixoSetAccountStatus('Your account is ready. Copy and save your account code before continuing.', true);
-  } catch (error) {
-    console.error('PLIXO account creation failed:', error);
-    plixoSetAccountStatus(error && error.message ? error.message : 'Could not create your account. Check your connection and try again.');
-  } finally {
-    plixoAccountBusy = false;
-    plixoSetAccountButtonsBusy(false);
-  }
-}
-async function plixoConnectExistingAccount() {
-  if (plixoAccountBusy) return;
-  const codeInput = document.getElementById('plixo-existing-account-code');
-  const code = String(codeInput && codeInput.value || '').trim().toUpperCase();
-  if (!plixoValidCode(code)) { plixoSetAccountStatus('Enter the complete 20-character account code.'); if (codeInput) codeInput.focus(); return; }
-
-  plixoAccountBusy = true;
-  plixoSetAccountButtonsBusy(true);
-  plixoSetAccountStatus('Checking your account…', true);
-  try {
-    const db = plixoAccountDb();
-    const snap = await db.ref('accountCodes/' + code).once('value');
-    const account = snap.val();
-    if (!account || !account.deviceId || !account.name) throw new Error('Account code not found. Check the code or create a new account.');
-    await plixoFinishAccountConnection(code, account, true);
-  } catch (error) {
-    console.error('PLIXO account connection failed:', error);
-    plixoSetAccountStatus(error && error.message ? error.message : 'Could not connect. Check your connection and try again.');
-  } finally {
-    plixoAccountBusy = false;
-    plixoSetAccountButtonsBusy(false);
-  }
-}
 async function plixoBootstrapAccount() {
-  const savedCode = getPlixoAccountCodeForSync();
-  const oldName = plixoCleanPlayerName(safeGetLS('pg_player_name', '') || safeGetLS('md6_n', ''));
-  const oldGeneratedName = /^speler\d{4}$/i.test(oldName);
-  const nameInput = document.getElementById('plixo-new-account-name');
-  if (nameInput && oldName && !oldGeneratedName) nameInput.value = oldName;
-  const codeInput = document.getElementById('plixo-existing-account-code');
-  if (codeInput && savedCode) codeInput.value = savedCode;
-
+  // Match the other PLIXO games: read the account code the leaderboard already
+  // placed in localStorage. Never ask for a code and never create an account here.
+  const candidates = [safeGetLS('pg_account_code', ''), safeGetLS('pg_player_id', ''), safeGetLS('plixo_sync_code', '')];
+  const savedCode = candidates.map(value => String(value || '').trim().toUpperCase()).find(value => plixoValidCode(value)) || null;
   if (!savedCode) {
-    plixoSetAccountStatus('Create your own account or connect your existing PLIXO account.');
-    return;
+    plixoSetGuestIdentity();
+    return false;
   }
+
   try {
     const snap = await plixoAccountDb().ref('accountCodes/' + savedCode).once('value');
     const account = snap.val();
     if (account && account.deviceId && account.name) {
-      await plixoFinishAccountConnection(savedCode, account, true);
-      return;
+      await plixoFinishAccountConnection(savedCode, account);
+      return true;
     }
-    plixoSetAccountStatus('No registered account was found for the saved code. Create an account or connect an existing one.');
+    // The leaderboard may have a locally generated code that has not been
+    // registered yet. Treat that browser as a guest without prompting.
+    plixoSetGuestIdentity();
+    return false;
   } catch (error) {
-    console.warn('Could not verify the saved PLIXO account:', error);
-    plixoSetAccountStatus('Could not verify the saved account. Check your connection or enter your account code again.');
+    // A temporary Firebase/network failure must not prevent guest play.
+    console.warn('Could not verify the saved PLIXO account; starting as Guest:', error);
+    plixoSetGuestIdentity();
+    return false;
   }
-}
-async function plixoCopyCreatedAccountCode() {
-  if (!plixoCreatedAccountCode) return;
-  try {
-    await navigator.clipboard.writeText(plixoCreatedAccountCode);
-    plixoSetAccountStatus('Account code copied. Keep it safe so you can log in on another device.', true);
-  } catch (_) {
-    window.prompt('Copy and save your PLIXO account code:', plixoCreatedAccountCode);
-  }
-}
-function plixoContinueAfterAccountCreation() {
-  if (!plixoAccountReady || !plixoCreatedAccountCode) return;
-  const gate = document.getElementById('plixo-account-gate');
-  if (gate) gate.hidden = true;
 }
 
-document.getElementById('plixo-create-account-button').addEventListener('click', plixoCreateNewAccount);
-document.getElementById('plixo-connect-account-button').addEventListener('click', plixoConnectExistingAccount);
-document.getElementById('plixo-copy-account-code-button').addEventListener('click', plixoCopyCreatedAccountCode);
-document.getElementById('plixo-continue-account-button').addEventListener('click', plixoContinueAfterAccountCreation);
-document.getElementById('plixo-new-account-name').addEventListener('keydown', event => { if (event.key === 'Enter') plixoCreateNewAccount(); });
-document.getElementById('plixo-existing-account-code').addEventListener('keydown', event => { if (event.key === 'Enter') plixoConnectExistingAccount(); });
+async function requestMoneyDiggerStart(mode) {
+  // If a leaderboard code is present, finish checking it before assigning the
+  // multiplayer identity. With no code, bootstrap immediately selects Guest.
+  if (plixoAccountBootstrapPromise) await plixoAccountBootstrapPromise;
+  if (!plixoAccountReady || !deviceId || !myName) plixoSetGuestIdentity();
+  startGame(mode);
+}
+
+// Detect a code sent by the leaderboard in another tab while this menu remains open.
+window.addEventListener('storage', event => {
+  if (!gameMode && ['pg_account_code', 'pg_player_id', 'plixo_sync_code'].includes(event.key)) {
+    plixoAccountBootstrapPromise = plixoBootstrapAccount();
+  }
+});
 
 let myClicks = 0;
 let scores   = {};
@@ -2120,12 +1986,7 @@ scoresRef.on('value', snap => {
 const _origStart = startGame;
 // Override startGame to also call initFirebase for mp
 function startGame(mode){
-  if (!plixoAccountReady || !deviceId || !myName) {
-    const gate = document.getElementById('plixo-account-gate');
-    if (gate) gate.hidden = false;
-    plixoSetAccountStatus('Create or connect a PLIXO account before starting Money Digger.');
-    return;
-  }
+  if (!plixoAccountReady || !deviceId || !myName) plixoSetGuestIdentity();
   gameMode = mode;
   plixoRecordMoneyDiggerStart();
   const menu = document.getElementById('menu');
@@ -2153,8 +2014,8 @@ function startGame(mode){
 // Opening the dedicated mobile file completes the MOBILE DIGGER long-term mission.
 window.addEventListener('load', () => plixoSetMaxProgress('a29', 1));
 
-document.getElementById('btn-sp').addEventListener('click', ()=> startGame('sp'));
-document.getElementById('btn-mp').addEventListener('click', ()=> startGame('mp'));
+document.getElementById('btn-sp').addEventListener('click', ()=> requestMoneyDiggerStart('sp'));
+document.getElementById('btn-mp').addEventListener('click', ()=> requestMoneyDiggerStart('mp'));
 
 document.getElementById('cbtn').addEventListener('click', ()=>{
   if(!gameMode) return; // menu still open
@@ -2215,7 +2076,7 @@ function loop(){
 })();
 
 updateScoreboard();
-plixoBootstrapAccount().catch(error => { console.error('PLIXO account check failed:', error); plixoSetAccountStatus('Could not check the account. Please retry.'); });
+plixoAccountBootstrapPromise = plixoBootstrapAccount().catch(error => { console.warn('PLIXO account check failed; starting as Guest:', error); plixoSetGuestIdentity(); return false; });
 </script>
 
 
