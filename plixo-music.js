@@ -6,7 +6,7 @@ const script = document.currentScript || Array.from(document.scripts).reverse().
 const gameId = script && script.dataset.gameId || '';
 const isHome = !!(script && script.dataset.page === 'home');
 const KEY = 'plixo_music_settings_v1';
-const CFG = {apiKey:'AIzaSySyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',authDomain:'money-digger-9b05e.firebaseapp.com',databaseURL:'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app'};
+const CFG = {apiKey:'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',authDomain:'money-digger-9b05e.firebaseapp.com',databaseURL:'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app'};
 const SONGS = {'creative-fire':{title:'Creative Fire',src:'creative-fire.mp3'},'fallen-tech':{title:'Fallen Tech',src:'fallen-tech.mp3'}};
 const GAMES = [['home','Homepage'],['dvd_plus','DVD+'],['dino_world','Dino World'],['mini_browser_platformer','Mini Browser Platformer'],['mini_spikes_platformer','Mini Spikes Platformer'],['one_square','One Square'],['dodging_arena','Dodging Arena'],['bug_escape','Bug Escape'],['mini_apocalypse','Mini Apocalypse'],['money_digger','Money Digger'],['lucky_guy','Lucky Guy'],['time_ticker','Time Ticker'],['the_end','THE END']];
 const TXT = {
