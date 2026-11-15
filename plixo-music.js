@@ -16,11 +16,14 @@ nl:{nav:'♪ MUZIEK',title:'MUZIEKINSTELLINGEN',desc:'Kies welke nummers in je m
 fr:{nav:'♪ MUSIQUE',title:'PARAMÈTRES MUSIQUE',desc:'Choisissez les morceaux de votre liste. Activez ou désactivez la musique séparément dans chaque jeu.',song:'Votre bibliothèque musicale',songHelp:'Sélectionnez un ou plusieurs morceaux. Un seul morceau se répète ; plusieurs sont lus à la suite.',songEnabled:'Inclus dans votre liste',saved:'Vos choix sont enregistrés automatiquement',cloud:'Synchronisé avec votre compte Plixo',local:'Enregistré sur cet appareil jusqu’à votre connexion',off:'Musique : OFF',tap:'Touchez pour démarrer la musique',playing:'Lecture en cours'}
 };
 const tr = k => (TXT[localStorage.getItem('app_lang') || 'en'] || TXT.en)[k] || TXT.en[k] || k;
-const defaults = () => ({songs:['creative-fire'],games:['home']});
+const defaults = () => ({songs:['creative-fire'],games:[]});
 const normalize = v => {
  const legacySong = v && SONGS[v.song] ? v.song : 'creative-fire';
- const songs = Array.isArray(v && v.songs) ? v.songs.filter(id => SONGS[id]) : [legacySong];
- return {songs:Array.from(new Set(songs)),games:Array.isArray(v && v.games) ? Array.from(new Set(v.games.filter(x => GAMES.some(g => g[0] === x && !UNSUPPORTED_GAMES.has(g[0]))))) : ['home']};
+ const isNewSettings = Array.isArray(v && v.songs);
+ const songs = isNewSettings ? v.songs.filter(id => SONGS[id]) : [legacySong];
+ const canKeepGameChoices = isNewSettings || (v && v.enabled === true);
+ const games = canKeepGameChoices && Array.isArray(v && v.games) ? v.games : [];
+ return {songs:Array.from(new Set(songs)),games:Array.from(new Set(games.filter(x => GAMES.some(g => g[0] === x && !UNSUPPORTED_GAMES.has(g[0])))))};
 };
 let settings = defaults(), db = null, accountCode = null, cloudReady = false, audio = null, playlistIndex = 0;
 try { settings = normalize(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch(e) {}
@@ -70,8 +73,9 @@ async function playback(advance=false) {
  if (!ids.length || !here()) { a.pause(); playerRefresh(); return; }
  if (playlistIndex>=ids.length) playlistIndex=0;
  const song=currentSong(); if (!song) { a.pause(); playerRefresh(); return; }
- if (!a.src.endsWith(song.src)) { a.src=song.src; a.load(); }
- if (advance || a.paused) { try { await a.play(); } catch(e) { playerRefresh(true); return; } }
+ const sourceChanged=!a.src.endsWith(song.src);
+ if (sourceChanged) { a.pause(); a.src=song.src; a.load(); }
+ if (advance || a.paused || sourceChanged) { try { await a.play(); } catch(e) { playerRefresh(true); return; } }
  playerRefresh();
 }
 function save() {
