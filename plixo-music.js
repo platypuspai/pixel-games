@@ -78,7 +78,7 @@ async function playback(advance=false) {
  if (advance || a.paused || sourceChanged) { try { await a.play(); } catch(e) { playerRefresh(true); return; } }
  playerRefresh();
 }
-function save() {
+function save(skipPlayback=false) {
  settings=normalize(settings); localSave(); refresh();
  clearTimeout(save.timer);
  save.timer=setTimeout(async () => {
@@ -88,7 +88,7 @@ function save() {
   catch(e) { console.warn('[Plixo music] Save failed',e); }
   status();
  },200);
- playback();
+ if (!skipPlayback) playback();
 }
 function playerRefresh(blocked) {
  const b=document.getElementById('plixo-music-toggle'), s=document.getElementById('plixo-music-player-status');
@@ -98,24 +98,39 @@ function playerRefresh(blocked) {
  b.setAttribute('aria-label',active?'Turn music off for this game':'Turn music on for this game');
  b.setAttribute('aria-pressed',active?'true':'false');
  b.style.opacity=playlist().length?'1':'.45'; b.disabled=!playlist().length;
+ b.style.background=enabled?'#00e676':'#252536';
+ b.style.color=enabled?'#07130c':'#f0f0ff';
+ b.style.border=enabled?'2px solid #00ff88':'2px solid #55556b';
+ b.style.boxShadow=enabled?'0 0 12px #00e67666':'none';
+ b.style.borderRadius='8px';
+ b.style.transition='background .15s ease,border-color .15s ease,box-shadow .15s ease';
+ b.title=enabled?'Music enabled for this page':'Music disabled for this page';
  s.textContent=blocked ? tr('tap') : active ? tr('playing')+': '+(currentSong()?.title || '') : enabled ? tr('tap') : tr('off');
 }
 function player() {
  if (document.getElementById('plixo-music-player')) return;
  const wrap=document.createElement('div'); wrap.id='plixo-music-player';
  wrap.style.cssText='position:fixed;right:14px;bottom:14px;z-index:99999;display:flex;align-items:center;gap:9px;padding:9px 12px;background:rgba(10,10,15,.94);border:1px solid #2a2a42;color:#e8e8ff;font:13px Inconsolata,monospace;box-shadow:0 4px 18px #0008;max-width:calc(100vw - 28px)';
- const b=document.createElement('button'); b.id='plixo-music-toggle'; b.textContent='▶'; b.style.cssText='background:#00ff88;color:#000;border:0;padding:7px 10px;font-weight:bold;cursor:pointer';
+ const b=document.createElement('button'); b.id='plixo-music-toggle'; b.textContent='▶'; b.style.cssText='background:#252536;color:#f0f0ff;border:2px solid #55556b;border-radius:8px;padding:7px 10px;font-weight:bold;cursor:pointer;min-width:42px;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease';
  const s=document.createElement('span'); s.id='plixo-music-player-status'; wrap.append(b,s); document.body.appendChild(wrap);
+ let toggleBusy=false;
  b.addEventListener('click',async () => {
+  if (toggleBusy || !playlist().length) return;
+  toggleBusy=true; b.disabled=true;
   const id=currentGameId();
-  if (here() && audio && !audio.paused) {
-   settings.games=settings.games.filter(x=>x!==id);
-   save(); audioEl().pause(); playerRefresh();
-   return;
-  }
-  if (!here()) settings.games=settings.games.concat(id);
-  save();
-  try { await playback(true); } catch(e) { playerRefresh(true); }
+  try {
+   if (here()) {
+    settings.games=settings.games.filter(x=>x!==id);
+    save(true);
+    audioEl().pause();
+    playerRefresh();
+   } else {
+    settings.games=settings.games.concat(id);
+    save(true);
+    await playback(true);
+   }
+  } catch(e) { playerRefresh(true); }
+  finally { toggleBusy=false; playerRefresh(); }
  });
  playerRefresh();
 }
@@ -148,9 +163,10 @@ function refresh() {
  p.querySelector('#plixo-music-saved').textContent=tr('saved');
  const list=p.querySelector('#plixo-music-songs'); list.innerHTML='';
  Object.entries(SONGS).forEach(([id,song])=>{
-  const label=document.createElement('label'); label.style.cssText='display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);padding:14px;color:var(--text);font-size:.9rem;cursor:pointer;border-radius:8px';
-  const input=document.createElement('input'); input.type='checkbox'; input.checked=settings.songs.includes(id); input.style.cssText='accent-color:var(--accent-green);width:18px;height:18px;flex:0 0 auto';
-  input.addEventListener('change',()=>{settings.songs=input.checked?settings.songs.concat(id):settings.songs.filter(x=>x!==id); playlistIndex=0; save();});
+  const selected=settings.songs.includes(id);
+  const label=document.createElement('label'); label.style.cssText='display:flex;align-items:center;gap:12px;background:'+(selected?'rgba(0,230,118,.16)':'var(--surface)')+';border:2px solid '+(selected?'#00e676':'var(--border)')+';padding:14px;color:var(--text);font-size:.9rem;cursor:pointer;border-radius:8px;transition:background .15s ease,border-color .15s ease';
+  const input=document.createElement('input'); input.type='checkbox'; input.checked=selected; input.style.cssText='accent-color:#00e676;width:19px;height:19px;flex:0 0 auto';
+  input.addEventListener('change',()=>{settings.songs=input.checked?settings.songs.concat(id):settings.songs.filter(x=>x!==id); playlistIndex=0; save(); refresh();});
   const info=document.createElement('span'); info.style.cssText='display:flex;flex-direction:column;gap:4px';
   const name=document.createElement('strong'); name.textContent=song.title;
   const hint=document.createElement('small'); hint.style.color='var(--text-muted)'; hint.textContent=tr('songEnabled');
