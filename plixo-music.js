@@ -94,8 +94,9 @@ function playerRefresh(blocked) {
  const b=document.getElementById('plixo-music-toggle'), s=document.getElementById('plixo-music-player-status');
  if (!b || !s) return;
  const enabled=here(), active=audio && !audio.paused;
- b.textContent=enabled?'Ⅱ':'▶';
- b.setAttribute('aria-label',enabled?'Turn music off for this game':'Turn music on for this game');
+ b.textContent=active?'Ⅱ':'▶';
+ b.setAttribute('aria-label',active?'Turn music off for this game':'Turn music on for this game');
+ b.setAttribute('aria-pressed',active?'true':'false');
  b.style.opacity=playlist().length?'1':'.45'; b.disabled=!playlist().length;
  s.textContent=blocked ? tr('tap') : active ? tr('playing')+': '+(currentSong()?.title || '') : enabled ? tr('tap') : tr('off');
 }
@@ -107,10 +108,14 @@ function player() {
  const s=document.createElement('span'); s.id='plixo-music-player-status'; wrap.append(b,s); document.body.appendChild(wrap);
  b.addEventListener('click',async () => {
   const id=currentGameId();
-  settings.games=here()?settings.games.filter(x=>x!==id):settings.games.concat(id);
+  if (here() && audio && !audio.paused) {
+   settings.games=settings.games.filter(x=>x!==id);
+   save(); audioEl().pause(); playerRefresh();
+   return;
+  }
+  if (!here()) settings.games=settings.games.concat(id);
   save();
-  if (here()) { try { await playback(true); } catch(e) { playerRefresh(true); } }
-  else { audioEl().pause(); playerRefresh(); }
+  try { await playback(true); } catch(e) { playerRefresh(true); }
  });
  playerRefresh();
 }
@@ -154,7 +159,7 @@ function refresh() {
  status(); playerRefresh();
 }
 function init() {
- if (isHome) homePage(); else if (gameId) player();
+ if (isHome) { homePage(); player(); } else if (gameId) player();
  audioEl(); sync().then(playback); playback();
  window.addEventListener('storage',e=>{
   if(e.key===KEY){try{settings=normalize(JSON.parse(e.newValue||'null'));}catch(_){} refresh(); playback();}
