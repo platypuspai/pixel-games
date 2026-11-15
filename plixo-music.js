@@ -9,14 +9,15 @@ const KEY = 'plixo_music_settings_v1';
 const CFG = {apiKey:'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',authDomain:'money-digger-9b05e.firebaseapp.com',databaseURL:'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app'};
 const SONGS = {'creative-fire':{title:'Creative Fire',src:'creative-fire.mp3'},'fallen-tech':{title:'Fallen Tech',src:'fallen-tech.mp3'}};
 const GAMES = [['home','Homepage'],['dvd_plus','DVD+'],['dino_world','Dino World'],['mini_browser_platformer','Mini Browser Platformer'],['mini_spikes_platformer','Mini Spikes Platformer'],['one_square','One Square'],['dodging_arena','Dodging Arena'],['bug_escape','Bug Escape'],['mini_apocalypse','Mini Apocalypse'],['money_digger','Money Digger'],['lucky_guy','Lucky Guy'],['time_ticker','Time Ticker'],['the_end','THE END']];
+const UNSUPPORTED_GAMES = new Set(['dodging_arena','bug_escape','mini_apocalypse','the_end']);
 const TXT = {
-en:{nav:'♪ MUSIC',title:'MUSIC SETTINGS',desc:'Choose your music and where it plays. Settings sync to your Plixo account when signed in.',enabled:'Music enabled',song:'Choose a song',games:'Play music on',saved:'Settings save automatically',cloud:'Synced to your Plixo account',local:'Saved on this device until you sign in',on:'Music: ON',off:'Music: OFF',tap:'Tap to start music',playing:'Now playing',home:'Homepage'},
-nl:{nav:'♪ MUZIEK',title:'MUZIEKINSTELLINGEN',desc:'Kies je muziek en waar die speelt. Je instellingen worden gesynchroniseerd met je Plixo-account als je bent ingelogd.',enabled:'Muziek inschakelen',song:'Kies een nummer',games:'Muziek afspelen bij',saved:'Instellingen worden automatisch opgeslagen',cloud:'Gesynchroniseerd met je Plixo-account',local:'Op dit apparaat opgeslagen tot je inlogt',on:'Muziek: AAN',off:'Muziek: UIT',tap:'Tik om muziek te starten',playing:'Speelt nu',home:'Homepage'},
-fr:{nav:'♪ MUSIQUE',title:'PARAMÈTRES MUSIQUE',desc:'Choisissez votre musique et les jeux où elle sera diffusée. Vos paramètres sont synchronisés avec votre compte Plixo lorsque vous êtes connecté.',enabled:'Activer la musique',song:'Choisir une chanson',games:'Jouer la musique dans',saved:'Les paramètres sont enregistrés automatiquement',cloud:'Synchronisé avec votre compte Plixo',local:'Enregistré sur cet appareil jusqu’à votre connexion',on:'Musique : ON',off:'Musique : OFF',tap:'Touchez pour démarrer la musique',playing:'Lecture en cours',home:'Page d’accueil'}
+en:{nav:'♪ MUSIC',title:'MUSIC SETTINGS',desc:'Choose your music and where it plays. Settings sync to your Plixo account when signed in.',enabled:'Music enabled',song:'Choose a song',games:'Play music on',saved:'Settings save automatically',cloud:'Synced to your Plixo account',local:'Saved on this device until you sign in',on:'Music: ON',off:'Music: OFF',tap:'Tap to start music',playing:'Now playing',home:'Homepage',unsupported:'Not supported yet — music is unavailable for this game'},
+nl:{nav:'♪ MUZIEK',title:'MUZIEKINSTELLINGEN',desc:'Kies je muziek en waar die speelt. Je instellingen worden gesynchroniseerd met je Plixo-account als je bent ingelogd.',enabled:'Muziek inschakelen',song:'Kies een nummer',games:'Muziek afspelen bij',saved:'Instellingen worden automatisch opgeslagen',cloud:'Gesynchroniseerd met je Plixo-account',local:'Op dit apparaat opgeslagen tot je inlogt',on:'Muziek: AAN',off:'Muziek: UIT',tap:'Tik om muziek te starten',playing:'Speelt nu',home:'Homepage',unsupported:'Nog niet ondersteund — muziek is niet beschikbaar voor dit spel'},
+fr:{nav:'♪ MUSIQUE',title:'PARAMÈTRES MUSIQUE',desc:'Choisissez votre musique et les jeux où elle sera diffusée. Vos paramètres sont synchronisés avec votre compte Plixo lorsque vous êtes connecté.',enabled:'Activer la musique',song:'Choisir une chanson',games:'Jouer la musique dans',saved:'Les paramètres sont enregistrés automatiquement',cloud:'Synchronisé avec votre compte Plixo',local:'Enregistré sur cet appareil jusqu’à votre connexion',on:'Musique : ON',off:'Musique : OFF',tap:'Touchez pour démarrer la musique',playing:'Lecture en cours',home:'Page d’accueil',unsupported:'Pas encore pris en charge — musique indisponible pour ce jeu'}
 };
 const tr = k => (TXT[localStorage.getItem('app_lang') || 'en'] || TXT.en)[k] || TXT.en[k] || k;
 const defaults = () => ({enabled:false,song:'creative-fire',games:['home']});
-const normalize = v => ({enabled:!!(v && v.enabled === true),song:v && SONGS[v.song] ? v.song : 'creative-fire',games:Array.isArray(v && v.games) ? Array.from(new Set(v.games.filter(x => GAMES.some(g => g[0] === x)))) : ['home']});
+const normalize = v => ({enabled:!!(v && v.enabled === true),song:v && SONGS[v.song] ? v.song : 'creative-fire',games:Array.isArray(v && v.games) ? Array.from(new Set(v.games.filter(x => GAMES.some(g => g[0] === x && !UNSUPPORTED_GAMES.has(g[0]))))) : ['home']});
 let settings = defaults(), db = null, accountCode = null, cloudReady = false, audio = null;
 try { settings = normalize(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch(e) {}
 function code() {
@@ -130,9 +131,12 @@ function refresh() {
  const list=p.querySelector('#plixo-music-games'); list.innerHTML='';
  GAMES.forEach(pair=>{
   const label=document.createElement('label'); label.style.cssText='display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);padding:10px;color:var(--text);font-size:.82rem;cursor:pointer';
-  const input=document.createElement('input'); input.type='checkbox'; input.checked=settings.games.includes(pair[0]); input.style.cssText='accent-color:var(--accent-green);width:auto';
-  input.addEventListener('change',()=>{settings.games=input.checked?settings.games.concat(pair[0]):settings.games.filter(x=>x!==pair[0]);save();});
-  const span=document.createElement('span'); span.textContent=pair[0]==='home'?tr('home'):pair[1]; label.append(input,span); list.appendChild(label);
+  const unsupported=UNSUPPORTED_GAMES.has(pair[0]);
+  const input=document.createElement('input'); input.type='checkbox'; input.checked=!unsupported && settings.games.includes(pair[0]); input.disabled=unsupported; input.style.cssText='accent-color:var(--accent-green);width:auto';
+  if(!unsupported) input.addEventListener('change',()=>{settings.games=input.checked?settings.games.concat(pair[0]):settings.games.filter(x=>x!==pair[0]);save();});
+  const span=document.createElement('span'); span.textContent=(pair[0]==='home'?tr('home'):pair[1])+(unsupported?' — '+tr('unsupported'):'');
+  if(unsupported){label.style.opacity='.48';label.style.cursor='not-allowed';label.title=tr('unsupported');}
+  label.append(input,span); list.appendChild(label);
  });
  status(); playerRefresh();
 }
