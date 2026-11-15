@@ -25,7 +25,7 @@ const normalize = v => {
  const games = canKeepGameChoices && Array.isArray(v && v.games) ? v.games : [];
  return {songs:Array.from(new Set(songs)),games:Array.from(new Set(games.filter(x => GAMES.some(g => g[0] === x && !UNSUPPORTED_GAMES.has(g[0])))))};
 };
-let settings = defaults(), db = null, accountCode = null, cloudReady = false, audio = null, playlistIndex = 0;
+let settings = defaults(), db = null, accountCode = null, cloudReady = false, audio = null, playlistIndex = 0, localRevision = 0;
 try { settings = normalize(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch(e) {}
 function code() {
  const values = ['pg_account_code','pg_player_id','plixo_sync_code'].map(k => String(localStorage.getItem(k) || '').trim().toUpperCase());
@@ -50,10 +50,12 @@ function status() {
 }
 async function sync() {
  const c=code(); if (!c || (c===accountCode && cloudReady)) return;
+ const revisionAtStart=localRevision;
  accountCode=c; const d=await firebaseReady(); if (!d || accountCode!==c) return;
  try {
   const ref=d.ref('plixo_users/'+c+'/music_settings'); const snap=await ref.once('value');
-  if (snap.exists()) { settings=normalize(snap.val()); localSave(); refresh(); }
+  if (revisionAtStart!==localRevision) { await ref.set(settings); }
+  else if (snap.exists()) { settings=normalize(snap.val()); localSave(); refresh(); }
   else await ref.set(settings);
   cloudReady=true; status();
  } catch(e) { console.warn('[Plixo music] Cloud sync unavailable',e); status(); }
@@ -79,6 +81,7 @@ async function playback(advance=false) {
  playerRefresh();
 }
 function save(skipPlayback=false) {
+ localRevision++;
  settings=normalize(settings); localSave(); refresh();
  clearTimeout(save.timer);
  save.timer=setTimeout(async () => {
@@ -164,9 +167,10 @@ function refresh() {
  const list=p.querySelector('#plixo-music-songs'); list.innerHTML='';
  Object.entries(SONGS).forEach(([id,song])=>{
   const selected=settings.songs.includes(id);
-  const label=document.createElement('label'); label.style.cssText='display:flex;align-items:center;gap:12px;background:'+(selected?'rgba(0,230,118,.16)':'var(--surface)')+';border:2px solid '+(selected?'#00e676':'var(--border)')+';padding:14px;color:var(--text);font-size:.9rem;cursor:pointer;border-radius:8px;transition:background .15s ease,border-color .15s ease';
-  const input=document.createElement('input'); input.type='checkbox'; input.checked=selected; input.style.cssText='accent-color:#00e676;width:19px;height:19px;flex:0 0 auto';
-  input.addEventListener('change',()=>{settings.songs=input.checked?settings.songs.concat(id):settings.songs.filter(x=>x!==id); playlistIndex=0; save(); refresh();});
+  const label=document.createElement('div'); label.style.cssText='display:flex;align-items:center;gap:12px;background:'+(selected?'rgba(0,230,118,.22)':'var(--surface)')+';border:2px solid '+(selected?'#00e676':'var(--border)')+';padding:14px;color:var(--text);font-size:.9rem;border-radius:8px;transition:background .15s ease,border-color .15s ease;box-shadow:'+(selected?'inset 0 0 0 1px #00e67655':'none');
+  const input=document.createElement('input'); input.type='checkbox'; input.checked=selected; input.style.cssText='accent-color:#00e676;width:19px;height:19px;flex:0 0 auto;cursor:pointer';
+  input.addEventListener('change',()=>{const checked=input.checked;settings.songs=checked?Array.from(new Set(settings.songs.concat(id))):settings.songs.filter(x=>x!==id);playlistIndex=0;save();});
+  label.addEventListener('click',e=>{if(e.target!==input){input.checked=!input.checked;input.dispatchEvent(new Event('change',{bubbles:false}));}});
   const info=document.createElement('span'); info.style.cssText='display:flex;flex-direction:column;gap:4px';
   const name=document.createElement('strong'); name.textContent=song.title;
   const hint=document.createElement('small'); hint.style.color='var(--text-muted)'; hint.textContent=tr('songEnabled');
