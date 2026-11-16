@@ -113,7 +113,8 @@ function playerRefresh(blocked) {
 function player() {
  if (document.getElementById('plixo-music-player')) return;
  const wrap=document.createElement('div'); wrap.id='plixo-music-player';
- wrap.style.cssText='position:fixed;right:110px;bottom:14px;z-index:99999;display:flex;align-items:center;gap:9px;padding:9px 12px;background:rgba(10,10,15,.94);border:1px solid #2a2a42;color:#e8e8ff;font:13px Inconsolata,monospace;box-shadow:0 4px 18px #0008;max-width:calc(100vw - 28px)';
+ const isMobileDigger=!!document.getElementById('game-wrap');
+  wrap.style.cssText='position:fixed;'+(isMobileDigger?'right:110px;bottom:14px;':'left:14px;bottom:80px;')+'z-index:99999;display:flex;align-items:center;gap:9px;padding:9px 12px;background:rgba(10,10,15,.94);border:1px solid #2a2a42;color:#e8e8ff;font:13px Inconsolata,monospace;box-shadow:0 4px 18px #0008;max-width:calc(100vw - 28px)';
  const b=document.createElement('button'); b.id='plixo-music-toggle'; b.textContent='▶'; b.style.cssText='background:#252536;color:#f0f0ff;border:2px solid #55556b;border-radius:8px;padding:7px 10px;font-weight:bold;cursor:pointer;min-width:42px;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease';
  const s=document.createElement('span'); s.id='plixo-music-player-status'; wrap.append(b,s); document.body.appendChild(wrap);
  let toggleBusy=false;
