@@ -116,9 +116,9 @@ function player() {
  const mobileDigger=gameId==='money_digger' && !!document.getElementById('game-wrap');
  const desktopDigger=gameId==='money_digger' && !mobileDigger;
  if (mobileDigger) {
-  wrap.style.cssText='position:absolute;left:14px;right:auto;top:auto;bottom:78px;z-index:99999;display:flex;align-items:center;gap:9px;padding:8px 10px;background:rgba(10,10,15,.94);border:1px solid #2a2a42;color:#e8e8ff;font:12px Inconsolata,monospace;box-shadow:0 4px 18px #0008;max-width:calc(100% - 28px)';
+  wrap.style.cssText='position:absolute;left:14px;right:auto;top:auto;bottom:105px;z-index:99999;display:flex;align-items:center;gap:9px;padding:8px 10px;background:rgba(10,10,15,.94);border:1px solid #2a2a42;color:#e8e8ff;font:12px Inconsolata,monospace;box-shadow:0 4px 18px #0008;max-width:calc(100% - 28px)';
  } else if (desktopDigger) {
-  wrap.style.cssText='position:fixed;left:20px;right:auto;top:auto;bottom:76px;z-index:99999;display:flex;align-items:center;gap:9px;padding:9px 12px;background:rgba(10,10,15,.94);border:1px solid #2a2a42;color:#e8e8ff;font:13px Inconsolata,monospace;box-shadow:0 4px 18px #0008;max-width:calc(100vw - 28px)';
+  wrap.style.cssText='position:fixed;left:20px;right:auto;top:auto;bottom:72px;z-index:99999;display:flex;align-items:center;gap:9px;padding:9px 12px;background:rgba(10,10,15,.94);border:1px solid #2a2a42;color:#e8e8ff;font:13px Inconsolata,monospace;box-shadow:0 4px 18px #0008;max-width:calc(100vw - 28px)';
  } else {
   wrap.style.cssText='position:fixed;left:14px;bottom:80px;z-index:99999;display:flex;align-items:center;gap:9px;padding:9px 12px;background:rgba(10,10,15,.94);border:1px solid #2a2a42;color:#e8e8ff;font:13px Inconsolata,monospace;box-shadow:0 4px 18px #0008;max-width:calc(100vw - 28px)';
  }
