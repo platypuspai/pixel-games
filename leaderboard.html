@@ -94,6 +94,21 @@
         .account-code { font-size: 0.85rem; font-weight: 700; color: var(--accent-blue); letter-spacing: 0.15em; flex: 1; word-break: break-all; }
         .account-btn { font-family: 'Press Start 2P', monospace; font-size: 0.38rem; padding: 8px 14px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); cursor: pointer; letter-spacing: 0.08em; transition: all 0.15s; white-space: nowrap; }
         .account-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+        .profile-overlay{position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.86);display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(5px)}
+        .profile-overlay.hidden{display:none}
+        .public-profile{position:relative;width:min(520px,100%);max-height:85vh;overflow:auto;background:var(--card);border:1px solid var(--border);border-top:3px solid var(--accent-cyan);padding:28px}
+        .public-profile h3{font-family:'Press Start 2P',monospace;font-size:.68rem;color:var(--accent-cyan);line-height:1.7;margin:0 36px 18px 0}
+        .profile-close{position:absolute;top:14px;right:14px;background:transparent;border:1px solid var(--border);color:var(--text);padding:7px 11px;cursor:pointer}
+        .public-profile-name{font-size:1.25rem;font-weight:700;color:var(--accent-yellow);margin-bottom:18px;overflow-wrap:anywhere}
+        .public-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+        .public-profile-stat{background:var(--surface);border:1px solid var(--border);padding:13px}
+        .public-profile-stat small{display:block;color:var(--text-muted);font-size:.65rem;margin-bottom:7px}
+        .public-profile-stat strong{display:block;color:var(--text);font-size:1rem;overflow-wrap:anywhere}
+        .profile-loading,.profile-error{color:var(--text-muted);font-size:.85rem;line-height:1.6}
+        .lb-row{cursor:pointer}
+        .lb-row:focus-visible{outline:2px solid var(--accent-cyan);outline-offset:-2px}
+        @media(max-width:420px){.public-profile{padding:22px 16px}.public-profile-grid{grid-template-columns:1fr 1fr}}
+
     </style>
 
     <!-- PLIXO UNIVERSAL TRACKER (Inclusief setPlixoMaxProgress voor veiligheid) -->
@@ -235,6 +250,14 @@
 
             <button class="modal-btn" onclick="confirmName()" data-i18n="confirmNameBtn">► CONFIRM NAME</button>
         </div>
+    </div>
+
+    <div class="profile-overlay hidden" id="public-profile-overlay" onclick="if(event.target===this)closePublicProfile()">
+        <section class="public-profile" role="dialog" aria-modal="true" aria-labelledby="public-profile-title">
+            <button class="profile-close" type="button" onclick="closePublicProfile()" aria-label="Close">✕</button>
+            <h3 id="public-profile-title">// ACCOUNT OVERVIEW</h3>
+            <div id="public-profile-content" class="profile-loading">Loading account...</div>
+        </section>
     </div>
 
     <div class="grid">
@@ -797,6 +820,17 @@ function render(bodyId, footId, rows, me) {
         </div>`;
     }
     body.innerHTML = html;
+    body.querySelectorAll('.lb-row').forEach(row => {
+        const nameEl = row.querySelector('.lb-name');
+        if (!nameEl) return;
+        row.tabIndex = 0;
+        row.setAttribute('role', 'button');
+        row.setAttribute('aria-label', 'View account: ' + nameEl.textContent);
+        row.addEventListener('click', () => showPublicProfile(nameEl.textContent));
+        row.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showPublicProfile(nameEl.textContent); }
+        });
+    });
 
     if (shouldPin) {
         const r = rows[pos];
@@ -806,6 +840,16 @@ function render(bodyId, footId, rows, me) {
         pinned.innerHTML = `<div class="lb-row me"><span class="lb-rank ${medalCls(pos)}">${medal(pos)}</span>
             <span class="lb-name me">${esc(r.name)}</span>
             <span class="lb-score">${esc(r.score)}</span></div>`;
+        const pinnedRow = pinned.querySelector('.lb-row');
+        if (pinnedRow) {
+            pinnedRow.tabIndex = 0;
+            pinnedRow.setAttribute('role', 'button');
+            pinnedRow.setAttribute('aria-label', 'View account: ' + r.name);
+            pinnedRow.addEventListener('click', () => showPublicProfile(r.name));
+            pinnedRow.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showPublicProfile(r.name); }
+            });
+        }
         const selfRow = body.querySelector('.lb-row-self');
         if (selfRow) {
             const updatePinnedVisibility = () => {
@@ -984,6 +1028,68 @@ async function rebuildAccountCreationIndex() {
     }
 }
 setTimeout(() => rebuildAccountCreationIndex().catch(error => console.warn('Could not index account creation dates.', error)), 1200);
+
+
+let publicAccountDirectoryPromise = null;
+function loadPublicAccountDirectory() {
+    if (!publicAccountDirectoryPromise) {
+        publicAccountDirectoryPromise = fbApp.database().ref('accountCodes').once('value').then(snapshot => {
+            const directory = {};
+            snapshot.forEach(child => {
+                const record = child.val() || {};
+                const name = String(record.name || record.player_name || '').trim().toLowerCase();
+                if (name && accountCodeLooksValid(child.key)) directory[name] = child.key.toUpperCase();
+            });
+            return directory;
+        }).catch(error => { publicAccountDirectoryPromise = null; throw error; });
+    }
+    return publicAccountDirectoryPromise;
+}
+function closePublicProfile() {
+    document.getElementById('public-profile-overlay').classList.add('hidden');
+}
+async function showPublicProfile(playerName) {
+    const overlay = document.getElementById('public-profile-overlay');
+    const content = document.getElementById('public-profile-content');
+    overlay.classList.remove('hidden');
+    content.className = 'profile-loading';
+    content.textContent = 'Loading account...';
+    try {
+        const directory = await loadPublicAccountDirectory();
+        const code = directory[String(playerName || '').trim().toLowerCase()];
+        if (!code) {
+            content.textContent = 'No linked Plixo account was found for this leaderboard name.';
+            return;
+        }
+        const snapshot = await fbApp.database().ref('plixo_users/' + code).once('value');
+        if (!snapshot.exists()) {
+            content.textContent = 'This player has a Plixo account, but has not created a public game profile yet.';
+            return;
+        }
+        const profile = snapshot.val() || {};
+        const skins = profile.skins && typeof profile.skins === 'object' ? profile.skins : {};
+        const ownedSkinCount = Object.values(skins).filter(Boolean).length;
+        const missionProgress = profile.mission_progress && typeof profile.mission_progress === 'object' ? profile.mission_progress : {};
+        const achievements = profile.claimed_achievements && typeof profile.claimed_achievements === 'object' ? profile.claimed_achievements : {};
+        const created = normalizeCreationTimestamp(profile.account_created_at);
+        const createdText = created ? new Date(created).toLocaleDateString() : 'Unknown';
+        const stat = (label, value) => '<div class="public-profile-stat"><small>' + label + '</small><strong>' + value + '</strong></div>';
+        content.className = '';
+        content.innerHTML = '<div class="public-profile-name">' + esc(playerName) + '</div><div class="public-profile-grid">' +
+            stat('PLIX BALANCE', formatNum(profile.plix || 0)) +
+            stat('CURRENT SKIN', esc(String(profile.selected_skin || 'classic').replace(/[_-]/g, ' '))) +
+            stat('UNLOCKED SKINS', formatNum(ownedSkinCount)) +
+            stat('ACHIEVEMENTS', formatNum(Object.values(achievements).filter(Boolean).length)) +
+            stat('MISSION TYPES', formatNum(Object.keys(missionProgress).length)) +
+            stat('ACCOUNT CREATED', esc(createdText)) + '</div>';
+    } catch (error) {
+        console.warn('Could not load public player profile:', error);
+        content.className = 'profile-error';
+        content.textContent = 'Could not load this account overview. Please try again.';
+    }
+}
+window.closePublicProfile = closePublicProfile;
+window.showPublicProfile = showPublicProfile;
 
 function formatNum(n) { return Number(n).toLocaleString('en-US'); }
 
