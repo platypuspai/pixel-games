@@ -140,7 +140,7 @@ canvas { display: block; image-rendering: pixelated; touch-action: none; }
 </div>
 <div id="magma-warning"></div>
 <canvas id="game" width="720" height="400"></canvas>
-<div id="plixo-login">
+<div id="plixo-login" class="hidden">
   <div id="plixo-login-card">
     <h2>ONE SQUARE</h2>
     <p>Log in with your PLIXO Arcade account</p>
@@ -1647,20 +1647,32 @@ window.addEventListener("focus", () => {
 });
 
 (async function restorePlixoAccount() {
-  const savedCode = String(localStorage.getItem(ACCOUNT_STORAGE_KEY) || "").trim().toUpperCase();
+  // Website games reuse the account already connected on the main Plixo site.
+  // If there is no account yet, One Square remains playable without forcing a login.
+  const candidates = [
+    localStorage.getItem(ACCOUNT_STORAGE_KEY),
+    localStorage.getItem("pg_account_code"),
+    localStorage.getItem("pg_player_id"),
+    localStorage.getItem("plixo_sync_code")
+  ];
+  const savedCode = candidates.map(value => String(value || "").trim().toUpperCase()).find(validPlixoCode) || "";
   if (!savedCode) {
-    accountCodeInput.focus();
+    gameStarted = true;
+    requestAnimationFrame(loop);
     return;
   }
   accountCodeInput.value = savedCode;
   loginButton.disabled = true;
-  loginButton.textContent = "RESTORING...";
+  loginButton.textContent = "CONNECTING...";
   try {
     await loginWithPlixo(savedCode);
   } catch (error) {
-    localStorage.removeItem(ACCOUNT_STORAGE_KEY);
-    loginError.textContent = error && error.message ? error.message : "Saved account could not be restored. Please log in again.";
-    accountCodeInput.focus();
+    console.warn("Could not automatically connect the saved PLIXO account:", error);
+    // Keep the game playable; account features can be connected later with the key button.
+    if (!gameStarted) {
+      gameStarted = true;
+      requestAnimationFrame(loop);
+    }
   } finally {
     loginButton.disabled = false;
     loginButton.textContent = "LOG IN & PLAY";
