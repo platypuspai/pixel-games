@@ -1078,7 +1078,7 @@ async function showPublicProfile(playerName) {
         const created = normalizeCreationTimestamp(profile.account_created_at);
         const createdText = created ? new Date(created).toLocaleDateString() : 'Unknown';
         const selectedSkin = String(profile.selected_skin || 'classic').replace(/[_-]/g, ' ');
-        const skinImage = typeof profile.skin_image === 'string' && /^data:image\\/(?:png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/.test(profile.skin_image) ? profile.skin_image : '';
+        const skinImage = typeof profile.skin_image === 'string' && /^data:image\/(?:png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/.test(profile.skin_image) ? profile.skin_image : '';
         const skinPreview = '<div class="profile-skin-showcase">' +
             (skinImage ? '<img src="' + skinImage + '" alt="Player skin">' : '<div style="width:82px;height:112px;display:grid;place-items:center;color:var(--text-muted)">?</div>') +
             '<div><small>CURRENT SKIN</small><strong>' + esc(selectedSkin) + '</strong></div></div>';
