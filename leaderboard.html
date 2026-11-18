@@ -1088,7 +1088,7 @@ async function showPublicProfile(playerName) {
             skinPreview +
             stat('PLIX BALANCE', formatNum(profile.plix || 0)) +
             stat('UNLOCKED SKINS', formatNum(ownedSkinCount)) +
-            stat('ACHIEVEMENTS', formatNum(Object.values(achievements).filter(Boolean).length)) +
+            stat('ACHIEVEMENTS COMPLETED', formatNum(Object.values(achievements).filter(Boolean).length) + '/23') +
             stat('ACCOUNT CREATED', esc(createdText)) + '</div>';
     } catch (error) {
         console.warn('Could not load public player profile:', error);
