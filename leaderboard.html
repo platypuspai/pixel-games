@@ -105,6 +105,11 @@
         .public-profile-stat small{display:block;color:var(--text-muted);font-size:.65rem;margin-bottom:7px}
         .public-profile-stat strong{display:block;color:var(--text);font-size:1rem;overflow-wrap:anywhere}
         .profile-loading,.profile-error{color:var(--text-muted);font-size:.85rem;line-height:1.6}
+        .profile-skin-showcase{grid-column:1/-1;background:var(--surface);border:1px solid var(--border);padding:14px;display:flex;align-items:center;gap:18px;min-height:130px}
+        .profile-skin-showcase img{width:82px;height:112px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 3px 8px rgba(0,0,0,.55))}
+        .profile-skin-showcase small{display:block;color:var(--text-muted);font-size:.65rem;margin-bottom:8px}
+        .profile-skin-showcase strong{color:var(--accent-cyan);font-size:.95rem;text-transform:capitalize}
+
         .lb-row{cursor:pointer}
         .lb-row:focus-visible{outline:2px solid var(--accent-cyan);outline-offset:-2px}
         @media(max-width:420px){.public-profile{padding:22px 16px}.public-profile-grid{grid-template-columns:1fr 1fr}}
@@ -1069,18 +1074,21 @@ async function showPublicProfile(playerName) {
         const profile = snapshot.val() || {};
         const skins = profile.skins && typeof profile.skins === 'object' ? profile.skins : {};
         const ownedSkinCount = Object.values(skins).filter(Boolean).length;
-        const missionProgress = profile.mission_progress && typeof profile.mission_progress === 'object' ? profile.mission_progress : {};
         const achievements = profile.claimed_achievements && typeof profile.claimed_achievements === 'object' ? profile.claimed_achievements : {};
         const created = normalizeCreationTimestamp(profile.account_created_at);
         const createdText = created ? new Date(created).toLocaleDateString() : 'Unknown';
+        const selectedSkin = String(profile.selected_skin || 'classic').replace(/[_-]/g, ' ');
+        const skinImage = typeof profile.skin_image === 'string' && /^data:image\\/(?:png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/.test(profile.skin_image) ? profile.skin_image : '';
+        const skinPreview = '<div class="profile-skin-showcase">' +
+            (skinImage ? '<img src="' + skinImage + '" alt="Player skin">' : '<div style="width:82px;height:112px;display:grid;place-items:center;color:var(--text-muted)">?</div>') +
+            '<div><small>CURRENT SKIN</small><strong>' + esc(selectedSkin) + '</strong></div></div>';
         const stat = (label, value) => '<div class="public-profile-stat"><small>' + label + '</small><strong>' + value + '</strong></div>';
         content.className = '';
         content.innerHTML = '<div class="public-profile-name">' + esc(playerName) + '</div><div class="public-profile-grid">' +
+            skinPreview +
             stat('PLIX BALANCE', formatNum(profile.plix || 0)) +
-            stat('CURRENT SKIN', esc(String(profile.selected_skin || 'classic').replace(/[_-]/g, ' '))) +
             stat('UNLOCKED SKINS', formatNum(ownedSkinCount)) +
             stat('ACHIEVEMENTS', formatNum(Object.values(achievements).filter(Boolean).length)) +
-            stat('MISSION TYPES', formatNum(Object.keys(missionProgress).length)) +
             stat('ACCOUNT CREATED', esc(createdText)) + '</div>';
     } catch (error) {
         console.warn('Could not load public player profile:', error);
