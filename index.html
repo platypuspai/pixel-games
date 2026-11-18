@@ -248,6 +248,9 @@
         .nav-btn:hover { color: var(--text); border-color: var(--text-muted); }
         .nav-btn.active { color: #000; background: var(--accent-green); border-color: var(--accent-green); }
 
+        .plixo-account-notice{max-width:900px;margin:0 auto 28px;padding:18px 22px;background:rgba(68,136,255,.10);border:1px solid rgba(68,136,255,.55);border-left:4px solid var(--accent-blue);color:var(--text);font-size:.9rem;line-height:1.6;text-align:center;position:relative;z-index:10}
+        .plixo-account-notice a{color:#8fc5ff;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+        .plixo-account-notice[hidden]{display:none!important}
         /* ---- PAGES ---- */
         .page { display: none; }
         .page.active { display: block; }
@@ -776,6 +779,10 @@
 
 <div id="page-home" class="page active" style="display:block;">
 <main>
+    <div id="plixo-account-notice" class="plixo-account-notice" hidden>
+        <span data-i18n="accountNotice">New to Plixo? Go to the Leaderboard tab to create an account or log in with an existing Plixo account.</span>
+        <a href="leaderboard.html" data-i18n="accountNoticeLink">Open Leaderboard</a>
+    </div>
 
     <!-- DVD+ Game Card -->
     <div class="game-card" style="--card-accent: #ff44aa;">
@@ -1195,6 +1202,7 @@
 const i18n = {
   en: {
     subtitle: "12 games &nbsp;·&nbsp; play in browser &nbsp;·&nbsp; school project <span>_</span>",
+    accountNotice: "New to Plixo? Go to the Leaderboard tab to create an account or log in with an existing Plixo account.", accountNoticeLink: "Open Leaderboard",
     navHome: "▶ HOME", navContact: "✉ CONTACT", navInfo: "ℹ INFO", navLb: "LEADERBOARD", navSkin: "SKIN",
     tagSim: "// 10 · simulation & idle", descDvd: "The ultimate DVD bouncing simulator with upgrades, skins, and predictions!",
     tagDino: "// 01 · simulation", descDino: "Would the dinosaurs survive without the asteroid? Find out!", btnExt: "⬡ EXTENSION",
@@ -1234,6 +1242,7 @@ const i18n = {
   },
   nl: {
     subtitle: "12 games &nbsp;·&nbsp; speel in de browser &nbsp;·&nbsp; schoolproject <span>_</span>",
+    accountNotice: "Nieuw op Plixo? Ga naar het tabblad Ranglijst om een account aan te maken of in te loggen met een bestaand Plixo-account.", accountNoticeLink: "Open ranglijst",
     navHome: "▶ START", navContact: "✉ CONTACT", navInfo: "ℹ INFO", navLb: "RANGLIJST", navSkin: "SKINS",
     tagSim: "// 10 · simulatie & idle", descDvd: "De ultieme DVD stuiter simulator met upgrades, skins en voorspellingen!",
     tagDino: "// 01 · simulatie", descDino: "Zouden de dinosauriërs overleven zonder asteroïde? Ontdek het hier!", btnExt: "⬡ EXTENSIE",
@@ -1273,6 +1282,7 @@ const i18n = {
   },
   fr: {
     subtitle: "12 jeux &nbsp;·&nbsp; jouez dans le navigateur &nbsp;·&nbsp; projet scolaire <span>_</span>",
+    accountNotice: "Vous découvrez Plixo ? Allez dans l’onglet Classement pour créer un compte ou vous connecter avec un compte Plixo existant.", accountNoticeLink: "Ouvrir le classement",
     navHome: "▶ ACCUEIL", navContact: "✉ CONTACT", navInfo: "ℹ INFO", navLb: "CLASSEMENT", navSkin: "SKINS",
     tagSim: "// 10 · simulation", descDvd: "L'ultime simulateur de rebond de DVD avec améliorations, skins et prédictions!",
     tagDino: "// 01 · simulation", descDino: "Les dinosaures survivraient-ils sans l'astéroïde? Découvrez-le!", btnExt: "⬡ EXTENSION",
@@ -1321,6 +1331,12 @@ function applyTranslations() {
   const lang = localStorage.getItem('app_lang') || 'en';
   document.documentElement.lang = lang;
   document.getElementById('lang-select').value = lang;
+  const notice = document.getElementById('plixo-account-notice');
+  if (notice) {
+    const accountCandidates = ['pg_account_code','pg_player_id','plixo_sync_code'];
+    const hasAccount = accountCandidates.some(key => /^(?:[A-HJ-NP-Z2-9]{20}|[0-9]{20})$/.test(String(localStorage.getItem(key) || '').trim().toUpperCase()));
+    notice.hidden = hasAccount;
+  }
   
   document.querySelectorAll('[data-i18n]').forEach(el => {
     el.innerHTML = t(el.getAttribute('data-i18n'));
