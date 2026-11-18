@@ -7,9 +7,8 @@ const gameId = script && script.dataset.gameId || '';
 const isHome = !!(script && script.dataset.page === 'home');
 const KEY = 'plixo_music_settings_v1';
 const CFG = {apiKey:'AIzaSyA9wKFVXmT6kUpuaBgwlPilF86LaKKDYFU',authDomain:'money-digger-9b05e.firebaseapp.com',databaseURL:'https://money-digger-9b05e-default-rtdb.europe-west1.firebasedatabase.app'};
-const SONGS = {'creative-fire':{title:'Creative Fire',src:'creative-fire.mp3'},'fallen-tech':{title:'Fallen Tech',src:'fallen-tech.mp3'}};
-const GAMES = [['home','Homepage'],['dvd_plus','DVD+'],['dino_world','Dino World'],['mini_browser_platformer','Mini Browser Platformer'],['mini_spikes_platformer','Mini Spikes Platformer'],['one_square','One Square'],['dodging_arena','Dodging Arena'],['bug_escape','Bug Escape'],['mini_apocalypse','Mini Apocalypse'],['money_digger','Money Digger'],['lucky_guy','Lucky Guy'],['time_ticker','Time Ticker'],['the_end','THE END']];
-const UNSUPPORTED_GAMES = new Set(['dodging_arena','bug_escape','mini_apocalypse','the_end']);
+const SONGS = {'creative-fire':{title:'Creative Fire',src:'creative-fire.mp3'},'fallen-tech':{title:'Fallen Tech',src:'fallen-tech.mp3'},'calm-story':{title:'Calm Story',src:'calm_story.mp3'}};
+const GAMES = [['home','Homepage'],['leaderboard','Leaderboards'],['dvd_plus','DVD+'],['dino_world','Dino World'],['mini_browser_platformer','Mini Browser Platformer'],['mini_spikes_platformer','Mini Spikes Platformer'],['one_square','One Square'],['dodging_arena','Dodging Arena'],['bug_escape','Bug Escape'],['mini_apocalypse','Mini Apocalypse'],['money_digger','Money Digger'],['lucky_guy','Lucky Guy'],['time_ticker','Time Ticker'],['the_end','THE END']];
 const TXT = {
 en:{nav:'♪ MUSIC',title:'MUSIC SETTINGS',desc:'Choose which songs are in your music rotation. Turn music on or off separately inside each game.',song:'Your music library',songHelp:'Select one or more songs. One song repeats; multiple songs play one after another.',songEnabled:'Included in your playlist',saved:'Your song choices save automatically',cloud:'Synced to your Plixo account',local:'Saved on this device until you sign in',off:'Music: OFF',tap:'Tap to start music',playing:'Now playing'},
 nl:{nav:'♪ MUZIEK',title:'MUZIEKINSTELLINGEN',desc:'Kies welke nummers in je muzieklijst staan. Zet muziek afzonderlijk aan of uit in elke game.',song:'Jouw muziekbibliotheek',songHelp:'Selecteer één of meer nummers. Eén nummer wordt herhaald; meerdere nummers spelen na elkaar.',songEnabled:'Toegevoegd aan je afspeellijst',saved:'Je nummerkeuze wordt automatisch opgeslagen',cloud:'Gesynchroniseerd met je Plixo-account',local:'Op dit apparaat opgeslagen tot je inlogt',off:'Muziek: UIT',tap:'Tik om muziek te starten',playing:'Speelt nu'},
@@ -23,7 +22,7 @@ const normalize = v => {
  const songs = isNewSettings ? v.songs.filter(id => SONGS[id]) : [legacySong];
  const canKeepGameChoices = isNewSettings || (v && v.enabled === true);
  const games = canKeepGameChoices && Array.isArray(v && v.games) ? v.games : [];
- return {songs:Array.from(new Set(songs)),games:Array.from(new Set(games.filter(x => GAMES.some(g => g[0] === x && !UNSUPPORTED_GAMES.has(g[0])))))};
+ return {songs:Array.from(new Set(songs)),games:Array.from(new Set(games.filter(x => GAMES.some(g => g[0] === x))))};
 };
 let settings = defaults(), db = null, accountCode = null, cloudReady = false, audio = null, playlistIndex = 0, localRevision = 0;
 try { settings = normalize(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch(e) {}
@@ -49,7 +48,7 @@ function status() {
  if (el) el.textContent = code() && cloudReady ? tr('cloud') : tr('local');
 }
 async function sync() {
- const c=code(); if (!c || (c===accountCode && cloudReady)) return;
+ const c=code(); if (!c || (!isHome && !playlist().length) || (c===accountCode && cloudReady)) return;
  const revisionAtStart=localRevision;
  accountCode=c; const d=await firebaseReady(); if (!d || accountCode!==c) return;
  try {
@@ -71,8 +70,9 @@ function audioEl() {
 function currentGameId() { return isHome ? 'home' : gameId; }
 function here() { return settings.games.includes(currentGameId()); }
 async function playback(advance=false) {
- const a=audioEl(), ids=playlist();
- if (!ids.length || !here()) { a.pause(); playerRefresh(); return; }
+ const ids=playlist();
+ if (!ids.length || !here()) { if (audio) audio.pause(); playerRefresh(); return; }
+ const a=audioEl();
  if (playlistIndex>=ids.length) playlistIndex=0;
  const song=currentSong(); if (!song) { a.pause(); playerRefresh(); return; }
  const sourceChanged=!a.src.endsWith(song.src);
@@ -96,11 +96,13 @@ function save(skipPlayback=false) {
 function playerRefresh(blocked) {
  const b=document.getElementById('plixo-music-toggle'), s=document.getElementById('plixo-music-player-status');
  if (!b || !s) return;
- const enabled=here(), active=audio && !audio.paused;
+ const hasSongs=playlist().length>0, enabled=here() && hasSongs, active=audio && !audio.paused;
+ const wrap=document.getElementById('plixo-music-player');
+ if (wrap) wrap.style.display=hasSongs?'flex':'none';
  b.textContent=active?'Ⅱ':'▶';
  b.setAttribute('aria-label',active?'Turn music off for this game':'Turn music on for this game');
  b.setAttribute('aria-pressed',active?'true':'false');
- b.style.opacity=playlist().length?'1':'.45'; b.disabled=!playlist().length;
+ b.style.opacity='1'; b.disabled=!hasSongs;
  b.style.background=enabled?'#00e676':'#252536';
  b.style.color=enabled?'#07130c':'#f0f0ff';
  b.style.border=enabled?'2px solid #00ff88':'2px solid #55556b';
@@ -133,7 +135,7 @@ function player() {
    if (here()) {
     settings.games=settings.games.filter(x=>x!==id);
     save(true);
-    audioEl().pause();
+    if (audio) audio.pause();
     playerRefresh();
    } else {
     settings.games=settings.games.concat(id);
@@ -188,7 +190,7 @@ function refresh() {
 }
 function init() {
  if (isHome) { homePage(); player(); } else if (gameId) player();
- audioEl(); sync().then(playback); playback();
+ sync().then(playback); playback();
  window.addEventListener('storage',e=>{
   if(e.key===KEY){try{settings=normalize(JSON.parse(e.newValue||'null'));}catch(_){} refresh(); playback();}
   if(['pg_account_code','pg_player_id','plixo_sync_code'].includes(e.key)) sync();
