@@ -24,6 +24,10 @@ body { overflow: hidden; background: #15181e; font-family: monospace; display:fl
 #lb-btn { color: #fda; border-color: #a84; }
 #lb-btn:hover { background: #443322; color: #ff0; }
 canvas { background: white; display: block; width: 400px; height: 300px; }
+#replay-controls { display:none; width:400px; min-height:28px; align-items:center; gap:6px; padding:4px; background:#20242c; border-top:1px solid #333; color:#ddd; font:9px monospace; }
+#replay-controls button { background:#333; color:#fff; border:1px solid #666; padding:4px 8px; font: bold 9px monospace; cursor:pointer; }
+#replay-controls button:hover { background:#444; border-color:#ffdd00; }
+#replay-status { flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#ffdd00; }
 
 /* Match both games to the same 4:3 viewport fit in fullscreen. */
 :fullscreen body { background: #15181e; justify-content: center; align-items: center; }
@@ -74,6 +78,7 @@ canvas { background: white; display: block; width: 400px; height: 300px; }
     <button id="fs-btn" title="Fullscreen">⛶</button>
   </div>
   <canvas id="game" width="400" height="300"></canvas>
+  <div id="replay-controls"><button id="replay-play">PAUSE</button><button id="replay-restart">RESTART</button><span id="replay-status">LOADING REPLAY…</span></div>
 </div>
 
 <div id="race-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-live="polite">
@@ -127,7 +132,8 @@ let fbSkinsRef    = null;
 
 
 const gameModeParam = new URLSearchParams(window.location.search).get("mode");
-const GAME_MODE = ["single", "multiplayer", "race"].includes(gameModeParam) ? gameModeParam : "multiplayer";
+const GAME_MODE = ["single", "multiplayer", "race", "replay"].includes(gameModeParam) ? gameModeParam : "multiplayer";
+const REPLAY_KEY = new URLSearchParams(window.location.search).get("replay") || "";
 const GAME_CODE = "mbp";
 const GAME_ROOT = "platformer";
 const GAME_LABEL = "Mini Browser Platformer";
@@ -940,6 +946,11 @@ function initFirebase() {
       setStatus("● SINGLEPLAYER", "#8af");
       return; // No remote players or shared-world writes in singleplayer.
     }
+    if (GAME_MODE === "replay") {
+      setStatus("● BEST RUN REPLAY", "#ffdd00");
+      startReplayPlayback(db, REPLAY_KEY);
+      return;
+    }
     if (GAME_MODE === "multiplayer") {
       bindNetworkRoot(db, GAME_ROOT);
       return;
@@ -1116,6 +1127,75 @@ const LEVELS = [
    obstacles:[[20,GROUND_HEIGHT-40,10,10],[30,GROUND_HEIGHT-30,10,10],[40,GROUND_HEIGHT-20,10,20],[50,GROUND_HEIGHT-30,10,10],[60,GROUND_HEIGHT-40,10,10],[0,GROUND_HEIGHT-24,10,24],[80,GROUND_HEIGHT-40,10,40],[110,GROUND_HEIGHT-40,10,40],[90,GROUND_HEIGHT-40,20,10],[90,GROUND_HEIGHT-10,20,10],[130,GROUND_HEIGHT-40,10,40],[160,GROUND_HEIGHT-40,10,40],[140,GROUND_HEIGHT-10,20,10],[90,GROUND_HEIGHT-80,10,30],[120,GROUND_HEIGHT-80,10,30],[160,GROUND_HEIGHT-80,10,30],[130,GROUND_HEIGHT-80,10,10],[140,GROUND_HEIGHT-70,10,10],[150,GROUND_HEIGHT-60,10,10],[0,GROUND_HEIGHT-59,10,9],[60,GROUND_HEIGHT-80,10,20],[50,GROUND_HEIGHT-60,10,10],[40,GROUND_HEIGHT-70,10,10],[30,GROUND_HEIGHT-60,10,10],[20,GROUND_HEIGHT-80,10,20],[75,GROUND_HEIGHT-69,9,9],[180,GROUND_HEIGHT-10,10,10],[190,GROUND_HEIGHT-30,10,10],[180,GROUND_HEIGHT-60,10,10],[105,GROUND_HEIGHT-69,9,9]]},
 ];
 
+// Best-run input recording, compressed as [buttonMask, frameCount] segments.
+let replaySegments = [], replayFrameTotal = 0, replayLastMask = null, replayLastCount = 0;
+let replayMode = GAME_MODE === "replay", replayPaused = false, replayEnded = false;
+let replayData = null, replaySegmentIndex = 0, replaySegmentFrame = 0, replayPlaybackStarted = false;
+function currentInputMask() {
+  return (keys["ArrowLeft"] ? 1 : 0) | (keys["ArrowRight"] ? 2 : 0) | (keys["ArrowUp"] ? 4 : 0);
+}
+function recordBestRunFrame() {
+  if (!timerRunning || replayMode || GAME_MODE === "race" || !window._pfDb) return;
+  const mask = currentInputMask(); replayFrameTotal++;
+  if (replayLastMask === mask) replayLastCount++;
+  else {
+    if (replayLastMask !== null) replaySegments.push([replayLastMask, replayLastCount]);
+    replayLastMask = mask; replayLastCount = 1;
+  }
+}
+function finishBestRunRecording() {
+  if (replayLastMask !== null && replayLastCount > 0) replaySegments.push([replayLastMask, replayLastCount]);
+  const segments = replaySegments;
+  replaySegments = []; replayFrameTotal = 0; replayLastMask = null; replayLastCount = 0;
+  return segments;
+}
+function resetBestRunRecording() {
+  replaySegments = []; replayFrameTotal = 0; replayLastMask = null; replayLastCount = 0;
+}
+function replayNextMask() {
+  if (!replayData || !Array.isArray(replayData.segments)) return null;
+  while (replaySegmentIndex < replayData.segments.length) {
+    const segment = replayData.segments[replaySegmentIndex];
+    if (!Array.isArray(segment) || segment.length < 2 || replaySegmentFrame >= Number(segment[1])) {
+      replaySegmentIndex++; replaySegmentFrame = 0; continue;
+    }
+    replaySegmentFrame++; return Number(segment[0]) & 7;
+  }
+  return null;
+}
+function setReplayKeys(mask) {
+  keys = { ArrowLeft: !!(mask & 1), ArrowRight: !!(mask & 2), ArrowUp: !!(mask & 4) };
+}
+function updateReplayStatus(message) {
+  const el = document.getElementById("replay-status"); if (el) el.textContent = message;
+}
+function startReplayPlayback(db, key) {
+  const controls = document.getElementById("replay-controls"); if (controls) controls.style.display = "flex";
+  const safeKey = String(key || "");
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(safeKey)) { updateReplayStatus("ONGELDIGE REPLAY-ID"); return; }
+  db.ref("platformerBestRuns/" + safeKey).once("value").then(snapshot => {
+    replayData = snapshot.val();
+    if (!replayData || !Array.isArray(replayData.segments) || !replayData.segments.length) {
+      updateReplayStatus("GEEN OPNAME BESCHIKBAAR VOOR DEZE SPELER"); return;
+    }
+    replayMode = true; replayPaused = false; replayEnded = false;
+    if (replayData.skin) applySkinImage(replayData.skin);
+    replaySegmentIndex = 0; replaySegmentFrame = 0; currentLevel = 1;
+    timerCurrent = 0; timerStart = performance.now(); timerRunning = true; loadLevel();
+    document.getElementById("replay-play").textContent = "PAUSE";
+    updateReplayStatus((replayData.name || "PLAYER") + " · BEST " + timerString(Number(replayData.time) || 0));
+    replayPlaybackStarted = true;
+  }).catch(error => { console.warn("Could not load MBP replay.", error); updateReplayStatus("REPLAY LADEN MISLUKT"); });
+}
+function restartReplayPlayback() {
+  if (!replayData) return;
+  replaySegmentIndex = 0; replaySegmentFrame = 0; replayEnded = false; replayPaused = false;
+  if (replayData.skin) applySkinImage(replayData.skin);
+  currentLevel = 1; timerCurrent = 0; timerStart = performance.now(); timerRunning = true; keys = {};
+  loadLevel(); document.getElementById("replay-play").textContent = "PAUSE";
+  updateReplayStatus((replayData.name || "PLAYER") + " · REPLAY");
+}
+
 let timerRunning = false;
 let timerStart = 0;
 let timerCurrent = 0;
@@ -1202,6 +1282,15 @@ function loadLevel() {
 }
 
 function nextLevel() {
+  if (replayMode) {
+    currentLevel = (currentLevel + 1) % LEVELS.length;
+    if (currentLevel === 0) {
+      timerRunning = false; replayEnded = true; replayPaused = true;
+      document.getElementById("replay-play").textContent = "PLAY";
+      updateReplayStatus("REPLAY COMPLETE · CLICK RESTART TO WATCH AGAIN");
+    }
+    loadLevel(); return;
+  }
   let levelTime = Date.now() - levelStartTime;
   if(levelTime < 15000) setPlixoMaxProgress('dm_30', 1);
   levelStartTime = Date.now();
@@ -1220,31 +1309,57 @@ function nextLevel() {
       if(highscore === null || timerCurrent < highscore) {
         highscore = timerCurrent;
         localStorage.setItem("platformer_highscore", highscore);
-        const pfName = localStorage.getItem('pg_player_name') || 'Speler';
-        if(window._pfDb) {
-          const pfRef = window._pfDb.ref('platformerScores');
-          pfRef.orderByChild('name').equalTo(pfName).once('value').then(snap => {
-            let existingKey = null, existingTime = Infinity;
-            snap.forEach(child => { existingKey = child.key; existingTime = child.val().time || Infinity; });
-            if(timerCurrent < existingTime) {
-              const entry = { name: pfName, time: timerCurrent };
-              if(existingKey) pfRef.child(existingKey).set(entry);
-              else pfRef.push(entry);
-            }
-          }).catch(()=>{});
-        }
+      }
+      const pfName = localStorage.getItem('pg_player_name') || 'Speler';
+      const completedReplaySegments = finishBestRunRecording();
+      if(window._pfDb && completedReplaySegments.length) {
+        const pfRef = window._pfDb.ref('platformerScores');
+        pfRef.orderByChild('name').equalTo(pfName).once('value').then(snap => {
+          let existingKey = null, existingTime = Infinity;
+          snap.forEach(child => {
+            const childTime = Number(child.val() && child.val().time) || Infinity;
+            if (childTime < existingTime) { existingKey = child.key; existingTime = childTime; }
+            else if (!existingKey) existingKey = child.key;
+          });
+          const improvesLeaderboard = timerCurrent < existingTime;
+          const saveScore = improvesLeaderboard
+            ? (existingKey
+                ? pfRef.child(existingKey).set({ name: pfName, time: timerCurrent }).then(() => existingKey)
+                : pfRef.push({ name: pfName, time: timerCurrent }).then(ref => ref.key))
+            : Promise.resolve(existingKey);
+          saveScore.then(scoreKey => {
+            if (!scoreKey) return;
+            const runRef = window._pfDb.ref('platformerBestRuns/' + scoreKey);
+            return runRef.once('value').then(runSnap => {
+              const oldRun = runSnap.val();
+              // Legacy leaderboard entries have no replay. Save the first new
+              // recorded run, then keep improving that replay independently.
+              if (!oldRun || timerCurrent < (Number(oldRun.time) || Infinity)) {
+                return runRef.set({
+                  version: 1, name: pfName, time: timerCurrent,
+                  frameCount: completedReplaySegments.reduce((sum, segment) => sum + Number(segment[1] || 0), 0),
+                  segments: completedReplaySegments,
+                  accountCode: (typeof safeAccountCode === "function" ? safeAccountCode() : ""),
+                  skin: localStorage.getItem("plixo_skin_image") || "",
+                  savedAt: Date.now()
+                });
+              }
+            });
+          }).catch(error => console.warn("Could not save MBP best-run replay.", error));
+        }).catch(error => console.warn("Could not check MBP best-run time.", error));
       }
     }
   } else if(currentLevel === 1 && !timerRunning) {
     timerStart = Date.now();
     timerRunning = true;
     timerCurrent = 0;
+    resetBestRunRecording();
   }
   loadLevel();
 }
 
-window.addEventListener("keydown", e=>{ if (GAME_MODE === "race" && !raceReady) return; keys[e.key]=true; });
-window.addEventListener("keyup", e=>keys[e.key]=false);
+window.addEventListener("keydown", e=>{ if (replayMode || (GAME_MODE === "race" && !raceReady)) return; keys[e.key]=true; });
+window.addEventListener("keyup", e=>{ if (!replayMode) keys[e.key]=false; });
 
 const TARGET_FPS = 60;
 const FRAME_TIME = 1000 / TARGET_FPS;
@@ -1256,6 +1371,25 @@ function loop(timestamp) {
 
   if(timestamp - lastTime < FRAME_TIME) return;
   lastTime = timestamp;
+  if (replayMode) {
+    if (!replayPlaybackStarted || replayPaused || replayEnded) {
+      ctx.clearRect(0,0,WIDTH,HEIGHT);
+      ctx.fillStyle = "black"; ctx.fillRect(0,GROUND_HEIGHT,WIDTH,HEIGHT-GROUND_HEIGHT);
+      ctx.fillStyle = "#ccc"; ctx.font = "bold 8px monospace"; ctx.fillText(timerString(timerCurrent),4,GROUND_HEIGHT+12);
+      ctx.fillStyle = "gray"; for (let o of obstacles) ctx.fillRect(o.x,o.y,o.w,o.h);
+      ctx.fillStyle = "gold"; ctx.beginPath(); ctx.arc(star.x+5,star.y+5,5,0,Math.PI*2); ctx.fill();
+      dino.draw(); return;
+    }
+    const nextMask = replayNextMask();
+    if (nextMask === null) {
+      replayEnded = true; replayPaused = true; timerRunning = false;
+      document.getElementById("replay-play").textContent = "PLAY";
+      updateReplayStatus("REPLAY DATA ENDED · CLICK RESTART");
+      return;
+    }
+    setReplayKeys(nextMask);
+    timerCurrent = performance.now() - timerStart;
+  }
 
   dino.vx = 0;
   if(keys["ArrowLeft"]) dino.vx = -2.5;
@@ -1274,6 +1408,7 @@ function loop(timestamp) {
       }
   }
   dino.prevJumpKey = jumpPressed;
+  if (!replayMode && timerRunning) recordBestRunFrame();
 
   dino.update(obstacles);
 
@@ -1281,8 +1416,10 @@ function loop(timestamp) {
      dino.y < star.y+star.size && dino.y+dino.h > star.y) nextLevel();
 
   frameCount++;
-  broadcastPosition();
-  if(frameCount % 30 === 0) cleanupRemotePlayers();
+  if (!replayMode) {
+    broadcastPosition();
+    if(frameCount % 30 === 0) cleanupRemotePlayers();
+  }
 
   if(timerRunning) timerCurrent = (GAME_MODE === "race" ? raceNow() : Date.now()) - timerStart;
 
@@ -1341,13 +1478,22 @@ document.getElementById("race-exit-btn").addEventListener("click", () => {
 });
 
 document.getElementById("restart-btn").addEventListener("click", () => {
+  if (replayMode) { restartReplayPlayback(); return; }
   if (GAME_MODE === "race" && (!raceReady || raceFinishRecorded)) return;
   currentLevel = 0;
+  resetBestRunRecording();
   if (GAME_MODE === "race" && raceReady) { timerStart = raceStartAt; timerCurrent = Math.max(0, raceNow() - raceStartAt); timerRunning = true; }
   else { timerRunning = false; timerCurrent = 0; }
   if (typeof totalDeaths !== "undefined") totalDeaths++;
   loadLevel();
 });
+document.getElementById("replay-play").addEventListener("click", () => {
+  if (!replayData || replayEnded) return;
+  replayPaused = !replayPaused;
+  document.getElementById("replay-play").textContent = replayPaused ? "PLAY" : "PAUSE";
+  updateReplayStatus(replayPaused ? "PAUSED · " + (replayData.name || "PLAYER") : (replayData.name || "PLAYER") + " · PLAYING");
+});
+document.getElementById("replay-restart").addEventListener("click", restartReplayPlayback);
 
 document.getElementById("lb-btn").addEventListener("click", () => {
   leaveRaceAndNavigate("leaderboard.html?build=linked-race-20261025-v1");
